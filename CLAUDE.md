@@ -78,6 +78,16 @@ this repo, now and later — do not relax them for convenience.
   non-negotiable — no Convex query, mutation, or action merges without a
   test covering its main behavior (and, where relevant, its permission
   checks and edge cases).
+- **Branch naming**: `<type>/<kebab-case-description>`, e.g.
+  `feat/add-login-page`, `fix/broken-invoice-total`. Allowed types: `feat`,
+  `fix`, `refactor`, `chore`, `docs`, `test`. `main` and `develop` are the
+  only exceptions. This is enforced by a Husky `pre-commit` hook
+  (`.husky/pre-commit`) — a badly named branch fails the commit outright.
+- **Tests gate every commit**: the same `pre-commit` hook runs `pnpm test`
+  (Vitest) before the commit is allowed through. Any failing test blocks
+  the commit; Vitest prints a full per-file pass/fail report in the
+  terminal. Hooks are installed automatically by `pnpm install` (via the
+  `prepare` script) — no manual setup needed after cloning.
 
 ## Project layout
 

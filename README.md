@@ -50,6 +50,17 @@ pnpm test     # Vitest (Convex function tests via convex-test)
 Before considering any change done, `pnpm lint`, `pnpm exec tsc --noEmit`,
 and `pnpm test` should all pass.
 
+## Branching & commits
+
+`pnpm install` sets up git hooks automatically (via Husky). Every commit
+runs a `pre-commit` check that:
+
+1. Validates the current branch name against `<type>/<kebab-case-description>`
+   (types: `feat`, `fix`, `refactor`, `chore`, `docs`, `test` — e.g.
+   `feat/add-login-page`). `main` and `develop` are exempt.
+2. Runs `pnpm test`. Any failing test blocks the commit; Vitest prints a
+   full pass/fail report per test file in the terminal.
+
 ## Project layout
 
 ```
