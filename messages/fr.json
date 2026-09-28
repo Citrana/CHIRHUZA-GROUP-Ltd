@@ -1,12 +1,49 @@
 {
-  "Home": {
-    "companyName": "CHIRHUZA GROUP Ltd",
-    "tagline": "Plateforme de gestion multi-services",
-    "statusTitle": "État du système",
-    "statusChecking": "Vérification de la connexion Convex…",
-    "statusConnected": "Convex connecté",
-    "statusUnreachable": "Convex injoignable",
-    "statusNotConfigured": "Convex non configuré — exécutez `pnpm dlx convex dev`"
+  "Common": {
+    "close": "Fermer"
+  },
+  "AppHeader": {
+    "brand": "CHIRHUZA GROUP Ltd",
+    "switchService": "Changer de service",
+    "openMenu": "Ouvrir le menu",
+    "account": "Compte",
+    "administration": "Administration",
+    "backToService": "Retour à {service}"
+  },
+  "ServicePicker": {
+    "title": "Choisissez un service",
+    "subtitle": "Sélectionnez l'activité dans laquelle vous voulez travailler.",
+    "comingSoon": "Bientôt disponible",
+    "lastUsed": "Dernier utilisé",
+    "noServices": "Aucun service n'est encore configuré. Demandez à un administrateur de terminer la configuration."
+  },
+  "BusinessUnits": {
+    "hair": "Coiffure",
+    "fashion": "Mode",
+    "housing": "Logement",
+    "transport": "Transport"
+  },
+  "Shell": {
+    "modules": "Modules",
+    "home": "Accueil",
+    "homeSubtitle": "Choisissez un module pour commencer.",
+    "noModules": "Votre rôle ne vous donne encore accès à aucun module. Contactez un administrateur.",
+    "comingSoonTitle": "Bientôt disponible",
+    "comingSoonBody": "Ce module est en cours de développement et sera bientôt disponible.",
+    "serviceUnavailable": "{service} sera bientôt disponible.",
+    "backToServices": "Retour aux services",
+    "accessDenied": "Vous n'avez pas accès à ce module."
+  },
+  "Modules": {
+    "analytics": "Analyses",
+    "products": "Produits",
+    "requisitions": "Réquisitions",
+    "stock": "Stock",
+    "sales": "Ventes",
+    "expenses": "Dépenses",
+    "payroll": "Paie",
+    "withdrawals": "Retraits",
+    "approvals": "Approbations"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -15,7 +52,8 @@
   },
   "Nav": {
     "manageUsers": "Gérer les utilisateurs",
-    "manageRoles": "Gérer les rôles"
+    "manageRoles": "Gérer les rôles",
+    "manageLocations": "Sites"
   },
   "Auth": {
     "logout": "Se déconnecter",
@@ -66,7 +104,13 @@
       "roleLabel": "Rôle",
       "selectRole": "Choisissez un rôle",
       "noRole": "Aucun rôle",
-      "roleChangeError": "Impossible de modifier le rôle."
+      "roleChangeError": "Impossible de modifier le rôle.",
+      "locationHeader": "Site",
+      "locationLabel": "Site",
+      "noLocation": "Aucun site",
+      "selectLocation": "Choisissez un site",
+      "locationRequiredHint": "Obligatoire pour ce rôle.",
+      "locationChangeError": "Impossible de modifier le site."
     },
     "roles": {
       "title": "Rôles",
@@ -87,6 +131,33 @@
       "scopeOwn": "Son propre site",
       "scopeAll": "Tous les sites",
       "saveError": "Impossible d'enregistrer la modification. Veuillez réessayer."
+    },
+    "locations": {
+      "title": "Sites",
+      "accessDenied": "Vous n'avez pas accès à cette page.",
+      "businessUnitLabel": "Service",
+      "add": "Ajouter un site",
+      "edit": "Modifier",
+      "empty": "Aucun site pour ce service.",
+      "createTitle": "Ajouter un site",
+      "editTitle": "Modifier le site",
+      "nameLabel": "Nom",
+      "typeLabel": "Type",
+      "addressLabel": "Adresse",
+      "activeLabel": "Actif",
+      "activeHint": "Les sites inactifs ne peuvent pas être attribués aux utilisateurs.",
+      "typeShop": "Boutique",
+      "typeWarehouse": "Entrepôt",
+      "statusActive": "Actif",
+      "statusInactive": "Inactif",
+      "nameHeader": "Nom",
+      "typeHeader": "Type",
+      "addressHeader": "Adresse",
+      "statusHeader": "Statut",
+      "actionsHeader": "Actions",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saveError": "Impossible d'enregistrer le site. Vérifiez le nom et réessayez."
     }
   },
   "Roles": {
@@ -123,7 +194,9 @@
     "requisition": "Réquisitions",
     "approvals": "Approbations",
     "analytics": "Analyses",
-    "admin": "Administration"
+    "admin": "Administration",
+    "products": "Produits",
+    "withdrawals": "Retraits"
   },
   "Permissions": {
     "sales": {
@@ -170,6 +243,18 @@
     },
     "roles": {
       "manage": "Gérer les rôles et permissions"
+    },
+    "products": {
+      "view": "Voir les produits",
+      "manage": "Créer et modifier des produits"
+    },
+    "withdrawals": {
+      "view": "Voir les retraits",
+      "request": "Demander un retrait",
+      "approve": "Approuver les retraits"
+    },
+    "locations": {
+      "manage": "Gérer les sites"
     }
   }
 }

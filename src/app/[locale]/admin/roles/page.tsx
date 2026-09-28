@@ -14,7 +14,7 @@ export default async function AdminRolesPage({ params }: Props) {
   setRequestLocale(locale);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 p-8">
+    <main className="mx-auto w-full max-w-3xl flex-1 p-4 md:p-8">
       <RolesAdminPanel />
     </main>
   );

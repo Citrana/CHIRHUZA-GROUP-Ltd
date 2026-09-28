@@ -27,12 +27,16 @@ this repo, now and later — do not relax them for convenience.
   (`PERMISSIONS`, `PermissionKey`), alongside the six `SYSTEM_ROLES` and
   their default grants. A new key goes there, then into
   `messages/{en,fr}.json` under `Permissions`, then `npx convex run
-  rbac:seedRbac` (idempotent; never overwrites an edited role's grants).
+  seed:seedReferenceData` (idempotent; never overwrites an edited role's
+  grants). Role defaults only apply when a role is first created — to give
+  a new key to roles that already exist, add a one-shot entry to
+  `SEED_STEPS` (applied once, recorded in `appliedSeedSteps`).
 - The Super Admin role is locked: it always holds every permission and
   can't be edited, and the last active Super Admin can't be demoted or
   blocked.
-- Frontend: `useCan(key)` (`src/lib/use-can.ts`) hides UI only. Skip
-  (`"skip"`) queries the user can't run rather than letting them throw.
+- Frontend: `useCan(key)` / `useCanAnyInModule(module)`
+  (`src/lib/use-can.ts`) hide UI only. Skip (`"skip"`) queries the user
+  can't run rather than letting them throw.
 
 ## Money
 
@@ -42,10 +46,19 @@ this repo, now and later — do not relax them for convenience.
 
 ## Multi-tenancy (business units)
 
-- Every business table has a `businessUnitId` field identifying which
-  service it belongs to (`hair`, `fashion`, `housing`, `transport`), unless
-  the table is truly global (e.g. shared reference/config data). Default to
-  scoping by business unit; only omit it with a clear reason.
+- Every business table has a `businessUnitId: v.id("businessUnits")` field
+  identifying which service it belongs to (`hair`, `fashion`, `housing`,
+  `transport`), unless the table is truly global (e.g. shared
+  reference/config data). Default to scoping by business unit; only omit it
+  with a clear reason.
+- Business units are seeded reference data (`convex/lib/businessUnits.ts`,
+  `businessUnits` table); only Hair is enabled today. Locations (`locations`
+  table: shop | warehouse) belong to one business unit and are never deleted
+  — retire one with `active: false`.
+- A user's own location is `users.locationId`. It is required for any user
+  whose role has at least one `own_location` permission (enforced in
+  `convex/users.ts`); that is what `own_location` scope checks compare
+  against.
 
 ## Time
 
@@ -89,6 +102,19 @@ this repo, now and later — do not relax them for convenience.
   and `src/proxy.ts`. New routes go under `src/app/[locale]/`.
 - Use `getTranslations`/`useTranslations` (scoped per component/page, e.g.
   `"Home"`) rather than a flat global namespace.
+
+## App shell & navigation
+
+- After login the first screen is the service picker (`/`). The selected
+  service lives in the URL (`/[locale]/[service]/...`); `src/lib/
+  service-store.ts` only remembers the last one for conveniences.
+- Service modules are listed in `src/lib/shell-modules.ts`; the menu shows a
+  module when the user holds any permission in its permission module. A new
+  module page goes in a static folder `src/app/[locale]/[service]/<module>/`,
+  which overrides the `[module]` placeholder route.
+- UI is **mobile-first** — users work from phones. Design for ~360px wide
+  first (tap targets ≥ 44px, no horizontal page scroll; wide tables scroll
+  inside their own container or become cards on small screens).
 
 ## Workflow
 
@@ -142,6 +168,8 @@ convex/
   http.ts           # required by Convex Auth (auth HTTP routes)
   seed.ts           # bootstraps the first Super Admin from env vars
   rbac.ts           # roles/permissions: seedRbac, role editing, getMyPermissions
+  businessUnits.ts  # the four services (seeded), list for the picker
+  locations.ts      # shops/warehouses per business unit
   lib/              # shared server-side wrappers (permissions, audit, etc.)
   <domain>.ts       # one file per domain/feature (e.g. hair.ts, fashion.ts)
   <domain>.test.ts  # tests for that domain's Convex logic
@@ -161,11 +189,12 @@ src/
 This repo has: project setup, Convex connection, folder structure, i18n
 (English/French) routing, authentication (Convex Auth, email +
 password, admin-created accounts, block/unblock, forced password change),
-and RBAC (six seeded roles, permission catalog, Super Admin role editor at
-`/admin/roles`, role assignment at `/admin/users`). No locations table yet
-(`own_location` scope is recorded but enforced per feature later), and no
-business features — they come in later steps, built on top of the rules
-above.
+RBAC (six seeded roles, permission catalog, Super Admin role editor at
+`/admin/roles`, role assignment at `/admin/users`), business units and
+locations (`/admin/locations`, user locations on `/admin/users`), and the
+service picker + mobile-first app shell (`/hair` with placeholder module
+pages). No business features yet — they come in later steps, built on top
+of the rules above.
 
 <!-- convex-ai-start -->
 

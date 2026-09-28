@@ -7,7 +7,7 @@ import {
 } from "convex-helpers/server/customFunctions";
 import { action, mutation, query } from "../_generated/server";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Doc } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { requireCurrentUser, requireCurrentUserFromAction } from "./auth";
 import { isPermissionKey, type PermissionKey, type Scope } from "./permissions";
@@ -53,6 +53,21 @@ export async function loadPermissions(
     }
   });
   return permissions;
+}
+
+/**
+ * A role "requires a location" when any of its permissions is scoped to
+ * own_location - such a scope is meaningless for a user with no location.
+ */
+export async function roleRequiresLocation(
+  ctx: QueryCtx | MutationCtx,
+  roleId: Id<"roles">,
+): Promise<boolean> {
+  const links = await ctx.db
+    .query("rolePermissions")
+    .withIndex("by_roleId_and_permissionId", (q) => q.eq("roleId", roleId))
+    .collect();
+  return links.some((link) => link.scope === "own_location");
 }
 
 async function assertPermission(

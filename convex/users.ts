@@ -7,16 +7,34 @@ import {
   internalMutation,
 } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
   getCurrentUserOrNull,
   requireCurrentUserFromAction,
 } from "./lib/auth";
-import { authedAction, authedMutation, authedQuery } from "./lib/rbac";
+import {
+  authedAction,
+  authedMutation,
+  authedQuery,
+  roleRequiresLocation,
+} from "./lib/rbac";
 import { logUserAudit } from "./lib/audit";
 import { generateStrongPassword } from "./lib/password";
 import { SUPER_ADMIN_ROLE_KEY } from "./lib/permissions";
+
+const LOCATION_REQUIRED =
+  "This role requires a location. Assign the user a location first.";
+
+async function assertActiveLocation(
+  ctx: MutationCtx,
+  locationId: Id<"locations">,
+) {
+  const location = await ctx.db.get("locations", locationId);
+  if (!location || !location.active) {
+    throw new ConvexError("Location not found or inactive.");
+  }
+}
 
 /**
  * Refuses to take the Super Admin role away from (or block) the last
@@ -64,7 +82,15 @@ export const listUsers = authedQuery({
     return await Promise.all(
       users.map(async (user) => {
         const role = user.roleId ? await ctx.db.get("roles", user.roleId) : null;
-        return { ...user, roleKey: role?.key ?? null, roleName: role?.name ?? null };
+        const location = user.locationId
+          ? await ctx.db.get("locations", user.locationId)
+          : null;
+        return {
+          ...user,
+          roleKey: role?.key ?? null,
+          roleName: role?.name ?? null,
+          locationName: location?.name ?? null,
+        };
       }),
     );
   },
@@ -77,8 +103,13 @@ export const listUsers = authedQuery({
  * can never be retrieved again after this call returns.
  */
 export const createUser = authedAction({
-  args: { name: v.string(), email: v.string(), roleId: v.id("roles") },
-  handler: async (ctx, { name, email, roleId }) => {
+  args: {
+    name: v.string(),
+    email: v.string(),
+    roleId: v.id("roles"),
+    locationId: v.optional(v.id("locations")),
+  },
+  handler: async (ctx, { name, email, roleId, locationId }) => {
     await ctx.requirePermission("users.manage");
     const role = await ctx.runQuery(internal.rbac.getRoleByIdInternal, {
       roleId,
@@ -90,6 +121,18 @@ export const createUser = authedAction({
     if (role.key === SUPER_ADMIN_ROLE_KEY) {
       await ctx.requirePermission("roles.manage");
     }
+    if (locationId !== undefined) {
+      const location = await ctx.runQuery(internal.locations.getByIdInternal, {
+        locationId,
+      });
+      if (!location || !location.active) {
+        throw new ConvexError("Location not found or inactive.");
+      }
+    } else if (
+      await ctx.runQuery(internal.rbac.roleRequiresLocationInternal, { roleId })
+    ) {
+      throw new ConvexError(LOCATION_REQUIRED);
+    }
     const password = generateStrongPassword();
     await createAccount(ctx, {
       provider: "password",
@@ -98,6 +141,7 @@ export const createUser = authedAction({
         name,
         email,
         roleId,
+        ...(locationId !== undefined ? { locationId } : {}),
         status: "active",
         mustChangePassword: true,
         createdBy: ctx.user._id,
@@ -155,6 +199,9 @@ export const setUserRole = authedMutation({
     if (target.roleId === roleId) {
       return;
     }
+    if (!target.locationId && (await roleRequiresLocation(ctx, roleId))) {
+      throw new ConvexError(LOCATION_REQUIRED);
+    }
     await assertNotLastSuperAdmin(ctx, target);
     const previousRole = target.roleId
       ? await ctx.db.get("roles", target.roleId)
@@ -165,6 +212,46 @@ export const setUserRole = authedMutation({
       action: "user.role_changed",
       targetUserId: userId,
       details: { from: previousRole?.key ?? "none", to: role.key },
+    });
+  },
+});
+
+/**
+ * Sets or clears (`null`) a user's location. It can't be cleared while the
+ * user's role requires one.
+ */
+export const setUserLocation = authedMutation({
+  args: {
+    userId: v.id("users"),
+    locationId: v.union(v.id("locations"), v.null()),
+  },
+  handler: async (ctx, { userId, locationId }) => {
+    await ctx.requirePermission("users.manage");
+    const target = await ctx.db.get("users", userId);
+    if (!target) {
+      throw new ConvexError("User not found.");
+    }
+    if ((target.locationId ?? null) === locationId) {
+      return;
+    }
+    if (locationId === null) {
+      if (target.roleId && (await roleRequiresLocation(ctx, target.roleId))) {
+        throw new ConvexError(LOCATION_REQUIRED);
+      }
+    } else {
+      await assertActiveLocation(ctx, locationId);
+    }
+    await ctx.db.patch("users", userId, {
+      locationId: locationId ?? undefined,
+    });
+    await logUserAudit(ctx, {
+      actorId: ctx.user._id,
+      action: "user.location_changed",
+      targetUserId: userId,
+      details: {
+        from: target.locationId ?? "none",
+        to: locationId ?? "none",
+      },
     });
   },
 });

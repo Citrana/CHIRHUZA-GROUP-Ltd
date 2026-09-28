@@ -28,7 +28,7 @@ export function RolesAdminPanel() {
         {t("title")}
       </h1>
 
-      <div className="overflow-hidden rounded-lg border border-border">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm">
           <thead className="bg-secondary text-secondary-foreground">
             <tr>

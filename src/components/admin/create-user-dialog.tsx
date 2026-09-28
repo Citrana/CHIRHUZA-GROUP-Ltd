@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useRoleText } from "@/components/admin/use-role-text";
+import { LocationSelect } from "@/components/admin/location-select";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,7 @@ export function CreateUserDialog() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState<Id<"roles"> | "">("");
+  const [locationId, setLocationId] = useState<Id<"locations"> | "">("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(
@@ -41,11 +43,15 @@ export function CreateUserDialog() {
     setName("");
     setEmail("");
     setRoleId("");
+    setLocationId("");
     setError(null);
     setSubmitting(false);
     setGeneratedPassword(null);
     setCopied(false);
   }
+
+  const locationRequired =
+    roles?.find((r) => r._id === roleId)?.requiresLocation === true;
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -53,7 +59,12 @@ export function CreateUserDialog() {
     setError(null);
     setSubmitting(true);
     try {
-      const result = await createUser({ name, email, roleId });
+      const result = await createUser({
+        name,
+        email,
+        roleId,
+        ...(locationId !== "" ? { locationId } : {}),
+      });
       setGeneratedPassword(result.password);
     } catch {
       setError(t("createError"));
@@ -152,6 +163,23 @@ export function CreateUserDialog() {
                     </option>
                   ))}
                 </NativeSelect>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="new-user-location">{t("locationLabel")}</Label>
+                <LocationSelect
+                  id="new-user-location"
+                  value={locationId}
+                  onValueChange={setLocationId}
+                  emptyLabel={
+                    locationRequired ? t("selectLocation") : t("noLocation")
+                  }
+                  required={locationRequired}
+                />
+                {locationRequired ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("locationRequiredHint")}
+                  </p>
+                ) : null}
               </div>
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>

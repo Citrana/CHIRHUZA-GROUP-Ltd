@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { UserStatusButton } from "@/components/admin/user-status-button";
 import { UserRoleSelect } from "@/components/admin/user-role-select";
+import { UserLocationSelect } from "@/components/admin/user-location-select";
 import { useRoleText } from "@/components/admin/use-role-text";
 import { useCan } from "@/lib/use-can";
 
@@ -23,6 +24,10 @@ export function UsersAdminPanel() {
     canManageUsers ? {} : "skip",
   );
 
+  const requiresLocation = new Set(
+    roles?.filter((r) => r.requiresLocation).map((r) => r._id),
+  );
+
   if (!currentUser || canManageUsers === undefined) {
     return null;
   }
@@ -33,15 +38,15 @@ export function UsersAdminPanel() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="font-heading text-2xl font-bold text-primary">
           {t("title")}
         </h1>
         <CreateUserDialog />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-sm">
+      <div className="overflow-x-auto rounded-lg border border-border">
+        <table className="w-full min-w-[48rem] text-sm">
           <thead className="bg-secondary text-secondary-foreground">
             <tr>
               <th className="p-3 text-left font-medium">{t("nameHeader")}</th>
@@ -49,6 +54,9 @@ export function UsersAdminPanel() {
                 {t("emailHeader")}
               </th>
               <th className="p-3 text-left font-medium">{t("roleHeader")}</th>
+              <th className="p-3 text-left font-medium">
+                {t("locationHeader")}
+              </th>
               <th className="p-3 text-left font-medium">
                 {t("statusHeader")}
               </th>
@@ -77,6 +85,15 @@ export function UsersAdminPanel() {
                         : t("noRole")}
                     </Badge>
                   )}
+                </td>
+                <td className="p-3">
+                  <UserLocationSelect
+                    userId={user._id}
+                    locationId={user.locationId}
+                    required={
+                      user.roleId !== null && requiresLocation.has(user.roleId)
+                    }
+                  />
                 </td>
                 <td className="p-3">
                   <Badge
