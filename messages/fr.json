@@ -12,5 +12,55 @@
     "label": "Langue",
     "en": "Anglais",
     "fr": "Français"
+  },
+  "Nav": {
+    "manageUsers": "Gérer les utilisateurs"
+  },
+  "Auth": {
+    "logout": "Se déconnecter",
+    "login": {
+      "title": "Connexion",
+      "emailLabel": "E-mail",
+      "passwordLabel": "Mot de passe",
+      "submit": "Se connecter",
+      "submitting": "Connexion en cours…",
+      "error": "E-mail ou mot de passe invalide."
+    },
+    "changePassword": {
+      "title": "Choisissez un nouveau mot de passe",
+      "description": "Vous devez définir un nouveau mot de passe pour continuer.",
+      "newPasswordLabel": "Nouveau mot de passe",
+      "confirmPasswordLabel": "Confirmez le nouveau mot de passe",
+      "submit": "Définir le mot de passe",
+      "submitting": "Définition du mot de passe…",
+      "tooShortError": "Le mot de passe doit contenir au moins 8 caractères.",
+      "mismatchError": "Les mots de passe ne correspondent pas.",
+      "genericError": "Une erreur s'est produite. Veuillez réessayer."
+    }
+  },
+  "Admin": {
+    "users": {
+      "title": "Utilisateurs",
+      "accessDenied": "Vous n'avez pas accès à cette page.",
+      "nameHeader": "Nom",
+      "emailHeader": "E-mail",
+      "statusHeader": "Statut",
+      "actionsHeader": "Actions",
+      "statusActive": "Actif",
+      "statusBlocked": "Bloqué",
+      "block": "Bloquer",
+      "unblock": "Débloquer",
+      "createUser": "Créer un utilisateur",
+      "nameLabel": "Nom",
+      "emailLabel": "E-mail",
+      "createButton": "Créer l'utilisateur",
+      "creating": "Création…",
+      "createError": "Impossible de créer l'utilisateur. Vérifiez que l'e-mail n'est pas déjà utilisé.",
+      "passwordDialogTitle": "Utilisateur créé",
+      "passwordDialogWarning": "Copiez ce mot de passe maintenant — il ne sera plus jamais affiché.",
+      "copyButton": "Copier",
+      "copiedLabel": "Copié !",
+      "closeButton": "Terminé"
+    }
   }
 }

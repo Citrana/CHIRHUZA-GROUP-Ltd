@@ -12,5 +12,55 @@
     "label": "Language",
     "en": "English",
     "fr": "French"
+  },
+  "Nav": {
+    "manageUsers": "Manage users"
+  },
+  "Auth": {
+    "logout": "Log out",
+    "login": {
+      "title": "Log in",
+      "emailLabel": "Email",
+      "passwordLabel": "Password",
+      "submit": "Log in",
+      "submitting": "Logging in…",
+      "error": "Invalid email or password."
+    },
+    "changePassword": {
+      "title": "Choose a new password",
+      "description": "You must set a new password before continuing.",
+      "newPasswordLabel": "New password",
+      "confirmPasswordLabel": "Confirm new password",
+      "submit": "Set password",
+      "submitting": "Setting password…",
+      "tooShortError": "Password must be at least 8 characters.",
+      "mismatchError": "Passwords do not match.",
+      "genericError": "Something went wrong. Please try again."
+    }
+  },
+  "Admin": {
+    "users": {
+      "title": "Users",
+      "accessDenied": "You don't have access to this page.",
+      "nameHeader": "Name",
+      "emailHeader": "Email",
+      "statusHeader": "Status",
+      "actionsHeader": "Actions",
+      "statusActive": "Active",
+      "statusBlocked": "Blocked",
+      "block": "Block",
+      "unblock": "Unblock",
+      "createUser": "Create user",
+      "nameLabel": "Name",
+      "emailLabel": "Email",
+      "createButton": "Create user",
+      "creating": "Creating…",
+      "createError": "Could not create user. Check the email isn't already in use.",
+      "passwordDialogTitle": "User created",
+      "passwordDialogWarning": "Copy this password now — it will not be shown again.",
+      "copyButton": "Copy",
+      "copiedLabel": "Copied!",
+      "closeButton": "Done"
+    }
   }
 }

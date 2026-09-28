@@ -8,7 +8,14 @@
  * @module
  */
 
+import type * as auth from "../auth.js";
 import type * as healthCheck from "../healthCheck.js";
+import type * as http from "../http.js";
+import type * as lib_audit from "../lib/audit.js";
+import type * as lib_auth from "../lib/auth.js";
+import type * as lib_password from "../lib/password.js";
+import type * as seed from "../seed.js";
+import type * as users from "../users.js";
 
 import type {
   ApiFromModules,
@@ -17,7 +24,14 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auth: typeof auth;
   healthCheck: typeof healthCheck;
+  http: typeof http;
+  "lib/audit": typeof lib_audit;
+  "lib/auth": typeof lib_auth;
+  "lib/password": typeof lib_password;
+  seed: typeof seed;
+  users: typeof users;
 }>;
 
 /**

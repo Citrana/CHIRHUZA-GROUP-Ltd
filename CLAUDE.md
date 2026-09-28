@@ -89,11 +89,39 @@ this repo, now and later — do not relax them for convenience.
   terminal. Hooks are installed automatically by `pnpm install` (via the
   `prepare` script) — no manual setup needed after cloning.
 
+## Authentication
+
+- Authentication is Convex Auth (`@convex-dev/auth`), email + password only.
+  There is no public self-serve sign-up — accounts are created exclusively
+  by a Super Admin (see `createUser` in `convex/users.ts`), which generates
+  a strong password shown to the admin exactly once.
+- `users.status` (`"active" | "blocked"`) is enforced in two places: Convex
+  Auth's `beforeSessionCreation` callback (`convex/auth.ts`) rejects sign-in
+  outright for a blocked user, and `getCurrentUserOrNull`
+  (`convex/lib/auth.ts`) re-checks status on every subsequent call, since a
+  user can be blocked after their session already exists.
+- Route protection is **client-side only** (`src/components/auth-gate.tsx`,
+  using `useConvexAuth()`), not Next.js middleware/proxy-based. Convex
+  Auth's server-side route protection has an open upstream bug with
+  Next.js's `proxy.ts` convention (get-convex/convex-auth#271), which this
+  repo uses. The real security boundary is still server-side — every
+  Convex function must go through `convex/lib/auth.ts`'s helpers
+  (`requireCurrentUser`, `requireSuperAdmin`, or their `...FromAction`
+  variants), per the Permissions & security rule above.
+- `roleId` and `isSuperAdmin` on `users` are placeholders: `roleId` stays
+  `null` until the roles/permissions system exists; `isSuperAdmin` is a
+  temporary stand-in for "can manage users" until real permission checks
+  replace it.
+
 ## Project layout
 
 ```
 convex/
   schema.ts        # single source of truth for all tables
+  auth.ts           # Convex Auth config (Password provider, callbacks)
+  auth.config.ts    # required by Convex Auth (JWT provider)
+  http.ts           # required by Convex Auth (auth HTTP routes)
+  seed.ts           # bootstraps the first Super Admin from env vars
   lib/              # shared server-side wrappers (permissions, audit, etc.)
   <domain>.ts       # one file per domain/feature (e.g. hair.ts, fashion.ts)
   <domain>.test.ts  # tests for that domain's Convex logic
@@ -110,10 +138,11 @@ src/
 
 ## Current status
 
-This repo is at the **scaffold stage**: project setup, Convex connection,
-folder structure, i18n (English/French) routing, and this file. No auth, no
-roles, no business features exist yet — they come in later steps, built on
-top of the rules above.
+This repo has: project setup, Convex connection, folder structure, i18n
+(English/French) routing, and authentication (Convex Auth, email +
+password, admin-created accounts, block/unblock, forced password change).
+No roles/permissions system yet, and no business features — they come in
+later steps, built on top of the rules above.
 
 <!-- convex-ai-start -->
 
