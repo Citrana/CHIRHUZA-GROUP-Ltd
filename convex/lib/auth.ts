@@ -35,19 +35,12 @@ export async function requireCurrentUser(
   return user;
 }
 
-export async function requireSuperAdmin(
-  ctx: QueryCtx | MutationCtx,
-): Promise<Doc<"users">> {
-  const user = await requireCurrentUser(ctx);
-  if (!user.isSuperAdmin) {
-    throw new ConvexError("Super Admin only.");
-  }
-  return user;
-}
+// Permission checks live in ./rbac.ts (authedQuery/authedMutation/
+// authedAction + requirePermission), built on top of these.
 
-// Action-context variants: @convex-dev/auth's account-mutating helpers
+// Action-context variant: @convex-dev/auth's account-mutating helpers
 // (createAccount, modifyAccountCredentials, ...) only run from actions,
-// which have no ctx.db - so these look the current user up through an
+// which have no ctx.db - so this looks the current user up through an
 // internal query instead.
 
 export async function requireCurrentUserFromAction(
@@ -62,16 +55,6 @@ export async function requireCurrentUserFromAction(
   });
   if (!user || user.status === "blocked") {
     throw new ConvexError("Not authenticated.");
-  }
-  return user;
-}
-
-export async function requireSuperAdminFromAction(
-  ctx: ActionCtx,
-): Promise<Doc<"users">> {
-  const user = await requireCurrentUserFromAction(ctx);
-  if (!user.isSuperAdmin) {
-    throw new ConvexError("Super Admin only.");
   }
   return user;
 }

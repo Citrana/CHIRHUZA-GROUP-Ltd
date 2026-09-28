@@ -12,8 +12,27 @@ this repo, now and later — do not relax them for convenience.
 ## Permissions & security
 
 - Every Convex function enforces permissions server-side, through shared
-  wrappers (to be added in `convex/lib/`). Never rely on hiding UI elements
+  wrappers in `convex/lib/rbac.ts`. Never rely on hiding UI elements
   as a substitute for a server-side check — the client is not trusted.
+- RBAC is **User -> Role -> Permissions** (`users.roleId` -> `roles` ->
+  `rolePermissions` -> `permissions`). There is no direct user-to-permission
+  link. Each role-permission link has a scope: `own_location` |
+  `all_locations`.
+- Every public function is built with `authedQuery` / `authedMutation` /
+  `authedAction` (convex-helpers custom functions, `convex/lib/rbac.ts`)
+  and calls `ctx.requirePermission("<key>", scopeCheck?)` for the
+  permission it needs. It returns the caller's scope; features with
+  location-bound records pass a `scopeCheck` to reject out-of-scope access.
+- Permission keys are a typed catalog in `convex/lib/permissions.ts`
+  (`PERMISSIONS`, `PermissionKey`), alongside the six `SYSTEM_ROLES` and
+  their default grants. A new key goes there, then into
+  `messages/{en,fr}.json` under `Permissions`, then `npx convex run
+  rbac:seedRbac` (idempotent; never overwrites an edited role's grants).
+- The Super Admin role is locked: it always holds every permission and
+  can't be edited, and the last active Super Admin can't be demoted or
+  blocked.
+- Frontend: `useCan(key)` (`src/lib/use-can.ts`) hides UI only. Skip
+  (`"skip"`) queries the user can't run rather than letting them throw.
 
 ## Money
 
@@ -105,13 +124,13 @@ this repo, now and later — do not relax them for convenience.
   Auth's server-side route protection has an open upstream bug with
   Next.js's `proxy.ts` convention (get-convex/convex-auth#271), which this
   repo uses. The real security boundary is still server-side — every
-  Convex function must go through `convex/lib/auth.ts`'s helpers
-  (`requireCurrentUser`, `requireSuperAdmin`, or their `...FromAction`
-  variants), per the Permissions & security rule above.
-- `roleId` and `isSuperAdmin` on `users` are placeholders: `roleId` stays
-  `null` until the roles/permissions system exists; `isSuperAdmin` is a
-  temporary stand-in for "can manage users" until real permission checks
-  replace it.
+  Convex function must go through the `convex/lib/rbac.ts` wrappers (built
+  on `convex/lib/auth.ts`'s `requireCurrentUser` /
+  `requireCurrentUserFromAction`), per the Permissions & security rule above.
+- `users.isSuperAdmin` is **deprecated** (optional, never read or written);
+  it was replaced by the Super Admin role. `rbac:seedRbac` backfills legacy
+  flagged users onto that role. Managing users needs `users.manage`;
+  assigning roles or editing role permissions needs `roles.manage`.
 
 ## Project layout
 
@@ -122,6 +141,7 @@ convex/
   auth.config.ts    # required by Convex Auth (JWT provider)
   http.ts           # required by Convex Auth (auth HTTP routes)
   seed.ts           # bootstraps the first Super Admin from env vars
+  rbac.ts           # roles/permissions: seedRbac, role editing, getMyPermissions
   lib/              # shared server-side wrappers (permissions, audit, etc.)
   <domain>.ts       # one file per domain/feature (e.g. hair.ts, fashion.ts)
   <domain>.test.ts  # tests for that domain's Convex logic
@@ -139,10 +159,13 @@ src/
 ## Current status
 
 This repo has: project setup, Convex connection, folder structure, i18n
-(English/French) routing, and authentication (Convex Auth, email +
-password, admin-created accounts, block/unblock, forced password change).
-No roles/permissions system yet, and no business features — they come in
-later steps, built on top of the rules above.
+(English/French) routing, authentication (Convex Auth, email +
+password, admin-created accounts, block/unblock, forced password change),
+and RBAC (six seeded roles, permission catalog, Super Admin role editor at
+`/admin/roles`, role assignment at `/admin/users`). No locations table yet
+(`own_location` scope is recorded but enforced per feature later), and no
+business features — they come in later steps, built on top of the rules
+above.
 
 <!-- convex-ai-start -->
 

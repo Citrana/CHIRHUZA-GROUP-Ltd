@@ -20,7 +20,6 @@ const password = Password({
       roleId: null,
       status: "active",
       mustChangePassword: false,
-      isSuperAdmin: false,
       createdBy: null,
     };
   },

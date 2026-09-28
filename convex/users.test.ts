@@ -2,43 +2,29 @@ import { convexTest } from "convex-test";
 import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
-import type { Id } from "./_generated/dataModel";
+import {
+  getRoleId,
+  insertUserWithRole,
+  seedRbacForTest,
+} from "./lib/test-utils";
 
 const modules = import.meta.glob("./**/*.*s");
 
-async function insertUser(
-  t: ReturnType<typeof convexTest>,
-  overrides: Partial<{
-    name: string;
-    email: string;
-    status: "active" | "blocked";
-    mustChangePassword: boolean;
-    isSuperAdmin: boolean;
-    createdBy: Id<"users"> | null;
-  }> = {},
-) {
-  return await t.run(async (ctx) => {
-    return await ctx.db.insert("users", {
-      name: overrides.name ?? "Test User",
-      email: overrides.email ?? "user@example.com",
-      roleId: null,
-      status: overrides.status ?? "active",
-      mustChangePassword: overrides.mustChangePassword ?? false,
-      isSuperAdmin: overrides.isSuperAdmin ?? false,
-      createdBy: overrides.createdBy ?? null,
-    });
-  });
+async function setup() {
+  const t = convexTest(schema, modules);
+  await seedRbacForTest(t);
+  return t;
 }
 
 test("getCurrentUser returns null when signed out", async () => {
-  const t = convexTest(schema, modules);
+  const t = await setup();
   const user = await t.query(api.users.getCurrentUser, {});
   expect(user).toBeNull();
 });
 
 test("getCurrentUser returns the active user's document", async () => {
-  const t = convexTest(schema, modules);
-  const userId = await insertUser(t, { email: "active@example.com" });
+  const t = await setup();
+  const userId = await insertUserWithRole(t, "sales_agent", { email: "active@example.com" });
   const user = await t
     .withIdentity({ subject: userId })
     .query(api.users.getCurrentUser, {});
@@ -46,8 +32,8 @@ test("getCurrentUser returns the active user's document", async () => {
 });
 
 test("getCurrentUser returns null for a blocked user", async () => {
-  const t = convexTest(schema, modules);
-  const userId = await insertUser(t, { status: "blocked" });
+  const t = await setup();
+  const userId = await insertUserWithRole(t, "sales_agent", { status: "blocked" });
   const user = await t
     .withIdentity({ subject: userId })
     .query(api.users.getCurrentUser, {});
@@ -55,12 +41,9 @@ test("getCurrentUser returns null for a blocked user", async () => {
 });
 
 test("setUserStatus lets a Super Admin block and unblock a user, writing an audit log", async () => {
-  const t = convexTest(schema, modules);
-  const adminId = await insertUser(t, {
-    email: "admin@example.com",
-    isSuperAdmin: true,
-  });
-  const targetId = await insertUser(t, { email: "target@example.com" });
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin@example.com" });
+  const targetId = await insertUserWithRole(t, "sales_agent", { email: "target@example.com" });
   const asAdmin = t.withIdentity({ subject: adminId });
 
   await asAdmin.mutation(api.users.setUserStatus, {
@@ -82,9 +65,9 @@ test("setUserStatus lets a Super Admin block and unblock a user, writing an audi
 });
 
 test("setUserStatus rejects a non-Super-Admin caller", async () => {
-  const t = convexTest(schema, modules);
-  const regularId = await insertUser(t, { email: "regular@example.com" });
-  const targetId = await insertUser(t, { email: "target2@example.com" });
+  const t = await setup();
+  const regularId = await insertUserWithRole(t, "sales_agent", { email: "regular@example.com" });
+  const targetId = await insertUserWithRole(t, "sales_agent", { email: "target2@example.com" });
 
   await expect(
     t
@@ -94,11 +77,8 @@ test("setUserStatus rejects a non-Super-Admin caller", async () => {
 });
 
 test("setUserStatus rejects a Super Admin blocking themselves", async () => {
-  const t = convexTest(schema, modules);
-  const adminId = await insertUser(t, {
-    email: "self@example.com",
-    isSuperAdmin: true,
-  });
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "self@example.com" });
 
   await expect(
     t
@@ -108,17 +88,16 @@ test("setUserStatus rejects a Super Admin blocking themselves", async () => {
 });
 
 test("createUser generates a one-time password that signs the new user in, forcing a password change", async () => {
-  const t = convexTest(schema, modules);
-  const adminId = await insertUser(t, {
-    email: "admin2@example.com",
-    isSuperAdmin: true,
-  });
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin2@example.com" });
 
+  const salesAgentRoleId = await getRoleId(t, "sales_agent");
   const { password } = await t
     .withIdentity({ subject: adminId })
     .action(api.users.createUser, {
       name: "New Hire",
       email: "newhire@example.com",
+      roleId: salesAgentRoleId,
     });
   expect(password).toHaveLength(16);
 
@@ -129,7 +108,7 @@ test("createUser generates a one-time password that signs the new user in, forci
       .unique(),
   );
   expect(created?.mustChangePassword).toBe(true);
-  expect(created?.isSuperAdmin).toBe(false);
+  expect(created?.roleId).toBe(salesAgentRoleId);
   expect(created?.createdBy).toBe(adminId);
 
   const result = await t.action(api.auth.signIn, {
@@ -140,26 +119,28 @@ test("createUser generates a one-time password that signs the new user in, forci
 });
 
 test("createUser rejects a non-Super-Admin caller", async () => {
-  const t = convexTest(schema, modules);
-  const regularId = await insertUser(t, { email: "regular2@example.com" });
+  const t = await setup();
+  const regularId = await insertUserWithRole(t, "sales_agent", { email: "regular2@example.com" });
 
   await expect(
     t
       .withIdentity({ subject: regularId })
-      .action(api.users.createUser, { name: "Nope", email: "nope@example.com" }),
+      .action(api.users.createUser, {
+        name: "Nope",
+        email: "nope@example.com",
+        roleId: await getRoleId(t, "sales_agent"),
+      }),
   ).rejects.toThrow();
 });
 
 test("a blocked user is rejected at sign-in", async () => {
-  const t = convexTest(schema, modules);
-  const adminId = await insertUser(t, {
-    email: "admin3@example.com",
-    isSuperAdmin: true,
-  });
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin3@example.com" });
   const { password } = await t
     .withIdentity({ subject: adminId })
     .action(api.users.createUser, {
       name: "Soon Blocked",
+      roleId: await getRoleId(t, "sales_agent"),
       email: "blocked@example.com",
     });
   const targetId = (await t.run((ctx) =>
@@ -182,15 +163,13 @@ test("a blocked user is rejected at sign-in", async () => {
 });
 
 test("changePassword updates the credential and clears mustChangePassword", async () => {
-  const t = convexTest(schema, modules);
-  const adminId = await insertUser(t, {
-    email: "admin4@example.com",
-    isSuperAdmin: true,
-  });
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin4@example.com" });
   const { password: oldPassword } = await t
     .withIdentity({ subject: adminId })
     .action(api.users.createUser, {
       name: "Will Rotate",
+      roleId: await getRoleId(t, "sales_agent"),
       email: "rotate@example.com",
     });
   const userId = (await t.run((ctx) =>
@@ -223,4 +202,136 @@ test("changePassword updates the credential and clears mustChangePassword", asyn
     },
   });
   expect(result.tokens).toBeTruthy();
+});
+
+test("setUserRole lets a Super Admin change a user's role, writing an audit log", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin5@example.com",
+  });
+  const targetId = await insertUserWithRole(t, "sales_agent", {
+    email: "promote@example.com",
+  });
+  const chiefAdminRoleId = await getRoleId(t, "chief_admin");
+
+  await t
+    .withIdentity({ subject: adminId })
+    .mutation(api.users.setUserRole, { userId: targetId, roleId: chiefAdminRoleId });
+
+  const target = await t.run((ctx) => ctx.db.get("users", targetId));
+  expect(target?.roleId).toBe(chiefAdminRoleId);
+  const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
+  expect(logs).toHaveLength(1);
+  expect(logs[0]).toMatchObject({
+    action: "user.role_changed",
+    targetUserId: targetId,
+    details: { from: "sales_agent", to: "chief_admin" },
+  });
+});
+
+test("setUserRole rejects a caller without roles.manage", async () => {
+  const t = await setup();
+  const callerId = await insertUserWithRole(t, "chief_admin", {
+    email: "chief@example.com",
+  });
+  const targetId = await insertUserWithRole(t, "sales_agent", {
+    email: "agent@example.com",
+  });
+
+  await expect(
+    t.withIdentity({ subject: callerId }).mutation(api.users.setUserRole, {
+      userId: targetId,
+      roleId: await getRoleId(t, "super_admin"),
+    }),
+  ).rejects.toThrow(/roles\.manage/);
+});
+
+test("setUserRole rejects changing your own role", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin6@example.com",
+  });
+
+  await expect(
+    t.withIdentity({ subject: adminId }).mutation(api.users.setUserRole, {
+      userId: adminId,
+      roleId: await getRoleId(t, "sales_agent"),
+    }),
+  ).rejects.toThrow(/own role/);
+});
+
+test("the last active Super Admin cannot be demoted or blocked", async () => {
+  const t = await setup();
+  const superAdminRoleId = await getRoleId(t, "super_admin");
+  const lastAdminId = await insertUserWithRole(t, "super_admin", {
+    email: "last@example.com",
+  });
+  // A non-Super-Admin who has been granted roles.manage + users.manage.
+  const managerId = await insertUserWithRole(t, "manager_admin", {
+    email: "mgr@example.com",
+  });
+  const managerRoleId = await getRoleId(t, "manager_admin");
+  await t.run(async (ctx) => {
+    for (const key of ["roles.manage", "users.manage"]) {
+      const p = await ctx.db
+        .query("permissions")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .unique();
+      await ctx.db.insert("rolePermissions", {
+        roleId: managerRoleId,
+        permissionId: p!._id,
+        scope: "all_locations",
+      });
+    }
+  });
+  const asManager = t.withIdentity({ subject: managerId });
+
+  await expect(
+    asManager.mutation(api.users.setUserRole, {
+      userId: lastAdminId,
+      roleId: managerRoleId,
+    }),
+  ).rejects.toThrow(/last active Super Admin/);
+  await expect(
+    asManager.mutation(api.users.setUserStatus, {
+      userId: lastAdminId,
+      status: "blocked",
+    }),
+  ).rejects.toThrow(/last active Super Admin/);
+
+  // With a second Super Admin present, demotion is allowed.
+  await insertUserWithRole(t, "super_admin", { email: "second@example.com" });
+  await asManager.mutation(api.users.setUserRole, {
+    userId: lastAdminId,
+    roleId: managerRoleId,
+  });
+  const demoted = await t.run((ctx) => ctx.db.get("users", lastAdminId));
+  expect(demoted?.roleId).not.toBe(superAdminRoleId);
+});
+
+test("createUser requires roles.manage to mint a Super Admin", async () => {
+  const t = await setup();
+  const managerId = await insertUserWithRole(t, "manager_admin", {
+    email: "mgr2@example.com",
+  });
+  const managerRoleId = await getRoleId(t, "manager_admin");
+  await t.run(async (ctx) => {
+    const p = await ctx.db
+      .query("permissions")
+      .withIndex("by_key", (q) => q.eq("key", "users.manage"))
+      .unique();
+    await ctx.db.insert("rolePermissions", {
+      roleId: managerRoleId,
+      permissionId: p!._id,
+      scope: "all_locations",
+    });
+  });
+
+  await expect(
+    t.withIdentity({ subject: managerId }).action(api.users.createUser, {
+      name: "Sneaky",
+      email: "sneaky@example.com",
+      roleId: await getRoleId(t, "super_admin"),
+    }),
+  ).rejects.toThrow(/roles\.manage/);
 });
