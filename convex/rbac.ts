@@ -3,10 +3,16 @@ import { internalMutation, internalQuery, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getCurrentUserOrNull } from "./lib/auth";
-import { authedMutation, authedQuery, loadPermissions } from "./lib/rbac";
+import {
+  authedMutation,
+  authedQuery,
+  loadPermissions,
+  roleRequiresLocation,
+} from "./lib/rbac";
 import { logAudit } from "./lib/audit";
 import {
   PERMISSIONS,
+  SEED_STEPS,
   SUPER_ADMIN_ROLE_KEY,
   SYSTEM_ROLES,
   isPermissionKey,
@@ -41,6 +47,8 @@ async function ensureRolePermission(
  * - A missing system role is created with its default permissions. An
  *   existing role's permissions are left alone (Super Admin edits survive),
  *   except Super Admin, which is locked and always re-synced to everything.
+ * - SEED_STEPS not yet recorded in `appliedSeedSteps` are applied once
+ *   (grants that must also reach roles that already existed).
  * - Pre-RBAC users flagged `isSuperAdmin` are moved onto the Super Admin role.
  * System bootstrap with no acting user, so it writes no audit entries.
  */
@@ -71,6 +79,7 @@ export const seedRbac = internalMutation({
     }
 
     let superAdminRoleId: Id<"roles"> | null = null;
+    const roleIds = new Map<string, Id<"roles">>();
     for (const seed of SYSTEM_ROLES) {
       const existing = await ctx.db
         .query("roles")
@@ -89,9 +98,32 @@ export const seedRbac = internalMutation({
           await ensureRolePermission(ctx, roleId, permissionIds.get(key)!, scope);
         }
       }
+      roleIds.set(seed.key, roleId);
       if (seed.key === SUPER_ADMIN_ROLE_KEY) {
         superAdminRoleId = roleId;
       }
+    }
+
+    for (const step of SEED_STEPS) {
+      const applied = await ctx.db
+        .query("appliedSeedSteps")
+        .withIndex("by_key", (q) => q.eq("key", step.key))
+        .unique();
+      if (applied) {
+        continue;
+      }
+      for (const [roleKey, permissionKey, scope] of step.grants) {
+        const roleId = roleIds.get(roleKey);
+        if (roleId) {
+          await ensureRolePermission(
+            ctx,
+            roleId,
+            permissionIds.get(permissionKey)!,
+            scope,
+          );
+        }
+      }
+      await ctx.db.insert("appliedSeedSteps", { key: step.key });
     }
 
     const legacyAdmins = await ctx.db
@@ -118,6 +150,14 @@ export const getPermissionsForUserInternal = internalQuery({
     }
     const permissions = await loadPermissions(ctx, user);
     return [...permissions].map(([key, scope]) => ({ key, scope }));
+  },
+});
+
+export const roleRequiresLocationInternal = internalQuery({
+  args: { roleId: v.id("roles") },
+  returns: v.boolean(),
+  handler: async (ctx, { roleId }) => {
+    return await roleRequiresLocation(ctx, roleId);
   },
 });
 
@@ -175,7 +215,14 @@ export const listRoleOptions = authedQuery({
   handler: async (ctx) => {
     await ctx.requirePermission("users.manage");
     const roles = await ctx.db.query("roles").take(100);
-    return roles.map((r) => ({ _id: r._id, key: r.key, name: r.name }));
+    return await Promise.all(
+      roles.map(async (r) => ({
+        _id: r._id,
+        key: r.key,
+        name: r.name,
+        requiresLocation: await roleRequiresLocation(ctx, r._id),
+      })),
+    );
   },
 });
 

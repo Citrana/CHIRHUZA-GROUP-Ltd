@@ -7,14 +7,30 @@ import { requirePermission } from "./lib/rbac";
 import {
   getRoleId,
   insertUserWithRole,
-  seedRbacForTest,
+  seedReferenceDataForTest,
 } from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
 
+const PRODUCTS_AND_WITHDRAWALS = [
+  "products.view",
+  "products.manage",
+  "withdrawals.view",
+  "withdrawals.request",
+  "withdrawals.approve",
+] as const;
+
+const SALES_AGENT_DEFAULTS = {
+  "sales.create": "own_location",
+  "sales.edit.request": "own_location",
+  ...Object.fromEntries(
+    PRODUCTS_AND_WITHDRAWALS.map((k) => [k, "own_location"]),
+  ),
+};
+
 async function setup() {
   const t = convexTest(schema, modules);
-  await seedRbacForTest(t);
+  await seedReferenceDataForTest(t);
   return t;
 }
 
@@ -52,7 +68,9 @@ test("re-seeding keeps a Super Admin's edits to non-locked roles", async () => {
   const perms = await t
     .withIdentity({ subject: agentId })
     .query(api.rbac.getMyPermissions, {});
-  expect(perms).toEqual({ "sales.create": "own_location" });
+  const expected: Record<string, string> = { ...SALES_AGENT_DEFAULTS };
+  delete expected["sales.edit.request"];
+  expect(perms).toEqual(expected);
 });
 
 test("seedRbac moves a legacy isSuperAdmin user onto the Super Admin role", async () => {
@@ -73,7 +91,7 @@ test("seedRbac moves a legacy isSuperAdmin user onto the Super Admin role", asyn
   expect(legacy?.roleId).toBe(await getRoleId(t, "super_admin"));
 });
 
-test("getMyPermissions: Super Admin has everything, Sales Agent only its own-location pair, anonymous nothing", async () => {
+test("getMyPermissions: Super Admin has everything, Sales Agent only its own-location defaults, anonymous nothing", async () => {
   const t = await setup();
   const adminId = await insertUserWithRole(t, "super_admin", { email: "a@x.com" });
   const agentId = await insertUserWithRole(t, "sales_agent", { email: "g@x.com" });
@@ -88,10 +106,7 @@ test("getMyPermissions: Super Admin has everything, Sales Agent only its own-loc
   const agentPerms = await t
     .withIdentity({ subject: agentId })
     .query(api.rbac.getMyPermissions, {});
-  expect(agentPerms).toEqual({
-    "sales.create": "own_location",
-    "sales.edit.request": "own_location",
-  });
+  expect(agentPerms).toEqual(SALES_AGENT_DEFAULTS);
 
   expect(await t.query(api.rbac.getMyPermissions, {})).toEqual({});
 });
@@ -237,7 +252,9 @@ test("listRoles returns every role with its permission count", async () => {
     permissionCount: PERMISSIONS.length,
     locked: true,
   });
-  expect(roles.find((r) => r.key === "sales_agent")?.permissionCount).toBe(2);
+  expect(roles.find((r) => r.key === "sales_agent")?.permissionCount).toBe(
+    Object.keys(SALES_AGENT_DEFAULTS).length,
+  );
 });
 
 test("requirePermission returns the scope and enforces scopeCheck", async () => {
@@ -265,4 +282,62 @@ test("requirePermission returns the scope and enforces scopeCheck", async () => 
   await expect(
     asAgent.run((ctx) => requirePermission(ctx, "sales.edit.approve")),
   ).rejects.toThrow(/sales\.edit\.approve/);
+});
+
+test("seed steps grant new keys to pre-existing roles exactly once", async () => {
+  const t = convexTest(schema, modules);
+  await seedReferenceDataForTest(t);
+  // Simulate a database seeded before the step existed: strip the step's
+  // grants from Chief Sales Admin and forget the step was applied.
+  const roleId = await getRoleId(t, "chief_sales_admin");
+  await t.run(async (ctx) => {
+    for (const key of PRODUCTS_AND_WITHDRAWALS) {
+      const p = await ctx.db
+        .query("permissions")
+        .withIndex("by_key", (q) => q.eq("key", key))
+        .unique();
+      const link = await ctx.db
+        .query("rolePermissions")
+        .withIndex("by_roleId_and_permissionId", (q) =>
+          q.eq("roleId", roleId).eq("permissionId", p!._id),
+        )
+        .unique();
+      await ctx.db.delete("rolePermissions", link!._id);
+    }
+    for (const step of await ctx.db.query("appliedSeedSteps").collect()) {
+      await ctx.db.delete("appliedSeedSteps", step._id);
+    }
+  });
+
+  await t.mutation(internal.rbac.seedRbac, {});
+  const userId = await insertUserWithRole(t, "chief_sales_admin", {
+    email: "cs@x.com",
+  });
+  const asUser = t.withIdentity({ subject: userId });
+  let perms = await asUser.query(api.rbac.getMyPermissions, {});
+  for (const key of PRODUCTS_AND_WITHDRAWALS) {
+    expect(perms[key]).toBe("all_locations");
+  }
+
+  // A later revoke survives re-seeding: the step is recorded as applied.
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "a@x.com" });
+  await t.withIdentity({ subject: adminId }).mutation(api.rbac.setRolePermission, {
+    roleId,
+    permissionKey: "withdrawals.approve",
+    scope: null,
+  });
+  await t.mutation(internal.rbac.seedRbac, {});
+  perms = await asUser.query(api.rbac.getMyPermissions, {});
+  expect(perms["withdrawals.approve"]).toBeUndefined();
+});
+
+test("listRoleOptions flags roles that require a location", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "a@x.com" });
+  const options = await t
+    .withIdentity({ subject: adminId })
+    .query(api.rbac.listRoleOptions, {});
+  expect(
+    options.filter((o) => o.requiresLocation).map((o) => o.key),
+  ).toEqual(["sales_agent"]);
 });

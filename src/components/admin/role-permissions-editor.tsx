@@ -115,7 +115,7 @@ export function RolePermissionsEditor({ roleId }: { roleId: string }) {
           <h2 className="font-heading text-lg font-semibold">
             {moduleLabels[module as PermissionModule] ?? module}
           </h2>
-          <div className="overflow-hidden rounded-lg border border-border">
+          <div className="overflow-x-auto rounded-lg border border-border">
             <table className="w-full text-sm">
               <thead className="bg-secondary text-secondary-foreground">
                 <tr>

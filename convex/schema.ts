@@ -2,9 +2,14 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
+import {
+  businessUnitKeyValidator,
+  locationTypeValidator,
+} from "./lib/businessUnits";
 
 // See CLAUDE.md for the permanent rules that apply to every business table:
-// - businessUnitId (hair | fashion | housing | transport) unless truly global
+// - businessUnitId: v.id("businessUnits") (hair | fashion | housing |
+//   transport) unless truly global
 // - money as integer minor units + a currency field, never floats
 // - deletes go through an approval request, never immediate
 // - every add/update/delete writes an audit log entry
@@ -24,9 +29,30 @@ export default defineSchema({
     // `rbac:seedRbac` backfills such users onto the Super Admin role.
     isSuperAdmin: v.optional(v.boolean()),
     createdBy: v.union(v.id("users"), v.null()),
+    // The user's own location. Missing = none. Required (enforced in
+    // convex/users.ts) when their role has any own_location permission.
+    locationId: v.optional(v.id("locations")),
   })
     .index("email", ["email"])
     .index("by_roleId", ["roleId"]),
+
+  // Global reference data: the four services. Seeded by
+  // businessUnits:seedBusinessUnits; every business table points here via
+  // `businessUnitId`.
+  businessUnits: defineTable({
+    key: businessUnitKeyValidator,
+    name: v.string(),
+    enabled: v.boolean(),
+  }).index("by_key", ["key"]),
+
+  // Shops and warehouses. Never deleted - retire with `active: false`.
+  locations: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    type: locationTypeValidator,
+    address: v.string(),
+    active: v.boolean(),
+  }).index("by_businessUnitId", ["businessUnitId"]),
 
   // RBAC tables are global (no businessUnitId): roles and permissions are
   // shared system configuration, not data owned by one business unit.
@@ -53,6 +79,12 @@ export default defineSchema({
   })
     .index("by_roleId_and_permissionId", ["roleId", "permissionId"])
     .index("by_permissionId", ["permissionId"]),
+
+  // Keys of one-shot seed steps already applied (see SEED_STEPS in
+  // convex/lib/permissions.ts). Global; only ever inserted.
+  appliedSeedSteps: defineTable({
+    key: v.string(),
+  }).index("by_key", ["key"]),
 
   // Append-only per CLAUDE.md: never updated or deleted, only inserted.
   auditLogs: defineTable({

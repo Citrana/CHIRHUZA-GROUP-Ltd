@@ -16,6 +16,9 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `permissions.ts` — the typed permission catalog (`PERMISSIONS`,
   `PermissionKey`) and the six `SYSTEM_ROLES` with default grants, seeded by
   `rbac:seedRbac`. Add new permission keys here.
+- `businessUnits.ts` — the four business units (`BUSINESS_UNITS`,
+  `BusinessUnitKey`) seeded by `businessUnits:seedBusinessUnits`, plus the
+  location type validator.
 - `auth.ts` — `getCurrentUserOrNull` / `requireCurrentUser` and
   `requireCurrentUserFromAction` (for actions, which have no `ctx.db`). The
   base layer `rbac.ts` builds on; use it directly only for functions that
@@ -23,8 +26,8 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `audit.ts` — `logAudit` (any entity) and `logUserAudit` (user-targeted),
   appending to the append-only `auditLogs` table.
 - `password.ts` — `generateStrongPassword`, used for admin-created accounts.
-- `test.utils.ts` — test-only helpers (`seedRbacForTest`,
-  `insertUserWithRole`, `getRoleId`) shared by `convex/*.test.ts`. The
+- `test.utils.ts` — test-only helpers (`seedReferenceDataForTest`,
+  `insertUserWithRole`, `getRoleId`, `insertLocation`, `getBusinessUnitId`) shared by `convex/*.test.ts`. The
   double dot is deliberate: the Convex CLI skips multi-dot files, so it is
   never pushed. Any file under `convex/` with an import/export is pushed as
   a module, and module names can't contain hyphens.

@@ -1,12 +1,49 @@
 {
-  "Home": {
-    "companyName": "CHIRHUZA GROUP Ltd",
-    "tagline": "Multi-service business management platform",
-    "statusTitle": "System status",
-    "statusChecking": "Checking Convex connection…",
-    "statusConnected": "Convex connected",
-    "statusUnreachable": "Convex unreachable",
-    "statusNotConfigured": "Convex not configured — run `pnpm dlx convex dev`"
+  "Common": {
+    "close": "Close"
+  },
+  "AppHeader": {
+    "brand": "CHIRHUZA GROUP Ltd",
+    "switchService": "Switch service",
+    "openMenu": "Open menu",
+    "account": "Account",
+    "administration": "Administration",
+    "backToService": "Back to {service}"
+  },
+  "ServicePicker": {
+    "title": "Choose a service",
+    "subtitle": "Select the business you want to work in.",
+    "comingSoon": "Coming soon",
+    "lastUsed": "Last used",
+    "noServices": "No services are set up yet. Ask an administrator to finish setup."
+  },
+  "BusinessUnits": {
+    "hair": "Hair",
+    "fashion": "Fashion",
+    "housing": "Housing",
+    "transport": "Transport"
+  },
+  "Shell": {
+    "modules": "Modules",
+    "home": "Home",
+    "homeSubtitle": "Choose a module to get started.",
+    "noModules": "Your role doesn't give you access to any module yet. Ask an administrator.",
+    "comingSoonTitle": "Coming soon",
+    "comingSoonBody": "This module is being built and will be available soon.",
+    "serviceUnavailable": "{service} is coming soon.",
+    "backToServices": "Back to services",
+    "accessDenied": "You don't have access to this module."
+  },
+  "Modules": {
+    "analytics": "Analytics",
+    "products": "Products",
+    "requisitions": "Requisitions",
+    "stock": "Stock",
+    "sales": "Sales",
+    "expenses": "Expenses",
+    "payroll": "Payroll",
+    "withdrawals": "Withdrawals",
+    "approvals": "Approvals"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -15,7 +52,8 @@
   },
   "Nav": {
     "manageUsers": "Manage users",
-    "manageRoles": "Manage roles"
+    "manageRoles": "Manage roles",
+    "manageLocations": "Locations"
   },
   "Auth": {
     "logout": "Log out",
@@ -66,7 +104,13 @@
       "roleLabel": "Role",
       "selectRole": "Select a role",
       "noRole": "No role",
-      "roleChangeError": "Could not change the role."
+      "roleChangeError": "Could not change the role.",
+      "locationHeader": "Location",
+      "locationLabel": "Location",
+      "noLocation": "No location",
+      "selectLocation": "Select a location",
+      "locationRequiredHint": "Required for this role.",
+      "locationChangeError": "Could not change the location."
     },
     "roles": {
       "title": "Roles",
@@ -87,6 +131,33 @@
       "scopeOwn": "Own location",
       "scopeAll": "All locations",
       "saveError": "Could not save the change. Please try again."
+    },
+    "locations": {
+      "title": "Locations",
+      "accessDenied": "You don't have access to this page.",
+      "businessUnitLabel": "Service",
+      "add": "Add location",
+      "edit": "Edit",
+      "empty": "No locations yet for this service.",
+      "createTitle": "Add location",
+      "editTitle": "Edit location",
+      "nameLabel": "Name",
+      "typeLabel": "Type",
+      "addressLabel": "Address",
+      "activeLabel": "Active",
+      "activeHint": "Inactive locations can't be assigned to users.",
+      "typeShop": "Shop",
+      "typeWarehouse": "Warehouse",
+      "statusActive": "Active",
+      "statusInactive": "Inactive",
+      "nameHeader": "Name",
+      "typeHeader": "Type",
+      "addressHeader": "Address",
+      "statusHeader": "Status",
+      "actionsHeader": "Actions",
+      "save": "Save",
+      "saving": "Saving…",
+      "saveError": "Could not save the location. Check the name and try again."
     }
   },
   "Roles": {
@@ -123,7 +194,9 @@
     "requisition": "Requisitions",
     "approvals": "Approvals",
     "analytics": "Analytics",
-    "admin": "Administration"
+    "admin": "Administration",
+    "products": "Products",
+    "withdrawals": "Withdrawals"
   },
   "Permissions": {
     "sales": {
@@ -170,6 +243,18 @@
     },
     "roles": {
       "manage": "Manage roles and permissions"
+    },
+    "products": {
+      "view": "View products",
+      "manage": "Create and edit products"
+    },
+    "withdrawals": {
+      "view": "View withdrawals",
+      "request": "Request a withdrawal",
+      "approve": "Approve withdrawals"
+    },
+    "locations": {
+      "manage": "Manage locations"
     }
   }
 }

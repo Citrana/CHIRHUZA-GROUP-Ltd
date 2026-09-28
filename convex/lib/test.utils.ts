@@ -6,11 +6,55 @@ import type { TestConvex } from "convex-test";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";
 import type schema from "../schema";
+import type { BusinessUnitKey } from "./businessUnits";
 
 type T = TestConvex<typeof schema>;
 
-export async function seedRbacForTest(t: T) {
-  return await t.mutation(internal.rbac.seedRbac, {});
+/** Seeds RBAC and business units, like `seed:seedReferenceData`. */
+export async function seedReferenceDataForTest(t: T) {
+  const result = await t.mutation(internal.rbac.seedRbac, {});
+  await t.mutation(internal.businessUnits.seedBusinessUnits, {});
+  return result;
+}
+
+export async function getBusinessUnitId(
+  t: T,
+  key: BusinessUnitKey,
+): Promise<Id<"businessUnits">> {
+  const unit = await t.run((ctx) =>
+    ctx.db
+      .query("businessUnits")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique(),
+  );
+  if (!unit) {
+    throw new Error(`Business unit "${key}" not seeded.`);
+  }
+  return unit._id;
+}
+
+export async function insertLocation(
+  t: T,
+  overrides: Partial<{
+    businessUnit: BusinessUnitKey;
+    name: string;
+    type: "shop" | "warehouse";
+    active: boolean;
+  }> = {},
+): Promise<Id<"locations">> {
+  const businessUnitId = await getBusinessUnitId(
+    t,
+    overrides.businessUnit ?? "hair",
+  );
+  return await t.run((ctx) =>
+    ctx.db.insert("locations", {
+      businessUnitId,
+      name: overrides.name ?? "Main shop",
+      type: overrides.type ?? "shop",
+      address: "1 Test Avenue",
+      active: overrides.active ?? true,
+    }),
+  );
 }
 
 export async function getRoleId(t: T, key: string): Promise<Id<"roles">> {
@@ -21,7 +65,9 @@ export async function getRoleId(t: T, key: string): Promise<Id<"roles">> {
       .unique(),
   );
   if (!role) {
-    throw new Error(`Role "${key}" not seeded - call seedRbacForTest first.`);
+    throw new Error(
+      `Role "${key}" not seeded - call seedReferenceDataForTest first.`,
+    );
   }
   return role._id;
 }
@@ -36,6 +82,7 @@ export async function insertUserWithRole(
     status: "active" | "blocked";
     mustChangePassword: boolean;
     createdBy: Id<"users"> | null;
+    locationId: Id<"locations">;
   }> = {},
 ): Promise<Id<"users">> {
   const roleId = roleKey === null ? null : await getRoleId(t, roleKey);
@@ -47,6 +94,7 @@ export async function insertUserWithRole(
       status: overrides.status ?? "active",
       mustChangePassword: overrides.mustChangePassword ?? false,
       createdBy: overrides.createdBy ?? null,
+      ...(overrides.locationId ? { locationId: overrides.locationId } : {}),
     }),
   );
 }

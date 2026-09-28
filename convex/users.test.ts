@@ -4,15 +4,16 @@ import { api } from "./_generated/api";
 import schema from "./schema";
 import {
   getRoleId,
+  insertLocation,
   insertUserWithRole,
-  seedRbacForTest,
+  seedReferenceDataForTest,
 } from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
 
 async function setup() {
   const t = convexTest(schema, modules);
-  await seedRbacForTest(t);
+  await seedReferenceDataForTest(t);
   return t;
 }
 
@@ -98,6 +99,7 @@ test("createUser generates a one-time password that signs the new user in, forci
       name: "New Hire",
       email: "newhire@example.com",
       roleId: salesAgentRoleId,
+      locationId: await insertLocation(t),
     });
   expect(password).toHaveLength(16);
 
@@ -141,6 +143,7 @@ test("a blocked user is rejected at sign-in", async () => {
     .action(api.users.createUser, {
       name: "Soon Blocked",
       roleId: await getRoleId(t, "sales_agent"),
+      locationId: await insertLocation(t),
       email: "blocked@example.com",
     });
   const targetId = (await t.run((ctx) =>
@@ -170,6 +173,7 @@ test("changePassword updates the credential and clears mustChangePassword", asyn
     .action(api.users.createUser, {
       name: "Will Rotate",
       roleId: await getRoleId(t, "sales_agent"),
+      locationId: await insertLocation(t),
       email: "rotate@example.com",
     });
   const userId = (await t.run((ctx) =>
@@ -334,4 +338,139 @@ test("createUser requires roles.manage to mint a Super Admin", async () => {
       roleId: await getRoleId(t, "super_admin"),
     }),
   ).rejects.toThrow(/roles\.manage/);
+});
+
+test("createUser requires an active location for a role with own_location permissions", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin7@example.com",
+  });
+  const asAdmin = t.withIdentity({ subject: adminId });
+  const salesAgentRoleId = await getRoleId(t, "sales_agent");
+
+  await expect(
+    asAdmin.action(api.users.createUser, {
+      name: "No Location",
+      email: "noloc@example.com",
+      roleId: salesAgentRoleId,
+    }),
+  ).rejects.toThrow(/requires a location/);
+
+  await expect(
+    asAdmin.action(api.users.createUser, {
+      name: "Closed Shop",
+      email: "closed@example.com",
+      roleId: salesAgentRoleId,
+      locationId: await insertLocation(t, { active: false }),
+    }),
+  ).rejects.toThrow(/inactive/);
+
+  // Roles without own_location permissions don't need one.
+  await asAdmin.action(api.users.createUser, {
+    name: "Chief",
+    email: "chief2@example.com",
+    roleId: await getRoleId(t, "chief_admin"),
+  });
+});
+
+test("setUserRole rejects moving a user without a location onto Sales Agent", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin8@example.com",
+  });
+  const targetId = await insertUserWithRole(t, "chief_admin", {
+    email: "noloc2@example.com",
+  });
+
+  await expect(
+    t.withIdentity({ subject: adminId }).mutation(api.users.setUserRole, {
+      userId: targetId,
+      roleId: await getRoleId(t, "sales_agent"),
+    }),
+  ).rejects.toThrow(/requires a location/);
+});
+
+test("setUserLocation sets a location with an audit entry, and can't clear a required one", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin9@example.com",
+  });
+  const asAdmin = t.withIdentity({ subject: adminId });
+  const firstShop = await insertLocation(t, { name: "First" });
+  const secondShop = await insertLocation(t, { name: "Second" });
+  const agentId = await insertUserWithRole(t, "sales_agent", {
+    email: "agent2@example.com",
+    locationId: firstShop,
+  });
+
+  await asAdmin.mutation(api.users.setUserLocation, {
+    userId: agentId,
+    locationId: secondShop,
+  });
+  const agent = await t.run((ctx) => ctx.db.get("users", agentId));
+  expect(agent?.locationId).toBe(secondShop);
+  const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
+  expect(logs[0]).toMatchObject({
+    action: "user.location_changed",
+    targetUserId: agentId,
+    details: { from: firstShop, to: secondShop },
+  });
+
+  await expect(
+    asAdmin.mutation(api.users.setUserLocation, {
+      userId: agentId,
+      locationId: null,
+    }),
+  ).rejects.toThrow(/requires a location/);
+
+  await expect(
+    asAdmin.mutation(api.users.setUserLocation, {
+      userId: agentId,
+      locationId: await insertLocation(t, { active: false }),
+    }),
+  ).rejects.toThrow(/inactive/);
+
+  // A role without own_location permissions may have its location cleared.
+  const chiefId = await insertUserWithRole(t, "chief_admin", {
+    email: "chief3@example.com",
+    locationId: firstShop,
+  });
+  await asAdmin.mutation(api.users.setUserLocation, {
+    userId: chiefId,
+    locationId: null,
+  });
+  const chief = await t.run((ctx) => ctx.db.get("users", chiefId));
+  expect(chief?.locationId).toBeUndefined();
+});
+
+test("setUserLocation rejects a caller without users.manage", async () => {
+  const t = await setup();
+  const agentId = await insertUserWithRole(t, "sales_agent", {
+    email: "agent3@example.com",
+    locationId: await insertLocation(t),
+  });
+
+  await expect(
+    t.withIdentity({ subject: agentId }).mutation(api.users.setUserLocation, {
+      userId: agentId,
+      locationId: await insertLocation(t, { name: "Elsewhere" }),
+    }),
+  ).rejects.toThrow(/users\.manage/);
+});
+
+test("listUsers includes each user's location name", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", {
+    email: "admin10@example.com",
+  });
+  await insertUserWithRole(t, "sales_agent", {
+    email: "agent4@example.com",
+    locationId: await insertLocation(t, { name: "Kenya Shop" }),
+  });
+  const users = await t
+    .withIdentity({ subject: adminId })
+    .query(api.users.listUsers, {});
+  expect(users.find((u) => u.email === "agent4@example.com")?.locationName).toBe(
+    "Kenya Shop",
+  );
 });

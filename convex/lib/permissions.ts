@@ -28,9 +28,16 @@ export const PERMISSIONS = [
   { key: "stock.distribute", module: "stock", description: "Distribute stock to locations" },
   { key: "stock.approve", module: "stock", description: "Approve stock movements" },
 
+  { key: "products.view", module: "products", description: "View products" },
+  { key: "products.manage", module: "products", description: "Create and edit products" },
+
   { key: "requisition.view", module: "requisition", description: "View requisitions" },
   { key: "requisition.create", module: "requisition", description: "Create requisitions" },
   { key: "requisition.approve", module: "requisition", description: "Approve requisitions" },
+
+  { key: "withdrawals.view", module: "withdrawals", description: "View withdrawals" },
+  { key: "withdrawals.request", module: "withdrawals", description: "Request a withdrawal" },
+  { key: "withdrawals.approve", module: "withdrawals", description: "Approve withdrawals" },
 
   { key: "deletes.approve", module: "approvals", description: "Approve delete requests" },
   { key: "approvals.view_all", module: "approvals", description: "View all approval requests" },
@@ -39,6 +46,7 @@ export const PERMISSIONS = [
 
   { key: "users.manage", module: "admin", description: "Manage users" },
   { key: "roles.manage", module: "admin", description: "Manage roles and permissions" },
+  { key: "locations.manage", module: "admin", description: "Manage locations" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -72,6 +80,15 @@ const all = (keys: PermissionKey[]) =>
 
 const VIEW_KEYS = PERMISSION_KEYS.filter((k) => k.endsWith(".view"));
 
+/** Granted to every role (Sales Agent at own_location, others all_locations). */
+const PRODUCTS_AND_WITHDRAWALS: PermissionKey[] = [
+  "products.view",
+  "products.manage",
+  "withdrawals.view",
+  "withdrawals.request",
+  "withdrawals.approve",
+];
+
 /**
  * The six system roles and their *default* permission sets. Defaults are
  * applied only when a role is first created by the seed, so a Super Admin's
@@ -100,25 +117,43 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "requisition.approve",
       "deletes.approve",
       "approvals.view_all",
+      ...PRODUCTS_AND_WITHDRAWALS,
     ]),
   },
   {
     key: "manager_admin",
     name: "Manager Admin",
     description: "Distributes stock, with basic viewing.",
-    permissions: all(["stock.distribute", "stock.view", "sales.view", "requisition.view"]),
+    permissions: all([
+      "stock.distribute",
+      "stock.view",
+      "sales.view",
+      "requisition.view",
+      ...PRODUCTS_AND_WITHDRAWALS,
+    ]),
   },
   {
     key: "chief_sales_admin",
     name: "Chief Sales Admin",
     description: "Records sales, approves sale edits and raises requisitions.",
-    permissions: all(["sales.view", "sales.create", "sales.edit.approve", "requisition.create"]),
+    permissions: all([
+      "sales.view",
+      "sales.create",
+      "sales.edit.approve",
+      "requisition.create",
+      ...PRODUCTS_AND_WITHDRAWALS,
+    ]),
   },
   {
     key: "chief_inventory_admin",
     name: "Chief Inventory Admin",
     description: "Creates purchase batches and sets prices on purchase.",
-    permissions: all(["stock.view", "stock.create", "stock.set_price"]),
+    permissions: all([
+      "stock.view",
+      "stock.create",
+      "stock.set_price",
+      ...PRODUCTS_AND_WITHDRAWALS,
+    ]),
   },
   {
     key: "sales_agent",
@@ -127,6 +162,34 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
     permissions: [
       ["sales.create", "own_location"],
       ["sales.edit.request", "own_location"],
+      ...PRODUCTS_AND_WITHDRAWALS.map((k) => [k, "own_location"] as const),
     ],
+  },
+];
+
+type SeedStep = {
+  key: string;
+  grants: ReadonlyArray<readonly [roleKey: string, PermissionKey, Scope]>;
+};
+
+/**
+ * One-shot changes to *existing* roles' grants. SYSTEM_ROLES defaults only
+ * apply when a role is first created, so a new default that must also reach
+ * roles already in a database goes here. `rbac:seedRbac` applies each step
+ * once and records its key in `appliedSeedSteps`, so an admin's later edit
+ * (e.g. revoking one of these grants) survives re-seeding.
+ * Never edit or reorder an applied step - add a new one.
+ */
+export const SEED_STEPS: readonly SeedStep[] = [
+  {
+    key: "2026-09-products-withdrawals-all-roles",
+    grants: SYSTEM_ROLES.filter((r) => r.key !== SUPER_ADMIN_ROLE_KEY).flatMap(
+      (role) =>
+        PRODUCTS_AND_WITHDRAWALS.map((permissionKey) => {
+          const scope: Scope =
+            role.key === "sales_agent" ? "own_location" : "all_locations";
+          return [role.key, permissionKey, scope] as const;
+        }),
+    ),
   },
 ];
