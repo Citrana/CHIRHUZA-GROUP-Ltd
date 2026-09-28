@@ -1,5 +1,7 @@
-// Test-only helpers shared by convex/*.test.ts. Type-only imports from
-// convex-test, so this file is harmless if bundled with the deployment.
+// Test-only helpers shared by convex/*.test.ts. The two dots in the file
+// name are deliberate: the Convex CLI skips files with more than one dot,
+// so this never gets pushed to a deployment (a hyphenated name like
+// test-utils.ts would be pushed and rejected as an invalid module path).
 import type { TestConvex } from "convex-test";
 import { internal } from "../_generated/api";
 import type { Id } from "../_generated/dataModel";

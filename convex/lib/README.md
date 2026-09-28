@@ -23,8 +23,11 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `audit.ts` — `logAudit` (any entity) and `logUserAudit` (user-targeted),
   appending to the append-only `auditLogs` table.
 - `password.ts` — `generateStrongPassword`, used for admin-created accounts.
-- `test-utils.ts` — test-only helpers (`seedRbacForTest`,
-  `insertUserWithRole`, `getRoleId`) shared by `convex/*.test.ts`.
+- `test.utils.ts` — test-only helpers (`seedRbacForTest`,
+  `insertUserWithRole`, `getRoleId`) shared by `convex/*.test.ts`. The
+  double dot is deliberate: the Convex CLI skips multi-dot files, so it is
+  never pushed. Any file under `convex/` with an import/export is pushed as
+  a module, and module names can't contain hyphens.
 - `test-setup.ts` — Vitest `setupFiles` entry providing a test-only JWT
   keypair so `@convex-dev/auth` can sign session tokens inside
   `convex-test`'s mock backend. Not used against any real deployment.

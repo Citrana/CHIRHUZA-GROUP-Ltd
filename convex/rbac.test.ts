@@ -8,7 +8,7 @@ import {
   getRoleId,
   insertUserWithRole,
   seedRbacForTest,
-} from "./lib/test-utils";
+} from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
 
