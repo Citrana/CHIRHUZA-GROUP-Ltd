@@ -1,0 +1,16 @@
+{
+  "Home": {
+    "companyName": "CHIRHUZA GROUP Ltd",
+    "tagline": "Plateforme de gestion multi-services",
+    "statusTitle": "État du système",
+    "statusChecking": "Vérification de la connexion Convex…",
+    "statusConnected": "Convex connecté",
+    "statusUnreachable": "Convex injoignable",
+    "statusNotConfigured": "Convex non configuré — exécutez `pnpm dlx convex dev`"
+  },
+  "LocaleSwitcher": {
+    "label": "Langue",
+    "en": "Anglais",
+    "fr": "Français"
+  }
+}
