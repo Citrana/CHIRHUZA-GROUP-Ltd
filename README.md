@@ -38,6 +38,36 @@ Open [http://localhost:3000](http://localhost:3000) — it redirects to
 `/en` (or `/fr`). You should see "CHIRHUZA GROUP Ltd" and a "Convex
 connected" status badge once both are running.
 
+## Authentication setup (first time only)
+
+Auth is Convex Auth (email + password, no public sign-up — only a Super
+Admin creates accounts). Two one-time steps on a fresh deployment:
+
+1. Generate a JWT keypair and set it as Convex deployment env vars (not
+   `.env.local` — this is server-side only):
+   ```bash
+   node -e "
+   import('jose').then(async ({ exportJWK, exportPKCS8, generateKeyPair }) => {
+     const keys = await generateKeyPair('RS256', { extractable: true });
+     const privateKey = await exportPKCS8(keys.privateKey);
+     const publicKey = await exportJWK(keys.publicKey);
+     console.log('JWT_PRIVATE_KEY=\"' + privateKey.trimEnd().replace(/\n/g, ' ') + '\"');
+     console.log('JWKS=' + JSON.stringify({ keys: [{ use: 'sig', ...publicKey }] }));
+   })"
+   # pipe/paste the two output lines into a file, then:
+   pnpm dlx convex env set --from-file <that file>
+   pnpm dlx convex env set SITE_URL "http://localhost:3000"
+   ```
+2. Bootstrap the first Super Admin:
+   ```bash
+   pnpm dlx convex env set SUPER_ADMIN_NAME "Your Name"
+   pnpm dlx convex env set SUPER_ADMIN_EMAIL "you@example.com"
+   pnpm dlx convex env set SUPER_ADMIN_PASSWORD "a strong password"
+   pnpm dlx convex run seed:seedSuperAdmin
+   ```
+   No-ops if a Super Admin already exists. Log in at `/login` with those
+   credentials, then use "Manage users" to create further accounts.
+
 ## Scripts
 
 ```bash
@@ -66,6 +96,8 @@ runs a `pre-commit` check that:
 ```
 convex/
   schema.ts        # single source of truth for all tables
+  auth.ts           # Convex Auth config (Password provider, callbacks)
+  seed.ts           # bootstraps the first Super Admin from env vars
   lib/              # shared server-side wrappers (permissions, audit, etc.)
   <domain>.ts       # one file per domain/feature (e.g. hair.ts, fashion.ts)
   <domain>.test.ts  # tests for that domain's Convex logic
@@ -82,5 +114,7 @@ src/
 
 ## Status
 
-Scaffold stage: project setup, Convex connection, folder structure, and
-English/French i18n are in place. No auth, roles, or business features yet.
+Project setup, Convex connection, folder structure, English/French i18n,
+and authentication (Convex Auth, admin-created accounts, block/unblock,
+forced password change) are in place. No roles/permissions or business
+features yet.

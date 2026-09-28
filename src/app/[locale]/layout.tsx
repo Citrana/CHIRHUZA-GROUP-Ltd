@@ -5,6 +5,7 @@ import { setRequestLocale } from "next-intl/server";
 import { notFound } from "next/navigation";
 import { routing } from "@/i18n/routing";
 import { ConvexClientProvider } from "@/lib/convex-client-provider";
+import { AuthGate } from "@/components/auth-gate";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -48,7 +49,9 @@ export default async function RootLayout({ children, params }: Props) {
     >
       <body className="min-h-full flex flex-col">
         <NextIntlClientProvider>
-          <ConvexClientProvider>{children}</ConvexClientProvider>
+          <ConvexClientProvider>
+            <AuthGate>{children}</AuthGate>
+          </ConvexClientProvider>
         </NextIntlClientProvider>
       </body>
     </html>

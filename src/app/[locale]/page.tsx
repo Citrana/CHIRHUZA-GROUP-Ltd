@@ -5,7 +5,7 @@ import { routing } from "@/i18n/routing";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConvexStatus } from "@/components/convex-status";
-import { LocaleSwitcher } from "@/components/locale-switcher";
+import { TopBar } from "@/components/top-bar";
 
 type Props = PageProps<"/[locale]">;
 
@@ -21,7 +21,7 @@ export default async function Home({ params }: Props) {
   return (
     <main className="relative flex flex-1 flex-col items-center justify-center gap-8 p-8">
       <div className="absolute right-6 top-6">
-        <LocaleSwitcher />
+        <TopBar />
       </div>
 
       <div className="text-center">
