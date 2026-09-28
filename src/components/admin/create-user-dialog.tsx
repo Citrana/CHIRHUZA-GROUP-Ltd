@@ -1,12 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { useAction } from "convex/react";
+import { useAction, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { NativeSelect } from "@/components/ui/native-select";
+import { useRoleText } from "@/components/admin/use-role-text";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +22,14 @@ import {
 
 export function CreateUserDialog() {
   const t = useTranslations("Admin.users");
+  const roleText = useRoleText();
   const createUser = useAction(api.users.createUser);
+  const roles = useQuery(api.rbac.listRoleOptions);
 
   const [open, setOpen] = useState(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
+  const [roleId, setRoleId] = useState<Id<"roles"> | "">("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [generatedPassword, setGeneratedPassword] = useState<string | null>(
@@ -34,6 +40,7 @@ export function CreateUserDialog() {
   function reset() {
     setName("");
     setEmail("");
+    setRoleId("");
     setError(null);
     setSubmitting(false);
     setGeneratedPassword(null);
@@ -42,10 +49,11 @@ export function CreateUserDialog() {
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
+    if (roleId === "") return;
     setError(null);
     setSubmitting(true);
     try {
-      const result = await createUser({ name, email });
+      const result = await createUser({ name, email, roleId });
       setGeneratedPassword(result.password);
     } catch {
       setError(t("createError"));
@@ -124,6 +132,26 @@ export function CreateUserDialog() {
                   onChange={(event) => setEmail(event.target.value)}
                   required
                 />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="new-user-role">{t("roleLabel")}</Label>
+                <NativeSelect
+                  id="new-user-role"
+                  value={roleId}
+                  onChange={(event) =>
+                    setRoleId(event.target.value as Id<"roles">)
+                  }
+                  required
+                >
+                  <option value="" disabled>
+                    {t("selectRole")}
+                  </option>
+                  {roles?.map((role) => (
+                    <option key={role._id} value={role._id}>
+                      {roleText(role).name}
+                    </option>
+                  ))}
+                </NativeSelect>
               </div>
               {error ? (
                 <p className="text-sm text-destructive">{error}</p>
