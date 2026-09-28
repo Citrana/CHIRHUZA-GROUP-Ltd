@@ -2,14 +2,32 @@
 
 Shared server-side helpers, not routable Convex functions themselves.
 
-- `auth.ts` — `getCurrentUserOrNull` / `requireCurrentUser` / `requireSuperAdmin`
-  (query/mutation context) and their `...FromAction` counterparts (for
-  actions, which have no `ctx.db`). This is the "shared wrapper" CLAUDE.md's
-  permissions rule requires — every function that needs an authenticated or
-  Super Admin caller goes through these rather than checking ad hoc. A real
-  role/permission check (beyond `isSuperAdmin`) lands in a later step.
-- `audit.ts` — `logUserAudit`, appends to the append-only `auditLogs` table.
+- `rbac.ts` — **the wrappers every public function must use**:
+  `authedQuery` / `authedMutation` / `authedAction` (convex-helpers custom
+  functions). They reject unauthenticated/blocked callers and add
+  `ctx.user`, `ctx.permissions`, `ctx.can(key)` and
+  `ctx.requirePermission(key, scopeCheck?)` to ctx. Every handler calls
+  `ctx.requirePermission(...)` for the permission it needs; it returns the
+  caller's `scope` (`own_location` | `all_locations`), and an optional
+  `scopeCheck(scope, user)` lets a feature reject out-of-scope records.
+  Also exports a standalone `requirePermission(ctx, key, scopeCheck?)` and
+  `loadPermissions`. Permissions are resolved User -> Role -> Permissions
+  fresh on every call, so role edits take effect immediately.
+- `permissions.ts` — the typed permission catalog (`PERMISSIONS`,
+  `PermissionKey`) and the six `SYSTEM_ROLES` with default grants, seeded by
+  `rbac:seedRbac`. Add new permission keys here.
+- `auth.ts` — `getCurrentUserOrNull` / `requireCurrentUser` and
+  `requireCurrentUserFromAction` (for actions, which have no `ctx.db`). The
+  base layer `rbac.ts` builds on; use it directly only for functions that
+  need no permission (e.g. `users.getCurrentUser`, `users.changePassword`).
+- `audit.ts` — `logAudit` (any entity) and `logUserAudit` (user-targeted),
+  appending to the append-only `auditLogs` table.
 - `password.ts` — `generateStrongPassword`, used for admin-created accounts.
+- `test.utils.ts` — test-only helpers (`seedRbacForTest`,
+  `insertUserWithRole`, `getRoleId`) shared by `convex/*.test.ts`. The
+  double dot is deliberate: the Convex CLI skips multi-dot files, so it is
+  never pushed. Any file under `convex/` with an import/export is pushed as
+  a module, and module names can't contain hyphens.
 - `test-setup.ts` — Vitest `setupFiles` entry providing a test-only JWT
   keypair so `@convex-dev/auth` can sign session tokens inside
   `convex-test`'s mock backend. Not used against any real deployment.

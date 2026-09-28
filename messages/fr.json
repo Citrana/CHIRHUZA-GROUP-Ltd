@@ -14,7 +14,8 @@
     "fr": "Français"
   },
   "Nav": {
-    "manageUsers": "Gérer les utilisateurs"
+    "manageUsers": "Gérer les utilisateurs",
+    "manageRoles": "Gérer les rôles"
   },
   "Auth": {
     "logout": "Se déconnecter",
@@ -60,7 +61,115 @@
       "passwordDialogWarning": "Copiez ce mot de passe maintenant — il ne sera plus jamais affiché.",
       "copyButton": "Copier",
       "copiedLabel": "Copié !",
-      "closeButton": "Terminé"
+      "closeButton": "Terminé",
+      "roleHeader": "Rôle",
+      "roleLabel": "Rôle",
+      "selectRole": "Choisissez un rôle",
+      "noRole": "Aucun rôle",
+      "roleChangeError": "Impossible de modifier le rôle."
+    },
+    "roles": {
+      "title": "Rôles",
+      "accessDenied": "Vous n'avez pas accès à cette page.",
+      "nameHeader": "Rôle",
+      "descriptionHeader": "Description",
+      "permissionsHeader": "Permissions",
+      "permissionCount": "{count, plural, one {# permission} other {# permissions}}",
+      "systemBadge": "Système",
+      "lockedBadge": "Verrouillé",
+      "edit": "Modifier les permissions",
+      "back": "Retour aux rôles",
+      "notFound": "Rôle introuvable.",
+      "lockedNote": "Le rôle Super administrateur est verrouillé : il détient toujours toutes les permissions, afin que personne ne puisse se bloquer l'accès.",
+      "permissionHeader": "Permission",
+      "grantedHeader": "Accordée",
+      "scopeHeader": "Portée",
+      "scopeOwn": "Son propre site",
+      "scopeAll": "Tous les sites",
+      "saveError": "Impossible d'enregistrer la modification. Veuillez réessayer."
+    }
+  },
+  "Roles": {
+    "super_admin": {
+      "name": "Super administrateur",
+      "description": "Accès complet, y compris la gestion des utilisateurs et des rôles."
+    },
+    "chief_admin": {
+      "name": "Administrateur en chef",
+      "description": "Supervise les analyses et approuve les modifications, le stock, la paie, les dépenses et les réquisitions."
+    },
+    "manager_admin": {
+      "name": "Administrateur gestionnaire",
+      "description": "Distribue le stock, avec une consultation de base."
+    },
+    "chief_sales_admin": {
+      "name": "Administrateur en chef des ventes",
+      "description": "Enregistre les ventes, approuve leurs modifications et crée des réquisitions."
+    },
+    "chief_inventory_admin": {
+      "name": "Administrateur en chef de l'inventaire",
+      "description": "Crée les lots d'achat et fixe les prix à l'achat."
+    },
+    "sales_agent": {
+      "name": "Agent commercial",
+      "description": "Enregistre des ventes et demande des modifications sur son propre site."
+    }
+  },
+  "PermissionModules": {
+    "sales": "Ventes",
+    "expenses": "Dépenses",
+    "payroll": "Paie",
+    "stock": "Stock",
+    "requisition": "Réquisitions",
+    "approvals": "Approbations",
+    "analytics": "Analyses",
+    "admin": "Administration"
+  },
+  "Permissions": {
+    "sales": {
+      "view": "Voir les ventes",
+      "create": "Enregistrer des ventes",
+      "edit": {
+        "request": "Demander la modification d'une vente",
+        "approve": "Approuver les modifications de ventes"
+      }
+    },
+    "expenses": {
+      "view": "Voir les dépenses",
+      "request": "Demander une dépense",
+      "approve": "Approuver les dépenses"
+    },
+    "payroll": {
+      "view": "Voir la paie",
+      "create": "Créer des entrées de paie",
+      "approve": "Approuver la paie"
+    },
+    "stock": {
+      "view": "Voir le stock",
+      "create": "Créer des lots d'achat",
+      "set_price": "Fixer les prix à l'achat",
+      "distribute": "Distribuer le stock aux sites",
+      "approve": "Approuver les mouvements de stock"
+    },
+    "requisition": {
+      "view": "Voir les réquisitions",
+      "create": "Créer des réquisitions",
+      "approve": "Approuver les réquisitions"
+    },
+    "deletes": {
+      "approve": "Approuver les demandes de suppression"
+    },
+    "approvals": {
+      "view_all": "Voir toutes les demandes d'approbation"
+    },
+    "analytics": {
+      "view": "Voir les analyses"
+    },
+    "users": {
+      "manage": "Gérer les utilisateurs"
+    },
+    "roles": {
+      "manage": "Gérer les rôles et permissions"
     }
   }
 }

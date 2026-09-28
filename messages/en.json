@@ -14,7 +14,8 @@
     "fr": "French"
   },
   "Nav": {
-    "manageUsers": "Manage users"
+    "manageUsers": "Manage users",
+    "manageRoles": "Manage roles"
   },
   "Auth": {
     "logout": "Log out",
@@ -60,7 +61,115 @@
       "passwordDialogWarning": "Copy this password now — it will not be shown again.",
       "copyButton": "Copy",
       "copiedLabel": "Copied!",
-      "closeButton": "Done"
+      "closeButton": "Done",
+      "roleHeader": "Role",
+      "roleLabel": "Role",
+      "selectRole": "Select a role",
+      "noRole": "No role",
+      "roleChangeError": "Could not change the role."
+    },
+    "roles": {
+      "title": "Roles",
+      "accessDenied": "You don't have access to this page.",
+      "nameHeader": "Role",
+      "descriptionHeader": "Description",
+      "permissionsHeader": "Permissions",
+      "permissionCount": "{count, plural, one {# permission} other {# permissions}}",
+      "systemBadge": "System",
+      "lockedBadge": "Locked",
+      "edit": "Edit permissions",
+      "back": "Back to roles",
+      "notFound": "Role not found.",
+      "lockedNote": "The Super Admin role is locked: it always holds every permission, so nobody can lock themselves out.",
+      "permissionHeader": "Permission",
+      "grantedHeader": "Granted",
+      "scopeHeader": "Scope",
+      "scopeOwn": "Own location",
+      "scopeAll": "All locations",
+      "saveError": "Could not save the change. Please try again."
+    }
+  },
+  "Roles": {
+    "super_admin": {
+      "name": "Super Admin",
+      "description": "Full access, including user and role management."
+    },
+    "chief_admin": {
+      "name": "Chief Admin",
+      "description": "Oversees analytics and approves edits, stock, payroll, expenses and requisitions."
+    },
+    "manager_admin": {
+      "name": "Manager Admin",
+      "description": "Distributes stock, with basic viewing."
+    },
+    "chief_sales_admin": {
+      "name": "Chief Sales Admin",
+      "description": "Records sales, approves sale edits and raises requisitions."
+    },
+    "chief_inventory_admin": {
+      "name": "Chief Inventory Admin",
+      "description": "Creates purchase batches and sets prices on purchase."
+    },
+    "sales_agent": {
+      "name": "Sales Agent",
+      "description": "Records sales and requests edits at their own location."
+    }
+  },
+  "PermissionModules": {
+    "sales": "Sales",
+    "expenses": "Expenses",
+    "payroll": "Payroll",
+    "stock": "Stock",
+    "requisition": "Requisitions",
+    "approvals": "Approvals",
+    "analytics": "Analytics",
+    "admin": "Administration"
+  },
+  "Permissions": {
+    "sales": {
+      "view": "View sales",
+      "create": "Record sales",
+      "edit": {
+        "request": "Request an edit to a sale",
+        "approve": "Approve sale edits"
+      }
+    },
+    "expenses": {
+      "view": "View expenses",
+      "request": "Request an expense",
+      "approve": "Approve expenses"
+    },
+    "payroll": {
+      "view": "View payroll",
+      "create": "Create payroll entries",
+      "approve": "Approve payroll"
+    },
+    "stock": {
+      "view": "View stock",
+      "create": "Create purchase batches",
+      "set_price": "Set prices on purchase",
+      "distribute": "Distribute stock to locations",
+      "approve": "Approve stock movements"
+    },
+    "requisition": {
+      "view": "View requisitions",
+      "create": "Create requisitions",
+      "approve": "Approve requisitions"
+    },
+    "deletes": {
+      "approve": "Approve delete requests"
+    },
+    "approvals": {
+      "view_all": "View all approval requests"
+    },
+    "analytics": {
+      "view": "View analytics"
+    },
+    "users": {
+      "manage": "Manage users"
+    },
+    "roles": {
+      "manage": "Manage roles and permissions"
     }
   }
 }
