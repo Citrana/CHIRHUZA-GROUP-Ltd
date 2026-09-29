@@ -7,6 +7,10 @@ import {
   applyRequisitionApproval,
   applyRequisitionRejection,
 } from "./requisitions";
+import {
+  applyStockBatchApproval,
+  applyStockBatchRejection,
+} from "./stockBatches";
 
 /**
  * Applies an approved change. Runs inside `approvals.decideApproval`'s
@@ -62,7 +66,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   expense: notImplementedYet,
   payroll: notImplementedYet,
   requisition: applyRequisitionApproval,
-  stock_batch: notImplementedYet,
+  stock_batch: applyStockBatchApproval,
   distribution: notImplementedYet,
   withdrawal: notImplementedYet,
 };
@@ -75,4 +79,5 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
  */
 export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalHandler>> = {
   requisition: applyRequisitionRejection,
+  stock_batch: applyStockBatchRejection,
 };

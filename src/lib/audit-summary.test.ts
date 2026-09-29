@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { formatAuditValue, summarizeAuditEntry } from "./audit-summary";
+import { formatAuditValue, formatSnapshotValue, orderSnapshotFields, summarizeAuditEntry } from "./audit-summary";
 
 test("an update summarizes its first readable change and counts the rest", () => {
   expect(
@@ -69,4 +69,48 @@ test("formatAuditValue", () => {
   expect(formatAuditValue(undefined, "—")).toBe("—");
   expect(formatAuditValue(false, "—")).toBe("false");
   expect(formatAuditValue({ a: 1 }, "—")).toBe('{"a":1}');
+});
+
+test("formatSnapshotValue shows money fields as money, in the viewer's language", () => {
+  const usd = { currency: "USD" as const, empty: "—" };
+  expect(formatSnapshotValue("purchasedTotal", 86421, { ...usd, locale: "en" })).toBe("$864.21");
+  expect(formatSnapshotValue("grandTotal", 100851, { ...usd, locale: "fr" })).toMatch(/^1\s008,51\s\$US$/);
+  // Counts and text are left alone.
+  expect(formatSnapshotValue("purchasedLines", 3, { ...usd, locale: "en" })).toBe("3");
+  expect(formatSnapshotValue("number", "BATCH-00001", { ...usd, locale: "en" })).toBe("BATCH-00001");
+  // Without a known currency, the raw value.
+  expect(formatSnapshotValue("amount", 1250, { currency: null, locale: "en", empty: "—" })).toBe("1250");
+  expect(formatSnapshotValue("amount", null, { ...usd, locale: "en" })).toBe("—");
+});
+
+test("orderSnapshotFields: identity first, money last, grand total at the very end", () => {
+  // As a stock batch approval comes back from the database (alphabetical).
+  expect(
+    orderSnapshotFields([
+      "currency",
+      "expensesTotal",
+      "grandTotal",
+      "notPurchasedLines",
+      "number",
+      "purchasedLines",
+      "purchasedTotal",
+      "title",
+    ]),
+  ).toEqual([
+    "number",
+    "title",
+    "purchasedLines",
+    "notPurchasedLines",
+    "currency",
+    "purchasedTotal",
+    "expensesTotal",
+    "grandTotal",
+  ]);
+  expect(orderSnapshotFields(["status", "amount", "category", "name", "currency"])).toEqual([
+    "name",
+    "status",
+    "category",
+    "currency",
+    "amount",
+  ]);
 });

@@ -1,6 +1,7 @@
 import { v, type Infer } from "convex/values";
 import type { MutationCtx } from "../_generated/server";
 import type { Id, TableNames } from "../_generated/dataModel";
+import { isMoneyField } from "./money";
 
 /**
  * The audit log (`auditLogs`) is append-only per CLAUDE.md: rows are only
@@ -85,7 +86,8 @@ export function snapshot<T extends Record<string, unknown>>(
 
 /**
  * Only the fields that changed between two snapshots, for an update's
- * before/after. Returns `null` when nothing changed - skip the entry then.
+ * before/after (plus `currency` when an amount changed). Returns `null`
+ * when nothing changed - skip the entry then.
  */
 export function diff(
   before: AuditSnapshot,
@@ -101,7 +103,16 @@ export function diff(
       changedAfter[key] = a;
     }
   }
-  return Object.keys(changedAfter).length === 0
-    ? null
-    : { before: changedBefore, after: changedAfter };
+  if (Object.keys(changedAfter).length === 0) return null;
+  // Keep the currency next to a changed amount so the entry reads on its own.
+  if (
+    Object.keys(changedAfter).some(isMoneyField) &&
+    before.currency !== undefined &&
+    after.currency !== undefined &&
+    !("currency" in changedAfter)
+  ) {
+    changedBefore.currency = normalize(before.currency);
+    changedAfter.currency = normalize(after.currency);
+  }
+  return { before: changedBefore, after: changedAfter };
 }

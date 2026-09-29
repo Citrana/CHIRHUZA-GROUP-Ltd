@@ -4,6 +4,12 @@ import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
 import { auditActionValidator } from "./lib/audit";
 import {
+  batchItemStatusValidator,
+  expenseCategoryValidator,
+  stockBatchStatusValidator,
+} from "./lib/stockBatches";
+import { usdValidator } from "./lib/money";
+import {
   requisitionItemResolutionValidator,
   requisitionStatusValidator,
 } from "./lib/requisitions";
@@ -184,6 +190,72 @@ export default defineSchema({
   })
     .index("by_requisitionId_and_productId", ["requisitionId", "productId"])
     .index("by_productId", ["productId"]),
+
+  // Stock batches (convex/lib/stockBatches.ts): purchases made abroad by the
+  // Chief Inventory Admin. USD only; money in integer cents.
+  stockBatches: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // e.g. BATCH-00001, per business unit (numberSequences).
+    number: v.string(),
+    title: v.string(),
+    description: v.optional(v.string()),
+    status: stockBatchStatusValidator,
+    currency: usdValidator,
+    // Deprecated: expenses are no longer spread over products. Never read
+    // or written; optional so batches created before the change stay valid.
+    allocationMethod: v.optional(v.union(v.literal("value"), v.literal("quantity"))),
+    createdBy: v.id("users"),
+    // The latest approval request (approve or reopen).
+    approvalId: v.optional(v.id("approvals")),
+    // UTC ms.
+    purchasedAt: v.optional(v.number()),
+    approvedAt: v.optional(v.number()),
+    shippedAt: v.optional(v.number()),
+    arrivedAt: v.optional(v.number()),
+    receivedAt: v.optional(v.number()),
+    // Goods total, fixed when marked purchased (cents). Expenses stay open
+    // (and aside from product costs), so their totals are always computed.
+    purchasedTotal: v.optional(v.number()),
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"]),
+
+  // Which requisitions a batch covers (kept in sync with its lines).
+  stockBatchRequisitions: defineTable({
+    batchId: v.id("stockBatches"),
+    requisitionId: v.id("requisitions"),
+  })
+    .index("by_batchId_and_requisitionId", ["batchId", "requisitionId"])
+    .index("by_requisitionId", ["requisitionId"]),
+
+  stockBatchItems: defineTable({
+    batchId: v.id("stockBatches"),
+    productId: v.id("products"),
+    // Missing = an extra product that wasn't requested.
+    requisitionItemId: v.optional(v.id("requisitionItems")),
+    status: batchItemStatusValidator,
+    // 0 for extras.
+    qtyRequested: v.number(),
+    qtyPurchased: v.number(),
+    // Cents per unit; set before the batch can be marked purchased.
+    unitCost: v.optional(v.number()),
+    currency: usdValidator,
+    // Required when not purchased, or fewer than requested were bought.
+    reason: v.optional(v.string()),
+  })
+    .index("by_batchId", ["batchId"])
+    .index("by_requisitionItemId", ["requisitionItemId"])
+    .index("by_productId", ["productId"]),
+
+  stockBatchExpenses: defineTable({
+    batchId: v.id("stockBatches"),
+    category: expenseCategoryValidator,
+    // Cents, > 0.
+    amount: v.number(),
+    currency: usdValidator,
+    note: v.optional(v.string()),
+    receiptFileId: v.optional(v.id("_storage")),
+  }).index("by_batchId", ["batchId"]),
 
   // Per-business-unit document number sequences (e.g. key "requisition").
   numberSequences: defineTable({

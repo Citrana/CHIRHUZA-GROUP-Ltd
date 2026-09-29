@@ -8,6 +8,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import { AUDIT_ACTIONS, type AuditAction } from "../../../convex/lib/audit";
+import { snapshotCurrency } from "../../../convex/lib/money";
 import {
   BUSINESS_TIME_ZONE,
   businessDayEndUtc,
@@ -22,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ChangesTable } from "@/components/shared/changes-table";
 import {
-  formatAuditValue,
+  formatSnapshotValue,
   summarizeAuditEntry,
 } from "@/lib/audit-summary";
 import { useCan } from "@/lib/use-can";
@@ -130,10 +131,12 @@ export function AuditLogPanel() {
   const summaryText = (entry: AuditEntry) => {
     const summary = summarizeAuditEntry(entry);
     if (!summary) return empty;
+    const opts = { currency: snapshotCurrency(entry.before, entry.after), locale, empty };
+    const value = (v: unknown) => formatSnapshotValue(summary.field, v, opts);
     const body =
       summary.kind === "change"
-        ? `${summary.field}: ${formatAuditValue(summary.from, empty)} → ${formatAuditValue(summary.to, empty)}`
-        : `${summary.field}: ${formatAuditValue(summary.value, empty)}`;
+        ? `${summary.field}: ${value(summary.from)} → ${value(summary.to)}`
+        : `${summary.field}: ${value(summary.value)}`;
     return summary.more > 0
       ? `${body} ${t("more", { count: summary.more })}`
       : body;

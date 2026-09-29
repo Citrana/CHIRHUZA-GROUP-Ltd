@@ -50,6 +50,14 @@ this repo, now and later — do not relax them for convenience.
 - Money is stored as an **integer** in minor units (e.g. cents), plus a
   separate `currency` field typed `"USD" | "CDF"`. Never store money as a
   float, and never store an amount without its currency.
+- Use `convex/lib/money.ts` (`currencyValidator`, `parseMoneyToMinor`,
+  `formatMoney`) and the `<MoneyInput>` component for entry — never parse
+  or format money by hand. Stock purchasing is USD only (`usdValidator`).
+- In audit snapshots and approval payloads, name money fields `amount` or
+  `…Amount` / `…Total` / `…Cost` / `…Price` and put `currency` beside them
+  (`isMoneyField`): the Approvals and Audit pages then show them formatted
+  instead of as raw cents. `diff(...)` keeps `currency` next to a changed
+  amount.
 
 ## Multi-tenancy (business units)
 
@@ -265,8 +273,11 @@ service picker + mobile-first app shell (`/hair` with placeholder module
 pages), the append-only audit log (`/admin/audit`), the generic approval
 engine (`/[service]/approvals`), the Hair product catalogue
 (`/[service]/products`, with lengths/colours in `/[service]/settings`), and
-requisitions (`/[service]/requisitions`: draft -> submit -> approve;
-purchasing comes next).
+requisitions (`/[service]/requisitions`: draft -> submit -> approve), and
+stock batches (`/[service]/stock`: purchasing abroad, trip expenses kept
+aside (never spread into product costs) and addable at any time by the buyer
+or the receiving team, approval, shipped/arrived/received; receiving into
+warehouse stock comes next).
 Other business modules come in later steps, built on top
 of the rules above.
 

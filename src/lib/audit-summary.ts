@@ -1,4 +1,5 @@
 import type { AuditAction } from "../../convex/lib/audit";
+import { formatMoney, isMoneyField, type Currency } from "../../convex/lib/money";
 
 /**
  * One-line summary of an audit entry for the compact audit list, e.g.
@@ -68,4 +69,61 @@ export function formatAuditValue(value: unknown, empty: string): string {
   if (value === null || value === undefined) return empty;
   if (typeof value === "object") return JSON.stringify(value);
   return String(value);
+}
+
+/**
+ * Fields in reading order within their group (see below); `grandTotal`
+ * (the sum) always comes last.
+ */
+const FIELD_ORDER = [
+  "purchasedLines",
+  "notPurchasedLines",
+  "amount",
+  "unitCost",
+  "purchasedTotal",
+  "expensesTotal",
+];
+
+/**
+ * Display order for a snapshot's fields (stored snapshots come back with
+ * their keys sorted alphabetically): what the record is first (number,
+ * title, name, ...), then the other fields, then the currency and the
+ * money fields, ending with `grandTotal`.
+ */
+export function orderSnapshotFields(fields: string[]): string[] {
+  const group = (field: string) => {
+    if (field === "number" || field === "title" || PREFERRED_FIELDS.includes(field)) return 0;
+    if (field === "grandTotal") return 4;
+    if (field === "currency") return 2;
+    if (isMoneyField(field)) return 3;
+    return 1;
+  };
+  const within = (field: string) => {
+    if (field === "number") return -2;
+    if (field === "title") return -1;
+    const preferred = PREFERRED_FIELDS.indexOf(field);
+    if (preferred !== -1) return preferred;
+    const known = FIELD_ORDER.indexOf(field);
+    return known === -1 ? FIELD_ORDER.length : known;
+  };
+  return [...fields].sort(
+    (a, b) => group(a) - group(b) || within(a) - within(b) || a.localeCompare(b),
+  );
+}
+
+/**
+ * Display form of one snapshot field: money fields (`isMoneyField`) holding
+ * integer cents are formatted in the snapshot's currency when it's known
+ * (payloads store cents, e.g. 86421 → "$864.21"); anything else as
+ * `formatAuditValue`.
+ */
+export function formatSnapshotValue(
+  field: string,
+  value: unknown,
+  { currency, locale, empty }: { currency: Currency | null; locale: string; empty: string },
+): string {
+  if (currency && isMoneyField(field) && Number.isSafeInteger(value)) {
+    return formatMoney(value as number, currency, locale);
+  }
+  return formatAuditValue(value, empty);
 }

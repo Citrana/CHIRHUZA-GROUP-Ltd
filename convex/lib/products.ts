@@ -160,8 +160,8 @@ export async function refreshProductSearchText(
 
 /**
  * Whether a product is referenced by a requisition or stock, in which case
- * it can only be archived, never deleted. Checks requisition lines today;
- * TODO: the stock feature must add its check here.
+ * it can only be archived, never deleted. Checks requisition and stock
+ * batch lines; future stock tables (inventory) must add their checks here.
  * Exported as an object property so tests can stub it.
  */
 export const productUsage: {
@@ -175,7 +175,12 @@ export const productUsage: {
       .query("requisitionItems")
       .withIndex("by_productId", (q) => q.eq("productId", productId))
       .first();
-    return requisitionLine !== null;
+    if (requisitionLine) return true;
+    const batchLine = await ctx.db
+      .query("stockBatchItems")
+      .withIndex("by_productId", (q) => q.eq("productId", productId))
+      .first();
+    return batchLine !== null;
   },
 };
 
