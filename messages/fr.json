@@ -2,6 +2,21 @@
   "Common": {
     "close": "Fermer"
   },
+  "DataTable": {
+    "search": "Rechercher…",
+    "loading": "Chargement…",
+    "noResults": "Aucun résultat.",
+    "pagination": "Pagination",
+    "rowsPerPage": "Lignes par page",
+    "page": "Page {page}",
+    "showing": "Affichage {start}–{end}",
+    "showingOf": "Affichage {start}–{end} sur {total}",
+    "previous": "Page précédente",
+    "next": "Page suivante",
+    "details": "Détails",
+    "expandRow": "Afficher les détails",
+    "collapseRow": "Masquer les détails"
+  },
   "AppHeader": {
     "brand": "CHIRHUZA GROUP Ltd",
     "switchService": "Changer de service",
@@ -111,7 +126,8 @@
       "noLocation": "Aucun site",
       "selectLocation": "Choisissez un site",
       "locationRequiredHint": "Obligatoire pour ce rôle.",
-      "locationChangeError": "Impossible de modifier le site."
+      "locationChangeError": "Impossible de modifier le site.",
+      "searchPlaceholder": "Rechercher par nom ou e-mail…"
     },
     "roles": {
       "title": "Rôles",
@@ -158,7 +174,8 @@
       "actionsHeader": "Actions",
       "save": "Enregistrer",
       "saving": "Enregistrement…",
-      "saveError": "Impossible d'enregistrer le site. Vérifiez le nom et réessayez."
+      "saveError": "Impossible d'enregistrer le site. Vérifiez le nom et réessayez.",
+      "searchPlaceholder": "Rechercher des sites…"
     }
   },
   "Roles": {
@@ -277,9 +294,15 @@
     "toLabel": "Au",
     "clearFilters": "Effacer les filtres",
     "empty": "Aucune entrée ne correspond à ces filtres.",
-    "loadMore": "Charger plus",
-    "loading": "Chargement…",
-    "by": "par {name}",
+    "filters": "Filtres",
+    "filtersWithCount": "Filtres ({count})",
+    "timeHeader": "Date",
+    "whoHeader": "Qui",
+    "actionHeader": "Action",
+    "recordHeader": "Enregistrement",
+    "changesHeader": "Modifications",
+    "more": "(+{count} de plus)",
+    "recordHistory": "Voir l'historique de cet enregistrement",
     "unknownActor": "Utilisateur inconnu",
     "reason": "Motif",
     "field": "Champ",
