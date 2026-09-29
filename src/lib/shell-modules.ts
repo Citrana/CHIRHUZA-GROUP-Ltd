@@ -15,7 +15,8 @@ import type { PermissionModule } from "../../convex/lib/permissions";
 /**
  * The modules of a service's app shell, in menu order. `key` is the URL
  * segment (/[service]/[key]) and the `Modules.<key>` translation key. A
- * module is shown when the user holds any permission in `permissionModule`.
+ * module is shown when the user holds any permission in `permissionModule`,
+ * or always when `alwaysVisible` (the page itself filters by permission).
  */
 export const SHELL_MODULES = [
   { key: "analytics", permissionModule: "analytics", icon: ChartColumn },
@@ -26,11 +27,19 @@ export const SHELL_MODULES = [
   { key: "expenses", permissionModule: "expenses", icon: Receipt },
   { key: "payroll", permissionModule: "payroll", icon: Wallet },
   { key: "withdrawals", permissionModule: "withdrawals", icon: Banknote },
-  { key: "approvals", permissionModule: "approvals", icon: BadgeCheck },
+  // Everyone may have requests to track; the list shows each user only
+  // what they may see.
+  {
+    key: "approvals",
+    permissionModule: "approvals",
+    icon: BadgeCheck,
+    alwaysVisible: true,
+  },
 ] as const satisfies ReadonlyArray<{
   key: string;
   permissionModule: PermissionModule;
   icon: LucideIcon;
+  alwaysVisible?: boolean;
 }>;
 
 export type ShellModule = (typeof SHELL_MODULES)[number];

@@ -72,7 +72,8 @@ this repo, now and later — do not relax them for convenience.
 
 - Deletes of business data are never immediate. A delete goes through an
   **approval request** (soft delete): the record is flagged/queued, not
-  removed, until an approver acts on it.
+  removed, until an approver acts on it. Use the approval engine with type
+  `"delete"` (see Approvals).
 
 ## Audit logging
 
@@ -96,6 +97,23 @@ this repo, now and later — do not relax them for convenience.
 
 - Nobody can approve their own request (delete approvals or otherwise). The
   requester and the approver must always be different users.
+- There is **one** approval engine (`convex/lib/approvals.ts`,
+  `convex/approvals.ts`). A feature never applies an approvable change
+  directly: its mutation checks the caller may *request* it, then calls
+  `requestApproval(ctx, { type, businessUnitId, locationId?, entityTable,
+  entityId, payload, reason? })`. Never write `approvals.status` yourself —
+  only `approvals.decideApproval` does, after checking the decider holds
+  `requiredPermission` (in scope) and isn't the requester.
+- The change is applied by the type's handler in `APPROVAL_HANDLERS`
+  (`convex/lib/approvalHandlers.ts`), which runs in the same transaction as
+  the decision: if it throws, nothing changes and the approval stays
+  pending. Handlers audit what they change. A new approval type goes in
+  `convex/lib/approvalTypes.ts` (the compiler then demands a handler and a
+  default permission) plus `Approvals.types.<type>` in both message files.
+- Payload convention: `{ before?: {...}, after?: {...}, ...extra data the
+  handler needs }` — the Approvals page shows `before`/`after` as a diff.
+  Money inside it follows the Money rule (integer minor units + currency).
+  Never put secrets in a payload.
 
 ## Append-only tables
 

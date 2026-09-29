@@ -70,6 +70,7 @@ needed.
 | `pagination` | `{ mode: "client", pageSize?, pageSizeOptions? }` or `{ mode: "server", ...PaginationProps }` | off | See [Pagination](#pagination). |
 | `initialSorting` | `SortingState` | `[]` | e.g. `[{ id: "name", desc: false }]`. |
 | `renderExpanded` | `(row) => ReactNode` | off | Makes rows clickable. A click, Enter or Space toggles this detail view under the row. |
+| `onRowClick` | `(row) => void` | off | Makes rows clickable (click, Enter or Space) and calls this instead, e.g. to open a detail drawer (see the Approvals page). Takes precedence over `renderExpanded`, so use one or the other. |
 | `renderCard` | `(row) => ReactNode` | off | On phones (below `md`) renders one card per row instead of the table. |
 | `className` | `string` | none | Classes for the outer wrapper. |
 

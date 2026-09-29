@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { Link } from "@/i18n/navigation";
 import { useVisibleModules } from "@/lib/use-visible-modules";
+import { PendingApprovalsBadge } from "@/components/approvals/pending-approvals-badge";
 
 /** A service's landing page: a tappable grid of the user's modules. */
 export function ServiceHome({ service }: { service: BusinessUnitKey }) {
@@ -33,7 +34,12 @@ export function ServiceHome({ service }: { service: BusinessUnitKey }) {
               href={`/${service}/${key}`}
               className="flex min-h-24 flex-col items-start justify-between gap-3 rounded-xl border border-border bg-card p-4 transition-colors hover:border-primary hover:bg-muted/50"
             >
-              <Icon className="size-6 text-primary" aria-hidden />
+              <span className="flex w-full items-start justify-between gap-2">
+                <Icon className="size-6 text-primary" aria-hidden />
+                {key === "approvals" ? (
+                  <PendingApprovalsBadge service={service} />
+                ) : null}
+              </span>
               <span className="font-medium">{tModules(key)}</span>
             </Link>
           </li>

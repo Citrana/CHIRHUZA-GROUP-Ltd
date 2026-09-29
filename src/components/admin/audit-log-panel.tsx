@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import { ChangesTable } from "@/components/shared/changes-table";
 import {
   formatAuditValue,
   summarizeAuditEntry,
@@ -183,12 +184,6 @@ export function AuditLogPanel() {
   ];
 
   const details = (entry: AuditEntry) => {
-    const fields = [
-      ...new Set([
-        ...Object.keys(entry.before ?? {}),
-        ...Object.keys(entry.after ?? {}),
-      ]),
-    ];
     return (
       <div className="flex flex-col gap-3 pt-1 text-sm">
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
@@ -204,40 +199,7 @@ export function AuditLogPanel() {
             </span>
           </dd>
         </dl>
-        {fields.length > 0 ? (
-          <div className="overflow-x-auto rounded-md border border-border bg-background">
-            <table className="w-full text-sm">
-              <thead className="bg-muted/50 text-muted-foreground">
-                <tr>
-                  <th className="p-2 text-left font-medium">{t("field")}</th>
-                  {entry.before ? (
-                    <th className="p-2 text-left font-medium">{t("before")}</th>
-                  ) : null}
-                  {entry.after ? (
-                    <th className="p-2 text-left font-medium">{t("after")}</th>
-                  ) : null}
-                </tr>
-              </thead>
-              <tbody>
-                {fields.map((field) => (
-                  <tr key={field} className="border-t border-border">
-                    <td className="p-2 font-mono text-xs">{field}</td>
-                    {entry.before ? (
-                      <td className="p-2 break-all">
-                        {formatAuditValue(entry.before[field], empty)}
-                      </td>
-                    ) : null}
-                    {entry.after ? (
-                      <td className="p-2 break-all">
-                        {formatAuditValue(entry.after[field], empty)}
-                      </td>
-                    ) : null}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : null}
+        <ChangesTable before={entry.before} after={entry.after} />
         {entry.reason ? (
           <p>
             <span className="font-medium">{t("reason")}:</span> {entry.reason}

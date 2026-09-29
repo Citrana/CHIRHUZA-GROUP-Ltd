@@ -4,6 +4,10 @@ import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
 import { auditActionValidator } from "./lib/audit";
 import {
+  approvalStatusValidator,
+  approvalTypeValidator,
+} from "./lib/approvalTypes";
+import {
   businessUnitKeyValidator,
   locationTypeValidator,
 } from "./lib/businessUnits";
@@ -86,6 +90,34 @@ export default defineSchema({
   appliedSeedSteps: defineTable({
     key: v.string(),
   }).index("by_key", ["key"]),
+
+  // The generic approval engine (convex/lib/approvals.ts). Created only via
+  // requestApproval; status moves pending -> approved/rejected exactly once,
+  // via approvals.decideApproval. Every request and decision is audited.
+  approvals: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // Set when the change belongs to one location (scopes own_location deciders).
+    locationId: v.optional(v.id("locations")),
+    type: approvalTypeValidator,
+    entityTable: v.string(),
+    entityId: v.string(),
+    // The proposed change: `{ before?, after?, ...handler data }`. Never secrets.
+    payload: v.any(),
+    reason: v.optional(v.string()),
+    status: approvalStatusValidator,
+    requestedBy: v.id("users"),
+    decidedBy: v.optional(v.id("users")),
+    // UTC ms.
+    decidedAt: v.optional(v.number()),
+    decisionNote: v.optional(v.string()),
+    // A PermissionKey the decider must hold.
+    requiredPermission: v.string(),
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"])
+    .index("by_businessUnitId_and_requestedBy", ["businessUnitId", "requestedBy"])
+    .index("by_businessUnitId_and_type", ["businessUnitId", "type"])
+    .index("by_entityTable_and_entityId", ["entityTable", "entityId"]),
 
   // Append-only per CLAUDE.md: never updated or deleted, only inserted -
   // write it only through logAudit / ctx.audit (convex/lib/audit.ts).
