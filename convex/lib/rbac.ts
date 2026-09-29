@@ -5,11 +5,16 @@ import {
   customMutation,
   customQuery,
 } from "convex-helpers/server/customFunctions";
+import {
+  wrapDatabaseWriter,
+  type Rules,
+} from "convex-helpers/server/rowLevelSecurity";
 import { action, mutation, query } from "../_generated/server";
 import type { MutationCtx, QueryCtx } from "../_generated/server";
-import type { Doc, Id } from "../_generated/dataModel";
+import type { DataModel, Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { requireCurrentUser, requireCurrentUserFromAction } from "./auth";
+import { logAudit, type AuditEntry } from "./audit";
 import { isPermissionKey, type PermissionKey, type Scope } from "./permissions";
 
 export type PermissionMap = ReadonlyMap<PermissionKey, Scope>;
@@ -125,11 +130,35 @@ export const authedQuery = customQuery(
   }),
 );
 
+/**
+ * Append-only tables: rows may be inserted but never patched, replaced or
+ * deleted. Enforced at runtime on authedMutation's `ctx.db`.
+ */
+const APPEND_ONLY_RULES: Rules<MutationCtx, DataModel> = {
+  auditLogs: { modify: async () => false },
+  appliedSeedSteps: { modify: async () => false },
+};
+
+/** `ctx.db` that throws on patch/replace/delete of append-only tables. */
+export function appendOnlyGuardedDb(ctx: MutationCtx) {
+  return wrapDatabaseWriter(ctx, ctx.db, APPEND_ONLY_RULES);
+}
+
+/**
+ * Also adds `ctx.audit(entry)` - logAudit with the caller as actor - and
+ * swaps `ctx.db` for one that refuses to modify append-only tables.
+ */
 export const authedMutation = customMutation(
   mutation,
   customCtx(async (ctx) => {
     const user = await requireCurrentUser(ctx);
-    return buildPermissionCtx(user, await loadPermissions(ctx, user));
+    const db = appendOnlyGuardedDb(ctx);
+    return {
+      ...buildPermissionCtx(user, await loadPermissions(ctx, user)),
+      db,
+      audit: (entry: AuditEntry) =>
+        logAudit({ ...ctx, db }, { ...entry, actorId: user._id }),
+    };
   }),
 );
 

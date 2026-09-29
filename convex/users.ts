@@ -19,21 +19,22 @@ import {
   authedQuery,
   roleRequiresLocation,
 } from "./lib/rbac";
-import { logUserAudit } from "./lib/audit";
+import { logAudit } from "./lib/audit";
 import { generateStrongPassword } from "./lib/password";
 import { SUPER_ADMIN_ROLE_KEY } from "./lib/permissions";
 
 const LOCATION_REQUIRED =
   "This role requires a location. Assign the user a location first.";
 
-async function assertActiveLocation(
+async function getActiveLocation(
   ctx: MutationCtx,
   locationId: Id<"locations">,
-) {
+): Promise<Doc<"locations">> {
   const location = await ctx.db.get("locations", locationId);
   if (!location || !location.active) {
     throw new ConvexError("Location not found or inactive.");
   }
+  return location;
 }
 
 /**
@@ -121,10 +122,11 @@ export const createUser = authedAction({
     if (role.key === SUPER_ADMIN_ROLE_KEY) {
       await ctx.requirePermission("roles.manage");
     }
+    const location: Doc<"locations"> | null =
+      locationId !== undefined
+        ? await ctx.runQuery(internal.locations.getByIdInternal, { locationId })
+        : null;
     if (locationId !== undefined) {
-      const location = await ctx.runQuery(internal.locations.getByIdInternal, {
-        locationId,
-      });
       if (!location || !location.active) {
         throw new ConvexError("Location not found or inactive.");
       }
@@ -134,7 +136,7 @@ export const createUser = authedAction({
       throw new ConvexError(LOCATION_REQUIRED);
     }
     const password = generateStrongPassword();
-    await createAccount(ctx, {
+    const { user } = await createAccount(ctx, {
       provider: "password",
       account: { id: email, secret: password },
       profile: {
@@ -145,6 +147,25 @@ export const createUser = authedAction({
         status: "active",
         mustChangePassword: true,
         createdBy: ctx.user._id,
+      },
+    });
+    // Actions can't write the DB directly, so the entry goes through an
+    // internal mutation. Never log the password.
+    await ctx.runMutation(internal.auditLogs.insertFromActionInternal, {
+      actorId: ctx.user._id,
+      action: "create",
+      entityTable: "users",
+      entityId: user._id,
+      ...(location ? { businessUnitId: location.businessUnitId } : {}),
+      after: {
+        name,
+        email,
+        roleId,
+        role: role.key,
+        locationId: locationId ?? null,
+        location: location?.name ?? null,
+        status: "active",
+        mustChangePassword: true,
       },
     });
     return { password };
@@ -165,14 +186,19 @@ export const setUserStatus = authedMutation({
     if (!target) {
       throw new ConvexError("User not found.");
     }
+    if (target.status === status) {
+      return;
+    }
     if (status === "blocked") {
       await assertNotLastSuperAdmin(ctx, target);
     }
     await ctx.db.patch("users", userId, { status });
-    await logUserAudit(ctx, {
-      actorId: ctx.user._id,
-      action: status === "blocked" ? "user.blocked" : "user.unblocked",
-      targetUserId: userId,
+    await ctx.audit({
+      action: "update",
+      entityTable: "users",
+      entityId: userId,
+      before: { status: target.status },
+      after: { status },
     });
   },
 });
@@ -207,11 +233,12 @@ export const setUserRole = authedMutation({
       ? await ctx.db.get("roles", target.roleId)
       : null;
     await ctx.db.patch("users", userId, { roleId });
-    await logUserAudit(ctx, {
-      actorId: ctx.user._id,
-      action: "user.role_changed",
-      targetUserId: userId,
-      details: { from: previousRole?.key ?? "none", to: role.key },
+    await ctx.audit({
+      action: "update",
+      entityTable: "users",
+      entityId: userId,
+      before: { roleId: target.roleId, role: previousRole?.key ?? null },
+      after: { roleId, role: role.key },
     });
   },
 });
@@ -234,32 +261,56 @@ export const setUserLocation = authedMutation({
     if ((target.locationId ?? null) === locationId) {
       return;
     }
+    let next: Doc<"locations"> | null = null;
     if (locationId === null) {
       if (target.roleId && (await roleRequiresLocation(ctx, target.roleId))) {
         throw new ConvexError(LOCATION_REQUIRED);
       }
     } else {
-      await assertActiveLocation(ctx, locationId);
+      next = await getActiveLocation(ctx, locationId);
     }
+    const previous = target.locationId
+      ? await ctx.db.get("locations", target.locationId)
+      : null;
     await ctx.db.patch("users", userId, {
       locationId: locationId ?? undefined,
     });
-    await logUserAudit(ctx, {
-      actorId: ctx.user._id,
-      action: "user.location_changed",
-      targetUserId: userId,
-      details: {
-        from: target.locationId ?? "none",
-        to: locationId ?? "none",
+    const businessUnitId = (next ?? previous)?.businessUnitId;
+    await ctx.audit({
+      action: "update",
+      entityTable: "users",
+      entityId: userId,
+      ...(businessUnitId ? { businessUnitId } : {}),
+      before: {
+        locationId: target.locationId ?? null,
+        location: previous?.name ?? null,
       },
+      after: { locationId, location: next?.name ?? null },
     });
   },
 });
 
+/**
+ * Runs after a successful password change: clears the forced-change flag
+ * and audits the change (the user is their own actor). The password is
+ * never logged - only the fact that it changed.
+ */
 export const clearMustChangePassword = internalMutation({
   args: { userId: v.id("users") },
   handler: async (ctx, { userId }) => {
+    const user = await ctx.db.get("users", userId);
+    if (!user) {
+      return;
+    }
     await ctx.db.patch("users", userId, { mustChangePassword: false });
+    await logAudit(ctx, {
+      actorId: userId,
+      action: "update",
+      entityTable: "users",
+      entityId: userId,
+      before: { mustChangePassword: user.mustChangePassword },
+      after: { mustChangePassword: false, passwordChanged: true },
+    });
   },
 });
 

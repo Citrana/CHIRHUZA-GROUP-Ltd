@@ -23,8 +23,12 @@ Shared server-side helpers, not routable Convex functions themselves.
   `requireCurrentUserFromAction` (for actions, which have no `ctx.db`). The
   base layer `rbac.ts` builds on; use it directly only for functions that
   need no permission (e.g. `users.getCurrentUser`, `users.changePassword`).
-- `audit.ts` — `logAudit` (any entity) and `logUserAudit` (user-targeted),
-  appending to the append-only `auditLogs` table.
+- `audit.ts` — `logAudit` (the only writer of the append-only `auditLogs`
+  table; inside `authedMutation` use `ctx.audit`, which fills the actor),
+  `snapshot` / `diff` for before/after, and the `auditActionValidator`.
+- `time.ts` — business time zone (Africa/Lubumbashi, UTC+2) helpers:
+  `businessDayStartUtc` / `businessDayEndUtc` turn a YYYY-MM-DD business
+  day into a UTC ms range.
 - `password.ts` — `generateStrongPassword`, used for admin-created accounts.
 - `test.utils.ts` — test-only helpers (`seedReferenceDataForTest`,
   `insertUserWithRole`, `getRoleId`, `insertLocation`, `getBusinessUnitId`) shared by `convex/*.test.ts`. The

@@ -1,6 +1,6 @@
 "use client";
 
-import { MapPin, ShieldCheck, Users } from "lucide-react";
+import { MapPin, ScrollText, ShieldCheck, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/i18n/navigation";
 import { useCan } from "@/lib/use-can";
@@ -20,11 +20,13 @@ export function AdminLinks({
   const canManageUsers = useCan("users.manage");
   const canManageRoles = useCan("roles.manage");
   const canManageLocations = useCan("locations.manage");
+  const canViewAudit = useCan("audit.view");
 
   const links = [
     { href: "/admin/users", label: t("manageUsers"), icon: Users, show: canManageUsers },
     { href: "/admin/roles", label: t("manageRoles"), icon: ShieldCheck, show: canManageRoles },
     { href: "/admin/locations", label: t("manageLocations"), icon: MapPin, show: canManageLocations },
+    { href: "/admin/audit", label: t("auditLog"), icon: ScrollText, show: canViewAudit },
   ].filter((link) => link.show);
 
   if (links.length === 0) {

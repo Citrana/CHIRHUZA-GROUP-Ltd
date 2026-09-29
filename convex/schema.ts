@@ -2,6 +2,7 @@ import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
 import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
+import { auditActionValidator } from "./lib/audit";
 import {
   businessUnitKeyValidator,
   locationTypeValidator,
@@ -86,17 +87,29 @@ export default defineSchema({
     key: v.string(),
   }).index("by_key", ["key"]),
 
-  // Append-only per CLAUDE.md: never updated or deleted, only inserted.
+  // Append-only per CLAUDE.md: never updated or deleted, only inserted -
+  // write it only through logAudit / ctx.audit (convex/lib/audit.ts).
   auditLogs: defineTable({
     actorId: v.id("users"),
-    action: v.string(),
-    // Legacy field from before entityType/entityId existed; still written
-    // for user-targeted actions.
-    targetUserId: v.optional(v.id("users")),
-    entityType: v.optional(v.string()),
-    entityId: v.optional(v.string()),
-    details: v.optional(v.record(v.string(), v.string())),
+    action: auditActionValidator,
+    entityTable: v.string(),
+    entityId: v.string(),
+    businessUnitId: v.optional(v.id("businessUnits")),
+    // JSON snapshots: the full record for create/delete, only the changed
+    // fields for update. Never secrets.
+    before: v.optional(v.record(v.string(), v.any())),
+    after: v.optional(v.record(v.string(), v.any())),
+    reason: v.optional(v.string()),
+    // UTC ms.
+    timestamp: v.number(),
   })
-    .index("by_targetUserId", ["targetUserId"])
-    .index("by_entityType_and_entityId", ["entityType", "entityId"]),
+    .index("by_timestamp", ["timestamp"])
+    .index("by_actorId_and_timestamp", ["actorId", "timestamp"])
+    .index("by_action_and_timestamp", ["action", "timestamp"])
+    .index("by_entityTable_and_timestamp", ["entityTable", "timestamp"])
+    .index("by_entityTable_and_entityId_and_timestamp", [
+      "entityTable",
+      "entityId",
+      "timestamp",
+    ]),
 });

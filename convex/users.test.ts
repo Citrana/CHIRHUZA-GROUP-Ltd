@@ -62,7 +62,12 @@ test("setUserStatus lets a Super Admin block and unblock a user, writing an audi
   expect(target?.status).toBe("active");
 
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
-  expect(logs.map((l) => l.action)).toEqual(["user.blocked", "user.unblocked"]);
+  expect(
+    logs.map((l) => [l.action, l.entityTable, l.before?.status, l.after?.status]),
+  ).toEqual([
+    ["update", "users", "active", "blocked"],
+    ["update", "users", "blocked", "active"],
+  ]);
 });
 
 test("setUserStatus rejects a non-Super-Admin caller", async () => {
@@ -227,9 +232,12 @@ test("setUserRole lets a Super Admin change a user's role, writing an audit log"
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
   expect(logs).toHaveLength(1);
   expect(logs[0]).toMatchObject({
-    action: "user.role_changed",
-    targetUserId: targetId,
-    details: { from: "sales_agent", to: "chief_admin" },
+    actorId: adminId,
+    action: "update",
+    entityTable: "users",
+    entityId: targetId,
+    before: { role: "sales_agent" },
+    after: { roleId: chiefAdminRoleId, role: "chief_admin" },
   });
 });
 
@@ -411,9 +419,11 @@ test("setUserLocation sets a location with an audit entry, and can't clear a req
   expect(agent?.locationId).toBe(secondShop);
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
   expect(logs[0]).toMatchObject({
-    action: "user.location_changed",
-    targetUserId: agentId,
-    details: { from: firstShop, to: secondShop },
+    action: "update",
+    entityTable: "users",
+    entityId: agentId,
+    before: { locationId: firstShop, location: "First" },
+    after: { locationId: secondShop, location: "Second" },
   });
 
   await expect(

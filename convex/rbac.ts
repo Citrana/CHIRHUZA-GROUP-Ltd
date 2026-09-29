@@ -9,7 +9,6 @@ import {
   loadPermissions,
   roleRequiresLocation,
 } from "./lib/rbac";
-import { logAudit } from "./lib/audit";
 import {
   PERMISSIONS,
   SEED_STEPS,
@@ -311,32 +310,44 @@ export const setRolePermission = authedMutation({
       )
       .unique();
 
-    const audit = (action: string, details: Record<string, string>) =>
-      logAudit(ctx, {
-        actorId: ctx.user._id,
-        action,
-        entityType: "roles",
-        entityId: roleId,
-        details: { permission: permissionKey, ...details },
-      });
+    // Readable keys alongside ids, so the audit page makes sense on its own.
+    const describe = (linkScope: Scope) => ({
+      roleId,
+      role: role.key,
+      permission: permissionKey,
+      scope: linkScope,
+    });
 
     if (scope === null) {
       if (link) {
         await ctx.db.delete("rolePermissions", link._id);
-        await audit("role.permission.revoked", { previousScope: link.scope });
+        await ctx.audit({
+          action: "delete",
+          entityTable: "rolePermissions",
+          entityId: link._id,
+          before: describe(link.scope),
+        });
       }
     } else if (!link) {
-      await ctx.db.insert("rolePermissions", {
+      const linkId = await ctx.db.insert("rolePermissions", {
         roleId,
         permissionId: permission._id,
         scope,
       });
-      await audit("role.permission.granted", { scope });
+      await ctx.audit({
+        action: "create",
+        entityTable: "rolePermissions",
+        entityId: linkId,
+        after: describe(scope),
+      });
     } else if (link.scope !== scope) {
       await ctx.db.patch("rolePermissions", link._id, { scope });
-      await audit("role.permission.scope_changed", {
-        previousScope: link.scope,
-        scope,
+      await ctx.audit({
+        action: "update",
+        entityTable: "rolePermissions",
+        entityId: link._id,
+        before: describe(link.scope),
+        after: describe(scope),
       });
     }
   },

@@ -155,16 +155,20 @@ test("a permission granted to a role takes effect immediately, and revoking remo
   await expect(asAgent.query(api.users.listUsers, {})).rejects.toThrow();
 
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
-  expect(logs.map((l) => l.action)).toEqual([
-    "role.permission.granted",
-    "role.permission.revoked",
+  expect(logs.map((l) => [l.action, l.entityTable])).toEqual([
+    ["create", "rolePermissions"],
+    ["delete", "rolePermissions"],
   ]);
-  expect(logs[0]).toMatchObject({
-    actorId: adminId,
-    entityType: "roles",
-    entityId: agentRoleId,
-    details: { permission: "users.manage", scope: "all_locations" },
-  });
+  const grant = {
+    roleId: agentRoleId,
+    role: "sales_agent",
+    permission: "users.manage",
+    scope: "all_locations",
+  };
+  expect(logs[0]).toMatchObject({ actorId: adminId, after: grant });
+  expect(logs[1]).toMatchObject({ actorId: adminId, before: grant });
+  // The revoke deletes the same row the grant created.
+  expect(logs[1].entityId).toBe(logs[0].entityId);
 });
 
 test("setRolePermission changes scope and audits it", async () => {
@@ -187,8 +191,10 @@ test("setRolePermission changes scope and audits it", async () => {
   );
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
   expect(logs[0]).toMatchObject({
-    action: "role.permission.scope_changed",
-    details: { previousScope: "own_location", scope: "all_locations" },
+    action: "update",
+    entityTable: "rolePermissions",
+    before: { permission: "sales.create", scope: "own_location" },
+    after: { permission: "sales.create", scope: "all_locations" },
   });
 });
 
