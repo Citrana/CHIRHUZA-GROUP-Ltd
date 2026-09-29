@@ -28,15 +28,36 @@ changes live:
 pnpm dlx convex dev
 ```
 
-In a second terminal, run the app:
+Once it has pushed, open a second terminal and seed the reference data
+(roles, permissions and business units):
+
+```bash
+pnpm dlx convex run seed:seedReferenceData
+```
+
+Then, in that same second terminal, run the app:
 
 ```bash
 pnpm dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) — it redirects to
-`/en` (or `/fr`). You should see "CHIRHUZA GROUP Ltd" and a "Convex
-connected" status badge once both are running.
+`/en` (or `/fr`) and then to `/login`. On a brand-new deployment, finish
+[Authentication setup](#authentication-setup-first-time-only) first.
+
+## After pulling changes
+
+Whenever you pull or switch branches, and `pnpm dlx convex dev` is running
+(so the latest schema and functions are pushed), re-run the seed:
+
+```bash
+pnpm dlx convex run seed:seedReferenceData
+```
+
+It is safe to run any number of times: it only adds missing permissions,
+roles and business units, and never undoes changes made in the Roles UI.
+Skipping it is the usual reason a new page or menu link doesn't appear —
+the permission that unlocks it hasn't been created yet.
 
 ## Authentication setup (first time only)
 
@@ -65,8 +86,10 @@ Admin creates accounts). Two one-time steps on a fresh deployment:
    pnpm dlx convex env set SUPER_ADMIN_PASSWORD "a strong password"
    pnpm dlx convex run seed:seedSuperAdmin
    ```
-   No-ops if a Super Admin already exists. Log in at `/login` with those
-   credentials, then use "Manage users" to create further accounts.
+   This also seeds the reference data, and no-ops if a Super Admin already
+   exists. Log in at `/login` with those credentials, then:
+   - **Locations** — add the shops and warehouses (Sales Agents need one).
+   - **Manage users** — create further accounts and give each a role.
 
 ## Scripts
 
@@ -77,8 +100,24 @@ pnpm lint     # ESLint
 pnpm test     # Vitest (Convex function tests via convex-test)
 ```
 
-Before considering any change done, `pnpm lint`, `pnpm exec tsc --noEmit`,
-and `pnpm test` should all pass.
+Convex commands:
+
+```bash
+pnpm dlx convex dev                          # push schema + functions live (keep running)
+pnpm dlx convex run seed:seedReferenceData   # seed roles, permissions, business units (idempotent)
+pnpm dlx convex run seed:seedSuperAdmin      # first Super Admin (see Authentication setup)
+pnpm dlx convex dashboard                    # open the deployment's dashboard
+pnpm dlx convex data <table>                 # print a table's rows, e.g. `auditLogs`
+```
+
+Before considering any change done, these should all pass:
+
+```bash
+pnpm lint
+pnpm exec tsc --noEmit             # app types
+pnpm exec tsc --noEmit -p convex   # Convex function types
+pnpm test
+```
 
 ## Branching & commits
 
@@ -97,7 +136,11 @@ runs a `pre-commit` check that:
 convex/
   schema.ts        # single source of truth for all tables
   auth.ts           # Convex Auth config (Password provider, callbacks)
-  seed.ts           # bootstraps the first Super Admin from env vars
+  seed.ts           # seedReferenceData + bootstraps the first Super Admin
+  rbac.ts           # roles & permissions
+  businessUnits.ts  # the four services
+  locations.ts      # shops & warehouses
+  auditLogs.ts      # read-only audit log queries
   lib/              # shared server-side wrappers (permissions, audit, etc.)
   <domain>.ts       # one file per domain/feature (e.g. hair.ts, fashion.ts)
   <domain>.test.ts  # tests for that domain's Convex logic
@@ -114,7 +157,9 @@ src/
 
 ## Status
 
-Project setup, Convex connection, folder structure, English/French i18n,
-and authentication (Convex Auth, admin-created accounts, block/unblock,
-forced password change) are in place. No roles/permissions or business
-features yet.
+In place: project setup, English/French i18n, authentication (Convex Auth,
+admin-created accounts, block/unblock, forced password change), roles &
+permissions (`/admin/roles`), business units and locations
+(`/admin/locations`), the service picker and mobile-first Hair app shell,
+and the append-only audit log (`/admin/audit`). Business modules (sales,
+stock, …) are placeholders for now.
