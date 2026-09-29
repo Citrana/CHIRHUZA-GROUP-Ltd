@@ -73,7 +73,13 @@ this repo, now and later — do not relax them for convenience.
 - Deletes of business data are never immediate. A delete goes through an
   **approval request** (soft delete): the record is flagged/queued, not
   removed, until an approver acts on it. Use the approval engine with type
-  `"delete"` (see Approvals).
+  `"delete"` (see Approvals): the feature calls `requestApproval({ type:
+  "delete", entityTable, entityId, payload: { before }, reason })`, and
+  registers the table's delete handler in `DELETE_HANDLERS`
+  (`convex/lib/approvalHandlers.ts`). That handler re-checks it's still
+  safe to delete, removes the record, and audits a `delete` entry.
+- Records that other records depend on (e.g. a product used in stock or a
+  requisition) are **archived**, not deleted.
 
 ## Audit logging
 
@@ -237,8 +243,10 @@ RBAC (six seeded roles, permission catalog, Super Admin role editor at
 `/admin/roles`, role assignment at `/admin/users`), business units and
 locations (`/admin/locations`, user locations on `/admin/users`), and the
 service picker + mobile-first app shell (`/hair` with placeholder module
-pages), and the append-only audit log (`/admin/audit`). No business
-features yet — they come in later steps, built on top
+pages), the append-only audit log (`/admin/audit`), the generic approval
+engine (`/[service]/approvals`), and the Hair product catalogue
+(`/[service]/products`, with lengths/colours in `/[service]/settings`).
+Other business modules come in later steps, built on top
 of the rules above.
 
 <!-- convex-ai-start -->

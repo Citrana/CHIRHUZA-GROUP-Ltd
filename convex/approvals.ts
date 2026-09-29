@@ -15,18 +15,11 @@ import {
   approvalStatusValidator,
   approvalTypeValidator,
 } from "./lib/approvalTypes";
-import { businessUnitKeyValidator } from "./lib/businessUnits";
+import {
+  businessUnitKeyValidator,
+  getBusinessUnitByKey,
+} from "./lib/businessUnits";
 import { isPermissionKey, PERMISSION_KEYS } from "./lib/permissions";
-
-async function getBusinessUnitByKey(
-  ctx: QueryCtx,
-  key: Doc<"businessUnits">["key"],
-): Promise<Doc<"businessUnits"> | null> {
-  return await ctx.db
-    .query("businessUnits")
-    .withIndex("by_key", (q) => q.eq("key", key))
-    .unique();
-}
 
 /**
  * Approves or rejects a pending approval. The decider must hold the
