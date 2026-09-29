@@ -8,11 +8,15 @@
  * @module
  */
 
+import type * as approvals from "../approvals.js";
 import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as businessUnits from "../businessUnits.js";
 import type * as healthCheck from "../healthCheck.js";
 import type * as http from "../http.js";
+import type * as lib_approvalHandlers from "../lib/approvalHandlers.js";
+import type * as lib_approvalTypes from "../lib/approvalTypes.js";
+import type * as lib_approvals from "../lib/approvals.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_businessUnits from "../lib/businessUnits.js";
@@ -32,11 +36,15 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  approvals: typeof approvals;
   auditLogs: typeof auditLogs;
   auth: typeof auth;
   businessUnits: typeof businessUnits;
   healthCheck: typeof healthCheck;
   http: typeof http;
+  "lib/approvalHandlers": typeof lib_approvalHandlers;
+  "lib/approvalTypes": typeof lib_approvalTypes;
+  "lib/approvals": typeof lib_approvals;
   "lib/audit": typeof lib_audit;
   "lib/auth": typeof lib_auth;
   "lib/businessUnits": typeof lib_businessUnits;

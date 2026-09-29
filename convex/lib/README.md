@@ -26,6 +26,13 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `audit.ts` — `logAudit` (the only writer of the append-only `auditLogs`
   table; inside `authedMutation` use `ctx.audit`, which fills the actor),
   `snapshot` / `diff` for before/after, and the `auditActionValidator`.
+- `approvals.ts` — the approval engine: `requestApproval` (from an
+  authedMutation), `insertApproval`, `DEFAULT_REQUIRED_PERMISSION`, and the
+  `canDecide` / `canSeeApproval` rules shared by `convex/approvals.ts`.
+- `approvalTypes.ts` — the approval type/status/decision validators. Add
+  new approval types here.
+- `approvalHandlers.ts` — `APPROVAL_HANDLERS`, one handler per type that
+  applies an approved change (stubs until each feature registers its own).
 - `time.ts` — business time zone (Africa/Lubumbashi, UTC+2) helpers:
   `businessDayStartUtc` / `businessDayEndUtc` turn a YYYY-MM-DD business
   day into a UTC ms range.
