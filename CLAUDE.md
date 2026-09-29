@@ -130,6 +130,14 @@ this repo, now and later — do not relax them for convenience.
   module when the user holds any permission in its permission module. A new
   module page goes in a static folder `src/app/[locale]/[service]/<module>/`,
   which overrides the `[module]` placeholder route.
+- Lists and tables use the shared `DataTable`
+  (`src/components/data-table/`) — don't hand-roll `<table>` markup. Its
+  features are opt-in per table: search, toolbar (filters/actions), per-column
+  sorting, client or server pagination, expandable rows, responsive columns
+  (`meta.hideBelow`) and a phone card layout (`renderCard`). Paginate Convex
+  queries that take `paginationOpts` with `useCursorPaginatedQuery`; use the
+  standalone `Pagination` component for paged content outside a table.
+  Usage guide: `src/components/data-table/README.md`.
 - UI is **mobile-first** — users work from phones. Design for ~360px wide
   first (tap targets ≥ 44px, no horizontal page scroll; wide tables scroll
   inside their own container or become cards on small screens).

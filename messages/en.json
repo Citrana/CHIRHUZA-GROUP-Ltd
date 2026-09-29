@@ -2,6 +2,21 @@
   "Common": {
     "close": "Close"
   },
+  "DataTable": {
+    "search": "Search…",
+    "loading": "Loading…",
+    "noResults": "No results.",
+    "pagination": "Pagination",
+    "rowsPerPage": "Rows per page",
+    "page": "Page {page}",
+    "showing": "Showing {start}–{end}",
+    "showingOf": "Showing {start}–{end} of {total}",
+    "previous": "Previous page",
+    "next": "Next page",
+    "details": "Details",
+    "expandRow": "Show details",
+    "collapseRow": "Hide details"
+  },
   "AppHeader": {
     "brand": "CHIRHUZA GROUP Ltd",
     "switchService": "Switch service",
@@ -111,7 +126,8 @@
       "noLocation": "No location",
       "selectLocation": "Select a location",
       "locationRequiredHint": "Required for this role.",
-      "locationChangeError": "Could not change the location."
+      "locationChangeError": "Could not change the location.",
+      "searchPlaceholder": "Search by name or email…"
     },
     "roles": {
       "title": "Roles",
@@ -158,7 +174,8 @@
       "actionsHeader": "Actions",
       "save": "Save",
       "saving": "Saving…",
-      "saveError": "Could not save the location. Check the name and try again."
+      "saveError": "Could not save the location. Check the name and try again.",
+      "searchPlaceholder": "Search locations…"
     }
   },
   "Roles": {
@@ -277,9 +294,15 @@
     "toLabel": "To",
     "clearFilters": "Clear filters",
     "empty": "No entries match these filters.",
-    "loadMore": "Load more",
-    "loading": "Loading…",
-    "by": "by {name}",
+    "filters": "Filters",
+    "filtersWithCount": "Filters ({count})",
+    "timeHeader": "Time",
+    "whoHeader": "Who",
+    "actionHeader": "Action",
+    "recordHeader": "Record",
+    "changesHeader": "Changes",
+    "more": "(+{count} more)",
+    "recordHistory": "Show this record's history",
     "unknownActor": "Unknown user",
     "reason": "Reason",
     "field": "Field",

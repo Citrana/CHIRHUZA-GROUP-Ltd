@@ -3,10 +3,12 @@
 import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
+import type { DataTableColumn } from "@/components/data-table/features";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { DataTable } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -59,6 +61,41 @@ export function LocationsAdminPanel() {
     </Badge>
   );
 
+  const columns: DataTableColumn<Doc<"locations">>[] = [
+    {
+      accessorKey: "name",
+      header: t("nameHeader"),
+      enableSorting: true,
+      meta: { className: "font-medium" },
+    },
+    {
+      id: "type",
+      // Filter and sort on the translated label.
+      accessorFn: typeLabel,
+      header: t("typeHeader"),
+      enableSorting: true,
+    },
+    {
+      accessorKey: "address",
+      header: t("addressHeader"),
+      meta: { className: "text-muted-foreground" },
+    },
+    {
+      id: "status",
+      accessorFn: (location) =>
+        location.active ? t("statusActive") : t("statusInactive"),
+      header: t("statusHeader"),
+      enableSorting: true,
+      cell: ({ row }) => statusBadge(row.original),
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("actionsHeader")}</span>,
+      cell: ({ row }) => editButton(row.original),
+      meta: { className: "text-right" },
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -78,34 +115,35 @@ export function LocationsAdminPanel() {
         ) : null}
       </div>
 
-      <div className="flex max-w-xs flex-col gap-2">
-        <Label htmlFor="locations-unit">{t("businessUnitLabel")}</Label>
-        <NativeSelect
-          id="locations-unit"
-          value={unitKey}
-          onChange={(event) =>
-            setSelected(event.target.value as BusinessUnitKey)
-          }
-        >
-          {units?.map((u) => (
-            <option key={u.key} value={u.key}>
-              {tUnits(u.key)}
-            </option>
-          ))}
-        </NativeSelect>
-      </div>
-
-      {locations?.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("empty")}</p>
-      ) : null}
-
-      {/* Phones: one card per location. */}
-      <ul className="flex flex-col gap-3 md:hidden">
-        {locations?.map((location) => (
-          <li
-            key={location._id}
-            className="flex flex-col gap-2 rounded-lg border border-border p-4"
-          >
+      <DataTable
+        columns={columns}
+        data={locations}
+        getRowId={(location) => location._id}
+        emptyMessage={t("empty")}
+        search={{ placeholder: t("searchPlaceholder") }}
+        pagination={{ mode: "client", pageSize: 10 }}
+        initialSorting={[{ id: "name", desc: false }]}
+        toolbar={
+          <div className="flex flex-col gap-1.5 sm:w-56">
+            <Label htmlFor="locations-unit">{t("businessUnitLabel")}</Label>
+            <NativeSelect
+              id="locations-unit"
+              className="h-10 sm:h-8"
+              value={unitKey}
+              onChange={(event) =>
+                setSelected(event.target.value as BusinessUnitKey)
+              }
+            >
+              {units?.map((u) => (
+                <option key={u.key} value={u.key}>
+                  {tUnits(u.key)}
+                </option>
+              ))}
+            </NativeSelect>
+          </div>
+        }
+        renderCard={(location) => (
+          <div className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-medium">{location.name}</p>
@@ -119,45 +157,9 @@ export function LocationsAdminPanel() {
               <p className="text-sm text-muted-foreground">{location.address}</p>
             ) : null}
             <div>{editButton(location)}</div>
-          </li>
-        ))}
-      </ul>
-
-      {/* md and up: a table. */}
-      {locations && locations.length > 0 ? (
-        <div className="hidden overflow-x-auto rounded-lg border border-border md:block">
-          <table className="w-full text-sm">
-            <thead className="bg-secondary text-secondary-foreground">
-              <tr>
-                <th className="p-3 text-left font-medium">{t("nameHeader")}</th>
-                <th className="p-3 text-left font-medium">{t("typeHeader")}</th>
-                <th className="p-3 text-left font-medium">
-                  {t("addressHeader")}
-                </th>
-                <th className="p-3 text-left font-medium">
-                  {t("statusHeader")}
-                </th>
-                <th className="p-3 text-right font-medium">
-                  {t("actionsHeader")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {locations.map((location) => (
-                <tr key={location._id} className="border-t border-border">
-                  <td className="p-3 font-medium">{location.name}</td>
-                  <td className="p-3">{typeLabel(location)}</td>
-                  <td className="p-3 text-muted-foreground">
-                    {location.address}
-                  </td>
-                  <td className="p-3">{statusBadge(location)}</td>
-                  <td className="p-3 text-right">{editButton(location)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      ) : null}
+          </div>
+        )}
+      />
     </div>
   );
 }

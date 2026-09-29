@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { FilterX } from "lucide-react";
-import { usePaginatedQuery, useQuery } from "convex/react";
+import { FilterX, History, SlidersHorizontal } from "lucide-react";
+import { useQuery, type PaginatedQueryItem } from "convex/react";
+import type { DataTableColumn } from "@/components/data-table/features";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
@@ -12,16 +13,29 @@ import {
   businessDayEndUtc,
   businessDayStartUtc,
 } from "../../../convex/lib/time";
+import { DataTable } from "@/components/data-table/data-table";
+import { useCursorPaginatedQuery } from "@/components/data-table/use-cursor-paginated-query";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
+import {
+  formatAuditValue,
+  summarizeAuditEntry,
+} from "@/lib/audit-summary";
 import { useCan } from "@/lib/use-can";
+import { cn } from "@/lib/utils";
+
+type AuditEntry = PaginatedQueryItem<typeof api.auditLogs.list>;
 
 /** Record types that currently write audit entries. */
 const ENTITY_TABLES = ["users", "rolePermissions", "locations"] as const;
 type EntityTable = (typeof ENTITY_TABLES)[number];
+
+function isEntityTable(table: string): table is EntityTable {
+  return (ENTITY_TABLES as readonly string[]).includes(table);
+}
 
 const ACTION_VARIANTS: Record<
   AuditAction,
@@ -52,21 +66,17 @@ const NO_FILTERS: Filters = {
   toDay: "",
 };
 
-function formatValue(value: unknown, empty: string): string {
-  if (value === null || value === undefined) return empty;
-  if (typeof value === "object") return JSON.stringify(value);
-  return String(value);
-}
-
 /**
- * Read-only view of the append-only audit log. There are deliberately no
- * edit or delete controls - the server exposes no such functions either.
+ * Read-only view of the append-only audit log: one compact row per entry,
+ * expandable to its full before/after. There are deliberately no edit or
+ * delete controls - the server exposes no such functions either.
  */
 export function AuditLogPanel() {
   const t = useTranslations("AuditLog");
   const locale = useLocale();
   const canView = useCan("audit.view");
   const [filters, setFilters] = useState<Filters>(NO_FILTERS);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const actors = useQuery(api.auditLogs.listActors, canView ? {} : "skip");
 
   const entityId = filters.entityId.trim();
@@ -79,10 +89,10 @@ export function AuditLogPanel() {
     ...(filters.fromDay ? { from: businessDayStartUtc(filters.fromDay) } : {}),
     ...(filters.toDay ? { to: businessDayEndUtc(filters.toDay) } : {}),
   };
-  const { results, status, loadMore } = usePaginatedQuery(
+  const { results, pagination } = useCursorPaginatedQuery(
     api.auditLogs.list,
     canView ? args : "skip",
-    { initialNumItems: 25 },
+    { initialPageSize: 25 },
   );
 
   if (canView === undefined) {
@@ -94,13 +104,272 @@ export function AuditLogPanel() {
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>
     setFilters((prev) => ({ ...prev, [key]: value }));
-  const hasFilters = Object.values(filters).some((v) => v !== "");
-  const formatTime = new Intl.DateTimeFormat(locale, {
+  const activeFilterCount = Object.values(filters).filter((v) => v !== "").length;
+  const shortTime = new Intl.DateTimeFormat(locale, {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: BUSINESS_TIME_ZONE,
+  });
+  const longTime = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",
     timeStyle: "medium",
     timeZone: BUSINESS_TIME_ZONE,
   });
   const empty = t("emptyValue");
+  const entityLabel = (table: string) =>
+    isEntityTable(table) ? t(`entities.${table}`) : table;
+  const actorLabel = (entry: AuditEntry) =>
+    entry.actorName || entry.actorEmail || t("unknownActor");
+
+  const actionBadge = (entry: AuditEntry) => (
+    <Badge variant={ACTION_VARIANTS[entry.action]}>
+      {t(`actions.${entry.action}`)}
+    </Badge>
+  );
+
+  const summaryText = (entry: AuditEntry) => {
+    const summary = summarizeAuditEntry(entry);
+    if (!summary) return empty;
+    const body =
+      summary.kind === "change"
+        ? `${summary.field}: ${formatAuditValue(summary.from, empty)} → ${formatAuditValue(summary.to, empty)}`
+        : `${summary.field}: ${formatAuditValue(summary.value, empty)}`;
+    return summary.more > 0
+      ? `${body} ${t("more", { count: summary.more })}`
+      : body;
+  };
+
+  const time = (entry: AuditEntry, format: Intl.DateTimeFormat) => (
+    <time
+      dateTime={new Date(entry.timestamp).toISOString()}
+      title={longTime.format(entry.timestamp)}
+    >
+      {format.format(entry.timestamp)}
+    </time>
+  );
+
+  const columns: DataTableColumn<AuditEntry>[] = [
+    {
+      id: "time",
+      header: t("timeHeader"),
+      cell: ({ row }) => time(row.original, shortTime),
+      meta: { className: "whitespace-nowrap text-muted-foreground" },
+    },
+    {
+      id: "who",
+      header: t("whoHeader"),
+      cell: ({ row }) => actorLabel(row.original),
+      meta: { hideBelow: "md", className: "whitespace-nowrap" },
+    },
+    {
+      id: "action",
+      header: t("actionHeader"),
+      cell: ({ row }) => actionBadge(row.original),
+    },
+    {
+      id: "record",
+      header: t("recordHeader"),
+      cell: ({ row }) => entityLabel(row.original.entityTable),
+      meta: { hideBelow: "lg", className: "whitespace-nowrap" },
+    },
+    {
+      id: "changes",
+      header: t("changesHeader"),
+      cell: ({ row }) => (
+        <span className="line-clamp-1 break-all">{summaryText(row.original)}</span>
+      ),
+      meta: { className: "w-full max-w-0" },
+    },
+  ];
+
+  const details = (entry: AuditEntry) => {
+    const fields = [
+      ...new Set([
+        ...Object.keys(entry.before ?? {}),
+        ...Object.keys(entry.after ?? {}),
+      ]),
+    ];
+    return (
+      <div className="flex flex-col gap-3 pt-1 text-sm">
+        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
+          <dt className="text-muted-foreground">{t("timeHeader")}</dt>
+          <dd>{time(entry, longTime)}</dd>
+          <dt className="text-muted-foreground">{t("whoHeader")}</dt>
+          <dd>{actorLabel(entry)}</dd>
+          <dt className="text-muted-foreground">{t("recordHeader")}</dt>
+          <dd className="min-w-0">
+            {entityLabel(entry.entityTable)}{" "}
+            <span className="font-mono text-xs break-all text-muted-foreground">
+              {entry.entityId}
+            </span>
+          </dd>
+        </dl>
+        {fields.length > 0 ? (
+          <div className="overflow-x-auto rounded-md border border-border bg-background">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/50 text-muted-foreground">
+                <tr>
+                  <th className="p-2 text-left font-medium">{t("field")}</th>
+                  {entry.before ? (
+                    <th className="p-2 text-left font-medium">{t("before")}</th>
+                  ) : null}
+                  {entry.after ? (
+                    <th className="p-2 text-left font-medium">{t("after")}</th>
+                  ) : null}
+                </tr>
+              </thead>
+              <tbody>
+                {fields.map((field) => (
+                  <tr key={field} className="border-t border-border">
+                    <td className="p-2 font-mono text-xs">{field}</td>
+                    {entry.before ? (
+                      <td className="p-2 break-all">
+                        {formatAuditValue(entry.before[field], empty)}
+                      </td>
+                    ) : null}
+                    {entry.after ? (
+                      <td className="p-2 break-all">
+                        {formatAuditValue(entry.after[field], empty)}
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+        {entry.reason ? (
+          <p>
+            <span className="font-medium">{t("reason")}:</span> {entry.reason}
+          </p>
+        ) : null}
+        <div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              setFilters({
+                ...NO_FILTERS,
+                entityTable: isEntityTable(entry.entityTable)
+                  ? entry.entityTable
+                  : "",
+                entityId: entry.entityId,
+              })
+            }
+          >
+            <History aria-hidden />
+            {t("recordHistory")}
+          </Button>
+        </div>
+      </div>
+    );
+  };
+
+  const card = (entry: AuditEntry) => (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-2">
+        {actionBadge(entry)}
+        <span className="font-medium">{entityLabel(entry.entityTable)}</span>
+      </div>
+      <p className="line-clamp-2 text-sm break-all">{summaryText(entry)}</p>
+      <p className="text-xs text-muted-foreground">
+        {time(entry, shortTime)} · {actorLabel(entry)}
+      </p>
+    </div>
+  );
+
+  const filterFields = (
+    <div
+      className={cn(
+        "w-full grid-cols-1 gap-3 rounded-lg border border-border p-4 sm:grid-cols-2 lg:grid-cols-3",
+        filtersOpen ? "grid" : "hidden md:grid",
+      )}
+    >
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-actor">{t("actorLabel")}</Label>
+        <NativeSelect
+          id="audit-actor"
+          value={filters.actorId}
+          onChange={(e) => set("actorId", e.target.value as Id<"users"> | "")}
+        >
+          <option value="">{t("allActors")}</option>
+          {actors?.map((actor) => (
+            <option key={actor._id} value={actor._id}>
+              {actor.name || actor.email}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-action">{t("actionLabel")}</Label>
+        <NativeSelect
+          id="audit-action"
+          value={filters.action}
+          onChange={(e) => set("action", e.target.value as AuditAction | "")}
+        >
+          <option value="">{t("allActions")}</option>
+          {AUDIT_ACTIONS.map((action) => (
+            <option key={action} value={action}>
+              {t(`actions.${action}`)}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-entity">{t("entityLabel")}</Label>
+        <NativeSelect
+          id="audit-entity"
+          value={filters.entityTable}
+          onChange={(e) => set("entityTable", e.target.value as EntityTable | "")}
+        >
+          <option value="">{t("allEntities")}</option>
+          {ENTITY_TABLES.map((table) => (
+            <option key={table} value={table}>
+              {t(`entities.${table}`)}
+            </option>
+          ))}
+        </NativeSelect>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-entity-id">{t("entityIdLabel")}</Label>
+        <Input
+          id="audit-entity-id"
+          value={filters.entityId}
+          placeholder={t("entityIdPlaceholder")}
+          onChange={(e) => set("entityId", e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-from">{t("fromLabel")}</Label>
+        <Input
+          id="audit-from"
+          type="date"
+          value={filters.fromDay}
+          max={filters.toDay || undefined}
+          onChange={(e) => set("fromDay", e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="audit-to">{t("toLabel")}</Label>
+        <Input
+          id="audit-to"
+          type="date"
+          value={filters.toDay}
+          min={filters.fromDay || undefined}
+          onChange={(e) => set("toDay", e.target.value)}
+        />
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 lg:col-span-3">
+        <p className="text-xs text-muted-foreground">{t("timeZoneNote")}</p>
+        {activeFilterCount > 0 ? (
+          <Button variant="ghost" size="sm" onClick={() => setFilters(NO_FILTERS)}>
+            <FilterX aria-hidden />
+            {t("clearFilters")}
+          </Button>
+        ) : null}
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -111,216 +380,32 @@ export function AuditLogPanel() {
         <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 rounded-lg border border-border p-4 sm:grid-cols-2 lg:grid-cols-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-actor">{t("actorLabel")}</Label>
-          <NativeSelect
-            id="audit-actor"
-            value={filters.actorId}
-            onChange={(e) => set("actorId", e.target.value as Id<"users"> | "")}
-          >
-            <option value="">{t("allActors")}</option>
-            {actors?.map((actor) => (
-              <option key={actor._id} value={actor._id}>
-                {actor.name || actor.email}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-action">{t("actionLabel")}</Label>
-          <NativeSelect
-            id="audit-action"
-            value={filters.action}
-            onChange={(e) => set("action", e.target.value as AuditAction | "")}
-          >
-            <option value="">{t("allActions")}</option>
-            {AUDIT_ACTIONS.map((action) => (
-              <option key={action} value={action}>
-                {t(`actions.${action}`)}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-entity">{t("entityLabel")}</Label>
-          <NativeSelect
-            id="audit-entity"
-            value={filters.entityTable}
-            onChange={(e) =>
-              set("entityTable", e.target.value as EntityTable | "")
-            }
-          >
-            <option value="">{t("allEntities")}</option>
-            {ENTITY_TABLES.map((table) => (
-              <option key={table} value={table}>
-                {t(`entities.${table}`)}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-entity-id">{t("entityIdLabel")}</Label>
-          <Input
-            id="audit-entity-id"
-            value={filters.entityId}
-            placeholder={t("entityIdPlaceholder")}
-            onChange={(e) => set("entityId", e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-from">{t("fromLabel")}</Label>
-          <Input
-            id="audit-from"
-            type="date"
-            value={filters.fromDay}
-            max={filters.toDay || undefined}
-            onChange={(e) => set("fromDay", e.target.value)}
-          />
-        </div>
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="audit-to">{t("toLabel")}</Label>
-          <Input
-            id="audit-to"
-            type="date"
-            value={filters.toDay}
-            min={filters.fromDay || undefined}
-            onChange={(e) => set("toDay", e.target.value)}
-          />
-        </div>
-        <div className="flex flex-wrap items-center justify-between gap-2 sm:col-span-2 lg:col-span-3">
-          <p className="text-xs text-muted-foreground">{t("timeZoneNote")}</p>
-          {hasFilters ? (
+      <DataTable
+        columns={columns}
+        data={results}
+        getRowId={(entry) => entry._id}
+        emptyMessage={t("empty")}
+        pagination={{ mode: "server", ...pagination }}
+        renderExpanded={details}
+        renderCard={card}
+        toolbar={
+          <>
+            {/* Phones: filters fold away behind a toggle. */}
             <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setFilters(NO_FILTERS)}
+              variant="outline"
+              className="h-10 self-start md:hidden"
+              aria-expanded={filtersOpen}
+              onClick={() => setFiltersOpen((open) => !open)}
             >
-              <FilterX aria-hidden />
-              {t("clearFilters")}
+              <SlidersHorizontal aria-hidden />
+              {activeFilterCount > 0
+                ? t("filtersWithCount", { count: activeFilterCount })
+                : t("filters")}
             </Button>
-          ) : null}
-        </div>
-      </div>
-
-      {status === "LoadingFirstPage" ? (
-        <p className="text-sm text-muted-foreground">{t("loading")}</p>
-      ) : results.length === 0 ? (
-        <p className="text-sm text-muted-foreground">{t("empty")}</p>
-      ) : (
-        <ol className="flex flex-col gap-3">
-          {results.map((entry) => {
-            const fields = [
-              ...new Set([
-                ...Object.keys(entry.before ?? {}),
-                ...Object.keys(entry.after ?? {}),
-              ]),
-            ];
-            const entityLabel = (ENTITY_TABLES as readonly string[]).includes(
-              entry.entityTable,
-            )
-              ? t(`entities.${entry.entityTable as EntityTable}`)
-              : entry.entityTable;
-            return (
-              <li
-                key={entry._id}
-                className="flex flex-col gap-3 rounded-lg border border-border p-4"
-              >
-                <div className="flex flex-wrap items-center gap-2">
-                  <Badge variant={ACTION_VARIANTS[entry.action]}>
-                    {t(`actions.${entry.action}`)}
-                  </Badge>
-                  <span className="font-medium">{entityLabel}</span>
-                  <button
-                    type="button"
-                    className="max-w-full truncate font-mono text-xs text-muted-foreground hover:text-foreground hover:underline"
-                    title={entry.entityId}
-                    onClick={() =>
-                      setFilters({
-                        ...NO_FILTERS,
-                        entityTable: (ENTITY_TABLES as readonly string[]).includes(
-                          entry.entityTable,
-                        )
-                          ? (entry.entityTable as EntityTable)
-                          : "",
-                        entityId: entry.entityId,
-                      })
-                    }
-                  >
-                    {entry.entityId}
-                  </button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  <time dateTime={new Date(entry.timestamp).toISOString()}>
-                    {formatTime.format(entry.timestamp)}
-                  </time>{" "}
-                  ·{" "}
-                  {t("by", {
-                    name: entry.actorName || entry.actorEmail || t("unknownActor"),
-                  })}
-                </p>
-                {fields.length > 0 ? (
-                  <div className="overflow-x-auto rounded-md border border-border">
-                    <table className="w-full text-sm">
-                      <thead className="bg-muted/50 text-muted-foreground">
-                        <tr>
-                          <th className="p-2 text-left font-medium">
-                            {t("field")}
-                          </th>
-                          {entry.before ? (
-                            <th className="p-2 text-left font-medium">
-                              {t("before")}
-                            </th>
-                          ) : null}
-                          {entry.after ? (
-                            <th className="p-2 text-left font-medium">
-                              {t("after")}
-                            </th>
-                          ) : null}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {fields.map((field) => (
-                          <tr key={field} className="border-t border-border">
-                            <td className="p-2 font-mono text-xs">{field}</td>
-                            {entry.before ? (
-                              <td className="p-2 break-all">
-                                {formatValue(entry.before[field], empty)}
-                              </td>
-                            ) : null}
-                            {entry.after ? (
-                              <td className="p-2 break-all">
-                                {formatValue(entry.after[field], empty)}
-                              </td>
-                            ) : null}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : null}
-                {entry.reason ? (
-                  <p className="text-sm">
-                    <span className="font-medium">{t("reason")}:</span>{" "}
-                    {entry.reason}
-                  </p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ol>
-      )}
-
-      {status === "CanLoadMore" || status === "LoadingMore" ? (
-        <Button
-          variant="outline"
-          className="self-center"
-          disabled={status === "LoadingMore"}
-          onClick={() => loadMore(25)}
-        >
-          {status === "LoadingMore" ? t("loading") : t("loadMore")}
-        </Button>
-      ) : null}
+            {filterFields}
+          </>
+        }
+      />
     </div>
   );
 }
