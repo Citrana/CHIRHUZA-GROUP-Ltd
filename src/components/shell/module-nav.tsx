@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowLeftRight, House } from "lucide-react";
+import { ArrowLeftRight, House, Settings } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { useVisibleModules } from "@/lib/use-visible-modules";
+import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { PendingApprovalsBadge } from "@/components/approvals/pending-approvals-badge";
 
@@ -24,8 +25,12 @@ export function ModuleNav({
   const tHeader = useTranslations("AppHeader");
   const pathname = usePathname();
   const modules = useVisibleModules();
+  const tNav = useTranslations("Nav");
+  const canManageProductSettings = useCan("products.settings");
 
   const homeHref = `/${service}`;
+  const settingsHref = `/${service}/settings`;
+  const settingsActive = pathname === settingsHref;
   const items = [
     { key: "home", href: homeHref, label: t("home"), icon: House },
     ...(modules ?? []).map((m) => ({
@@ -70,14 +75,33 @@ export function ModuleNav({
           </Link>
         );
       })}
-      <Link
-        href="/"
-        onClick={onNavigate}
-        className="mt-auto flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-      >
-        <ArrowLeftRight className="size-4 shrink-0" aria-hidden />
-        {tHeader("switchService")}
-      </Link>
+      {/* Bottom group: settings (if allowed), then switch service. */}
+      <div className="mt-auto flex flex-col gap-1 border-t border-border pt-2">
+        {canManageProductSettings ? (
+          <Link
+            href={settingsHref}
+            onClick={onNavigate}
+            aria-current={settingsActive ? "page" : undefined}
+            className={cn(
+              "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+              settingsActive
+                ? "bg-primary font-medium text-primary-foreground"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground",
+            )}
+          >
+            <Settings className="size-4 shrink-0" aria-hidden />
+            {tNav("productSettings")}
+          </Link>
+        ) : null}
+        <Link
+          href="/"
+          onClick={onNavigate}
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+        >
+          <ArrowLeftRight className="size-4 shrink-0" aria-hidden />
+          {tHeader("switchService")}
+        </Link>
+      </div>
     </nav>
   );
 }

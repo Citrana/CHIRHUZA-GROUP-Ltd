@@ -30,6 +30,8 @@ export const PERMISSIONS = [
 
   { key: "products.view", module: "products", description: "View products" },
   { key: "products.manage", module: "products", description: "Create and edit products" },
+  { key: "products.confirm", module: "products", description: "Confirm products created pending confirmation" },
+  { key: "products.settings", module: "products", description: "Manage product settings (lengths, colours)" },
 
   { key: "requisition.view", module: "requisition", description: "View requisitions" },
   { key: "requisition.create", module: "requisition", description: "Create requisitions" },
@@ -119,6 +121,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "deletes.approve",
       "approvals.view_all",
       ...PRODUCTS_AND_WITHDRAWALS,
+      "products.confirm",
+      "products.settings",
     ]),
   },
   {
@@ -143,6 +147,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "sales.edit.approve",
       "requisition.create",
       ...PRODUCTS_AND_WITHDRAWALS,
+      "products.confirm",
     ]),
   },
   {
@@ -154,6 +159,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.create",
       "stock.set_price",
       ...PRODUCTS_AND_WITHDRAWALS,
+      "products.settings",
     ]),
   },
   {
@@ -198,5 +204,16 @@ export const SEED_STEPS: readonly SeedStep[] = [
     // audit.view to a Chief Admin role that already existed.
     key: "2026-09-audit-view-chief-admin",
     grants: [["chief_admin", "audit.view", "all_locations"]],
+  },
+  {
+    // Product catalogue: chiefs confirm pending products; Chief Admin and
+    // Chief Inventory Admin manage the allowed lengths/colours.
+    key: "2026-09-products-confirm-settings",
+    grants: [
+      ["chief_admin", "products.confirm", "all_locations"],
+      ["chief_sales_admin", "products.confirm", "all_locations"],
+      ["chief_admin", "products.settings", "all_locations"],
+      ["chief_inventory_admin", "products.settings", "all_locations"],
+    ],
   },
 ];

@@ -38,7 +38,7 @@ export default function LoginPage() {
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="email">{t("emailLabel")}</Label>
+              <Label htmlFor="email" required>{t("emailLabel")}</Label>
               <Input
                 id="email"
                 type="email"
@@ -49,7 +49,7 @@ export default function LoginPage() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="password">{t("passwordLabel")}</Label>
+              <Label htmlFor="password" required>{t("passwordLabel")}</Label>
               <Input
                 id="password"
                 type="password"

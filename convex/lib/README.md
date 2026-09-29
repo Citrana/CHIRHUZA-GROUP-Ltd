@@ -17,8 +17,9 @@ Shared server-side helpers, not routable Convex functions themselves.
   `PermissionKey`) and the six `SYSTEM_ROLES` with default grants, seeded by
   `rbac:seedRbac`. Add new permission keys here.
 - `businessUnits.ts` — the four business units (`BUSINESS_UNITS`,
-  `BusinessUnitKey`) seeded by `businessUnits:seedBusinessUnits`, plus the
-  location type validator.
+  `BusinessUnitKey`) seeded by `businessUnits:seedBusinessUnits`, the
+  location type validator, and `getBusinessUnitByKey` /
+  `requireBusinessUnit`.
 - `auth.ts` — `getCurrentUserOrNull` / `requireCurrentUser` and
   `requireCurrentUserFromAction` (for actions, which have no `ctx.db`). The
   base layer `rbac.ts` builds on; use it directly only for functions that
@@ -33,6 +34,10 @@ Shared server-side helpers, not routable Convex functions themselves.
   new approval types here.
 - `approvalHandlers.ts` — `APPROVAL_HANDLERS`, one handler per type that
   applies an approved change (stubs until each feature registers its own).
+- `products.ts` — product catalogue constants (categories, units,
+  statuses), `nextSku`, `searchTextFor`, `productUsage.isProductInUse`
+  (TODO: stock/requisition features add their checks) and the approved
+  product delete handler.
 - `time.ts` — business time zone (Africa/Lubumbashi, UTC+2) helpers:
   `businessDayStartUtc` / `businessDayEndUtc` turn a YYYY-MM-DD business
   day into a UTC ms range.

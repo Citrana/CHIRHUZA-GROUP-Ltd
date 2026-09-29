@@ -1,6 +1,8 @@
+import { ConvexError } from "convex/values";
 import type { MutationCtx } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { ApprovalType } from "./approvalTypes";
+import { deleteApprovedProduct } from "./products";
 
 /**
  * Applies an approved change. Runs inside `approvals.decideApproval`'s
@@ -19,6 +21,26 @@ export type ApprovalHandler = (
 const notImplementedYet: ApprovalHandler = async () => {};
 
 /**
+ * Business-data deletes (CLAUDE.md "Deletes") all use the one `delete`
+ * approval type; this picks the table's own delete handler by
+ * `approval.entityTable`. To make a table deletable, add it here. An
+ * unregistered table throws, so its approval stays pending.
+ */
+export const DELETE_HANDLERS: Record<string, ApprovalHandler> = {
+  products: deleteApprovedProduct,
+};
+
+const dispatchDelete: ApprovalHandler = async (ctx, approval, decider) => {
+  const handler = DELETE_HANDLERS[approval.entityTable];
+  if (!handler) {
+    throw new ConvexError(
+      `Deleting "${approval.entityTable}" records isn't supported yet.`,
+    );
+  }
+  await handler(ctx, approval, decider);
+};
+
+/**
  * The handler registry, one entry per approval type. `Record` makes a
  * missing type a compile error. To plug a feature in, replace its stub:
  *
@@ -32,7 +54,7 @@ const notImplementedYet: ApprovalHandler = async () => {};
  */
 export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   sale_edit: notImplementedYet,
-  delete: notImplementedYet,
+  delete: dispatchDelete,
   expense: notImplementedYet,
   payroll: notImplementedYet,
   requisition: notImplementedYet,

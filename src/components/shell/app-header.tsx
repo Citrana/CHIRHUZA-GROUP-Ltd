@@ -21,7 +21,7 @@ import { useLastService } from "@/lib/service-store";
 /**
  * The app-wide header: brand, current service + switcher, and an account
  * menu (admin links, language, logout). On phones the account menu lives
- * in a sheet; from `lg` up it is inline (four admin links need the room).
+ * in a sheet; from `xl` up it is inline (the admin links need the room).
  *
  * - `service`: the service being worked in (inside /[service]).
  * - `backToLastService`: on pages outside a service (admin), offer a link
@@ -79,7 +79,7 @@ export function AppHeader({
           </span>
         ) : null}
 
-        <div className="ml-auto hidden items-center gap-4 lg:flex">
+        <div className="ml-auto hidden items-center gap-4 xl:flex">
           {serviceLink}
           <AdminLinks className="flex items-center gap-4" />
           <LocaleSwitcher />
@@ -92,7 +92,7 @@ export function AppHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="ml-auto lg:hidden"
+                className="ml-auto xl:hidden"
                 aria-label={t("account")}
               />
             }

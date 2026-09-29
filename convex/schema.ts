@@ -4,6 +4,11 @@ import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
 import { auditActionValidator } from "./lib/audit";
 import {
+  productCategoryValidator,
+  productStatusValidator,
+  productUnitValidator,
+} from "./lib/products";
+import {
   approvalStatusValidator,
   approvalTypeValidator,
 } from "./lib/approvalTypes";
@@ -90,6 +95,60 @@ export default defineSchema({
   appliedSeedSteps: defineTable({
     key: v.string(),
   }).index("by_key", ["key"]),
+
+  // Product catalogue (convex/lib/products.ts). No prices here - prices are
+  // set at purchase time. Deleted only via an approved `delete` approval.
+  products: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    // Auto-generated, unique, never reused (see skuCounters).
+    sku: v.string(),
+    category: productCategoryValidator,
+    unit: productUnitValidator,
+    brand: v.optional(v.string()),
+    texture: v.optional(v.string()),
+    // One of the business unit's productLengths.
+    lengthInches: v.optional(v.number()),
+    colourId: v.optional(v.id("productColours")),
+    status: productStatusValidator,
+    createdBy: v.id("users"),
+    // Set when a pending product is confirmed (or at creation by a confirmer).
+    confirmedBy: v.optional(v.id("users")),
+    confirmedAt: v.optional(v.number()),
+    // Lowercased name/sku/brand/texture/category, for search.
+    searchText: v.string(),
+  })
+    .index("by_sku", ["sku"])
+    .index("by_businessUnitId_and_name", ["businessUnitId", "name"])
+    .index("by_businessUnitId_and_status_and_name", ["businessUnitId", "status", "name"])
+    .index("by_businessUnitId_and_category_and_name", ["businessUnitId", "category", "name"])
+    // For "is this length / colour used by any product?" in product settings.
+    .index("by_businessUnitId_and_lengthInches", ["businessUnitId", "lengthInches"])
+    .index("by_colourId", ["colourId"])
+    .searchIndex("search_text", {
+      searchField: "searchText",
+      filterFields: ["businessUnitId", "status", "category"],
+    }),
+
+  // Per-business-unit product settings. Deactivated, never deleted, so
+  // products that use a value keep it.
+  productLengths: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    inches: v.number(),
+    active: v.boolean(),
+  }).index("by_businessUnitId_and_inches", ["businessUnitId", "inches"]),
+
+  productColours: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    active: v.boolean(),
+  }).index("by_businessUnitId_and_name", ["businessUnitId", "name"]),
+
+  // Next SKU sequence number per business unit.
+  skuCounters: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    next: v.number(),
+  }).index("by_businessUnitId", ["businessUnitId"]),
 
   // The generic approval engine (convex/lib/approvals.ts). Created only via
   // requestApproval; status moves pending -> approved/rejected exactly once,

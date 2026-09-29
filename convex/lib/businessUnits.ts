@@ -1,4 +1,6 @@
-import { v, type Infer } from "convex/values";
+import { v, ConvexError, type Infer } from "convex/values";
+import type { QueryCtx } from "../_generated/server";
+import type { Doc } from "../_generated/dataModel";
 
 /**
  * The four business units (services). Seeded into `businessUnits` by
@@ -33,3 +35,26 @@ export const locationTypeValidator = v.union(
   v.literal("warehouse"),
 );
 export type LocationType = Infer<typeof locationTypeValidator>;
+
+/** The business unit with this key, or null if it isn't seeded. */
+export async function getBusinessUnitByKey(
+  ctx: QueryCtx,
+  key: BusinessUnitKey,
+): Promise<Doc<"businessUnits"> | null> {
+  return await ctx.db
+    .query("businessUnits")
+    .withIndex("by_key", (q) => q.eq("key", key))
+    .unique();
+}
+
+/** Like getBusinessUnitByKey, but throws when the unit isn't seeded. */
+export async function requireBusinessUnit(
+  ctx: QueryCtx,
+  key: BusinessUnitKey,
+): Promise<Doc<"businessUnits">> {
+  const unit = await getBusinessUnitByKey(ctx, key);
+  if (!unit) {
+    throw new ConvexError("Business unit not found. Run seed:seedReferenceData.");
+  }
+  return unit;
+}

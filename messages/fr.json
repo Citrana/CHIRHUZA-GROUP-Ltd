@@ -1,6 +1,7 @@
 {
   "Common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "requiredHint": "Champs obligatoires"
   },
   "DataTable": {
     "search": "Rechercher…",
@@ -69,7 +70,8 @@
     "manageUsers": "Gérer les utilisateurs",
     "manageRoles": "Gérer les rôles",
     "manageLocations": "Sites",
-    "auditLog": "Journal d'audit"
+    "auditLog": "Journal d'audit",
+    "productSettings": "Paramètres produits"
   },
   "Auth": {
     "logout": "Se déconnecter",
@@ -264,7 +266,9 @@
     },
     "products": {
       "view": "Voir les produits",
-      "manage": "Créer et modifier des produits"
+      "manage": "Créer et modifier des produits",
+      "confirm": "Confirmer les produits en attente",
+      "settings": "Gérer les paramètres produits (longueurs, couleurs)"
     },
     "withdrawals": {
       "view": "Voir les retraits",
@@ -382,5 +386,117 @@
       "distribution": "Distribution de stock",
       "withdrawal": "Retrait"
     }
+  },
+  "ProductCategories": {
+    "wigs": "Perruques",
+    "bundles": "Tissages",
+    "closures": "Closures",
+    "frontals": "Frontales",
+    "extensions": "Extensions",
+    "hair_care": "Soins capillaires",
+    "accessories": "Accessoires"
+  },
+  "ProductUnits": {
+    "piece": "Pièce",
+    "bundle": "Paquet (tissage)",
+    "pack": "Lot",
+    "set": "Ensemble",
+    "bottle": "Flacon"
+  },
+  "Products": {
+    "title": "Produits",
+    "subtitle": "Le catalogue des produits. Les prix sont fixés à l'achat du stock.",
+    "accessDenied": "Vous n'avez pas accès aux produits.",
+    "loading": "Chargement…",
+    "notFound": "Ce produit n'existe plus.",
+    "create": "Nouveau produit",
+    "createTitle": "Nouveau produit",
+    "editTitle": "Modifier le produit",
+    "searchPlaceholder": "Rechercher par nom, SKU, marque…",
+    "allCategories": "Toutes les catégories",
+    "allStatuses": "Tous les statuts",
+    "empty": "Aucun produit ne correspond.",
+    "nameHeader": "Produit",
+    "skuHeader": "SKU",
+    "categoryHeader": "Catégorie",
+    "detailsHeader": "Longueur · couleur",
+    "statusHeader": "Statut",
+    "nameLabel": "Nom",
+    "categoryLabel": "Catégorie",
+    "unitLabel": "Unité",
+    "lengthLabel": "Longueur",
+    "colourLabel": "Couleur",
+    "brandLabel": "Marque",
+    "textureLabel": "Texture",
+    "texturePlaceholder": "ex. Body wave, Lisse",
+    "skuLabel": "SKU",
+    "selectCategory": "Choisissez une catégorie",
+    "selectUnit": "Choisissez une unité",
+    "none": "—",
+    "inches": "{inches}″",
+    "needsConfirmationHint": "Ce produit restera en attente jusqu'à sa confirmation par un responsable.",
+    "noSettingsHint": "Les longueurs et couleurs proviennent des Paramètres produits. Demandez à un administrateur d'en ajouter.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saveError": "Impossible d'enregistrer le produit. Vérifiez les champs et réessayez.",
+    "createdBy": "Créé par",
+    "confirmedBy": "Confirmé par",
+    "confirm": "Confirmer le produit",
+    "edit": "Modifier",
+    "archive": "Archiver",
+    "restore": "Restaurer",
+    "requestDeletion": "Demander la suppression",
+    "awaitingConfirmationNote": "En attente de confirmation par un responsable.",
+    "deletionPending": "Suppression en attente",
+    "deletionPendingNote": "Une demande de suppression attend une approbation.",
+    "viewApprovals": "Voir les approbations",
+    "inUseNote": "Ce produit est utilisé dans le stock ou des réquisitions ; il peut seulement être archivé.",
+    "actionError": "L'opération a échoué. Veuillez actualiser et réessayer.",
+    "requestDeletionTitle": "Demander la suppression",
+    "requestDeletionDescription": "Une autre personne doit approuver avant que le produit soit supprimé.",
+    "reasonLabel": "Motif",
+    "sendRequest": "Envoyer la demande",
+    "statuses": {
+      "active": "Actif",
+      "pending_confirmation": "En attente de confirmation",
+      "archived": "Archivé"
+    }
+  },
+  "ProductSettings": {
+    "title": "Paramètres produits",
+    "subtitle": "Les longueurs et couleurs utilisables par les produits. Désactivez celles que vous ne vendez plus ; les produits les conservent.",
+    "accessDenied": "Vous n'avez pas accès à cette page.",
+    "lengthsTitle": "Longueurs",
+    "inchesLabel": "Pouces",
+    "addLength": "Ajouter une longueur",
+    "lengthHeader": "Longueur",
+    "noLengths": "Aucune longueur pour l'instant.",
+    "lengthError": "Impossible d'ajouter la longueur. Utilisez un nombre entier de 1 à 60 qui n'existe pas déjà.",
+    "coloursTitle": "Couleurs",
+    "colourNameLabel": "Nom de la couleur",
+    "colourPlaceholder": "ex. 1B, Noir naturel",
+    "addColour": "Ajouter une couleur",
+    "colourHeader": "Couleur",
+    "noColours": "Aucune couleur pour l'instant.",
+    "searchColours": "Rechercher des couleurs…",
+    "colourError": "Impossible d'enregistrer la couleur. Le nom existe peut-être déjà.",
+    "statusHeader": "Statut",
+    "actionsHeader": "Actions",
+    "active": "Active",
+    "inactive": "Inactive",
+    "deactivate": "Désactiver",
+    "reactivate": "Réactiver",
+    "rename": "Renommer",
+    "renameTitle": "Renommer la couleur",
+    "save": "Enregistrer",
+    "productsHeader": "Produits",
+    "productCount": "{count, plural, =0 {Non utilisée} one {# produit} other {# produits}}",
+    "delete": "Supprimer",
+    "deleteTitle": "Supprimer {value} ?",
+    "deleteConfirm": "Cette action est irréversible. Vous pourrez la rajouter plus tard si besoin.",
+    "inUse": "{count, plural, one {Utilisée par # produit} other {Utilisée par # produits}} — désactivez-la plutôt.",
+    "deleteError": "Suppression impossible. Veuillez actualiser et réessayer.",
+    "lengthExists": "{value} existe déjà (elle est peut-être désactivée — réactivez-la plutôt).",
+    "colourExists": "« {value} » existe déjà (elle est peut-être désactivée — réactivez-la plutôt)."
   }
 }

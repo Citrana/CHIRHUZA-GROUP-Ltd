@@ -9,6 +9,7 @@ import type { LocationType } from "../../../convex/lib/businessUnits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
@@ -91,8 +92,9 @@ export function LocationFormDialog({
             </DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
+            <RequiredFieldsHint />
             <div className="flex flex-col gap-2">
-              <Label htmlFor={`${idPrefix}-name`}>{t("nameLabel")}</Label>
+              <Label htmlFor={`${idPrefix}-name`} required>{t("nameLabel")}</Label>
               <Input
                 id={`${idPrefix}-name`}
                 value={name}
