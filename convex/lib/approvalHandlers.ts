@@ -3,6 +3,10 @@ import type { MutationCtx } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { ApprovalType } from "./approvalTypes";
 import { deleteApprovedProduct } from "./products";
+import {
+  applyRequisitionApproval,
+  applyRequisitionRejection,
+} from "./requisitions";
 
 /**
  * Applies an approved change. Runs inside `approvals.decideApproval`'s
@@ -57,8 +61,18 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   delete: dispatchDelete,
   expense: notImplementedYet,
   payroll: notImplementedYet,
-  requisition: notImplementedYet,
+  requisition: applyRequisitionApproval,
   stock_batch: notImplementedYet,
   distribution: notImplementedYet,
   withdrawal: notImplementedYet,
+};
+
+/**
+ * Optional per-type rejection hooks, run by `decideApproval` in the same
+ * transaction when an approval is rejected. For status bookkeeping ONLY
+ * (e.g. marking a requisition "rejected") - never to apply a change: a
+ * rejection changes nothing but the state of the request itself.
+ */
+export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalHandler>> = {
+  requisition: applyRequisitionRejection,
 };

@@ -33,11 +33,16 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `approvalTypes.ts` — the approval type/status/decision validators. Add
   new approval types here.
 - `approvalHandlers.ts` — `APPROVAL_HANDLERS`, one handler per type that
-  applies an approved change (stubs until each feature registers its own).
+  applies an approved change (stubs until each feature registers its own),
+  `DELETE_HANDLERS` (by table) and the optional
+  `APPROVAL_REJECTION_HANDLERS` (status bookkeeping on reject).
 - `products.ts` — product catalogue constants (categories, units,
   statuses), `nextSku`, `searchTextFor`, `productUsage.isProductInUse`
-  (TODO: stock/requisition features add their checks) and the approved
+  (checks requisition lines; TODO: the stock feature adds its check) and the approved
   product delete handler.
+- `requisitions.ts` — requisition statuses/resolutions, `isEditable`,
+  `nextSequenceNumber` (per-unit document numbers like `REQ-00001`), and
+  the requisition approval + rejection handlers.
 - `time.ts` — business time zone (Africa/Lubumbashi, UTC+2) helpers:
   `businessDayStartUtc` / `businessDayEndUtc` turn a YYYY-MM-DD business
   day into a UTC ms range.

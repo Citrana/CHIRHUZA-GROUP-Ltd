@@ -1,6 +1,6 @@
 import { convexTest } from "convex-test";
 import { afterEach, expect, test, vi } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { productUsage } from "./lib/products";
@@ -318,4 +318,73 @@ test("managing products needs products.manage; viewing needs products.view", asy
   await expect(
     asNobody.query(api.products.list, { businessUnitKey: "hair", paginationOpts: PAGE }),
   ).rejects.toThrow(/products\.view/);
+});
+
+test("the Super Admin may confirm a product they created (flagged); chiefs still can't", async () => {
+  const s = await setup();
+  const superAdmin = await insertUserWithRole(s.t, "super_admin", { email: "sa@x.com" });
+  const pending = await s.t.run((ctx) =>
+    ctx.db.insert("products", {
+      businessUnitId: s.hairId,
+      name: "Imported",
+      sku: "HAIR-08888",
+      category: "wigs",
+      unit: "piece",
+      status: "pending_confirmation",
+      createdBy: superAdmin,
+      searchText: "imported",
+    }),
+  );
+  const asSuper = s.t.withIdentity({ subject: superAdmin });
+  expect((await asSuper.query(api.products.get, { productId: pending }))!.canConfirm).toBe(true);
+  await asSuper.mutation(api.products.confirm, { productId: pending });
+
+  expect((await getProduct(s, pending))!.status).toBe("active");
+  const confirmAudit = (await auditFor(s, pending)).find((a) => a.action === "update");
+  expect(confirmAudit!.after).toEqual({ status: "active", selfConfirmed: true });
+});
+
+test("products are searchable by length and colour; the index follows edits and colour renames", async () => {
+  const s = await setup();
+  const asChief = s.t.withIdentity({ subject: s.chief });
+  const long = await create(s, s.chief, { name: "Perique", lengthInches: 18, colourId: s.black });
+  await create(s, s.chief, { name: "Perique", lengthInches: 24 });
+
+  const skus = async (search: string) =>
+    (
+      await asChief.query(api.products.list, { businessUnitKey: "hair", paginationOpts: PAGE, search })
+    ).page.map((p) => p.sku);
+
+  expect(await skus("18")).toEqual(["HAIR-00001"]);
+  expect(await skus("24in")).toEqual(["HAIR-00002"]);
+  expect(await skus("1B")).toEqual(["HAIR-00001"]);
+
+  // Editing the length moves it in search.
+  await asChief.mutation(api.products.update, {
+    productId: long,
+    name: "Perique",
+    category: "wigs",
+    unit: "piece",
+    lengthInches: 24,
+    colourId: s.black,
+  });
+  expect(await skus("18")).toEqual([]);
+  expect((await skus("24")).sort()).toEqual(["HAIR-00001", "HAIR-00002"]);
+
+  // Renaming the colour updates every product using it.
+  const inventory = s.t.withIdentity({ subject: s.inventory });
+  await inventory.mutation(api.productOptions.renameColour, { colourId: s.black, name: "Jet" });
+  expect(await skus("jet")).toEqual(["HAIR-00001"]);
+  expect(await skus("1b")).toEqual([]);
+});
+
+test("rebuildSearchText fixes products with stale search text", async () => {
+  const s = await setup();
+  const id = await create(s, s.chief, { name: "Perique", lengthInches: 18, colourId: s.black });
+  // Simulate a product saved before length/colour were searchable.
+  await s.t.run((ctx) => ctx.db.patch("products", id, { searchText: "perique hair-00001 wigs" }));
+
+  await s.t.mutation(internal.products.rebuildSearchText, {});
+
+  expect((await getProduct(s, id))!.searchText).toBe("perique hair-00001 wigs 18 18in 1b");
 });

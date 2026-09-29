@@ -6,7 +6,7 @@ import {
   businessUnitKeyValidator,
   requireBusinessUnit,
 } from "./lib/businessUnits";
-import { normalizeColourName } from "./lib/products";
+import { normalizeColourName, refreshProductSearchText } from "./lib/products";
 
 /**
  * Per-business-unit product settings: the lengths (whole inches) and
@@ -237,6 +237,14 @@ export const renameColour = authedMutation({
     }
     await assertColourNameFree(ctx, colour.businessUnitId, name, colour._id);
     await ctx.db.patch("productColours", colour._id, { name });
+    // Products are searchable by colour name: keep their search text current.
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_colourId", (q) => q.eq("colourId", colour._id))
+      .take(USAGE_COUNT_LIMIT);
+    for (const product of products) {
+      await refreshProductSearchText(ctx, product);
+    }
     await ctx.audit({
       action: "update",
       entityTable: "productColours",

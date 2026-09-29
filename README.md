@@ -59,6 +59,14 @@ roles and business units, and never undoes changes made in the Roles UI.
 Skipping it is the usual reason a new page or menu link doesn't appear —
 the permission that unlocks it hasn't been created yet.
 
+If product search misses products by length or colour (e.g. after an update
+that changed what search covers), rebuild the product search text. It's
+also safe to re-run:
+
+```bash
+pnpm dlx convex run products:rebuildSearchText
+```
+
 ## Authentication setup (first time only)
 
 Auth is Convex Auth (email + password, no public sign-up — only a Super
@@ -106,6 +114,7 @@ Convex commands:
 pnpm dlx convex dev                          # push schema + functions live (keep running)
 pnpm dlx convex run seed:seedReferenceData   # seed roles, permissions, business units (idempotent)
 pnpm dlx convex run seed:seedSuperAdmin      # first Super Admin (see Authentication setup)
+pnpm dlx convex run products:rebuildSearchText # recompute product search text (idempotent)
 pnpm dlx convex dashboard                    # open the deployment's dashboard
 pnpm dlx convex data <table>                 # print a table's rows, e.g. `auditLogs`
 ```

@@ -24,11 +24,13 @@ import type * as lib_password from "../lib/password.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_products from "../lib/products.js";
 import type * as lib_rbac from "../lib/rbac.js";
+import type * as lib_requisitions from "../lib/requisitions.js";
 import type * as lib_time from "../lib/time.js";
 import type * as locations from "../locations.js";
 import type * as productOptions from "../productOptions.js";
 import type * as products from "../products.js";
 import type * as rbac from "../rbac.js";
+import type * as requisitions from "../requisitions.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
 
@@ -55,11 +57,13 @@ declare const fullApi: ApiFromModules<{
   "lib/permissions": typeof lib_permissions;
   "lib/products": typeof lib_products;
   "lib/rbac": typeof lib_rbac;
+  "lib/requisitions": typeof lib_requisitions;
   "lib/time": typeof lib_time;
   locations: typeof locations;
   productOptions: typeof productOptions;
   products: typeof products;
   rbac: typeof rbac;
+  requisitions: typeof requisitions;
   seed: typeof seed;
   users: typeof users;
 }>;

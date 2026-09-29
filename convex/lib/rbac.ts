@@ -15,7 +15,12 @@ import type { DataModel, Doc, Id } from "../_generated/dataModel";
 import { internal } from "../_generated/api";
 import { requireCurrentUser, requireCurrentUserFromAction } from "./auth";
 import { logAudit, type AuditEntry } from "./audit";
-import { isPermissionKey, type PermissionKey, type Scope } from "./permissions";
+import {
+  isPermissionKey,
+  SUPER_ADMIN_ROLE_KEY,
+  type PermissionKey,
+  type Scope,
+} from "./permissions";
 
 export type PermissionMap = ReadonlyMap<PermissionKey, Scope>;
 
@@ -105,15 +110,46 @@ export async function requirePermission(
   return await assertPermission(user, permissions, key, scopeCheck);
 }
 
-function buildPermissionCtx(user: Doc<"users">, permissions: PermissionMap) {
+/**
+ * Whether the user holds the Super Admin role. The Super Admin has every
+ * permission AND is exempt from separation-of-duties rules (approving their
+ * own requests, confirming their own products, editing others'
+ * requisitions) - but not from the lock-out guards on their own account.
+ */
+export async function loadIsSuperAdmin(
+  ctx: QueryCtx | MutationCtx,
+  user: Doc<"users">,
+): Promise<boolean> {
+  if (user.roleId === null) return false;
+  const role = await ctx.db.get("roles", user.roleId);
+  return role?.key === SUPER_ADMIN_ROLE_KEY;
+}
+
+function buildPermissionCtx(
+  user: Doc<"users">,
+  permissions: PermissionMap,
+  isSuperAdmin: boolean,
+) {
   return {
     user,
     permissions,
+    /** See loadIsSuperAdmin: exempt from separation-of-duties rules. */
+    isSuperAdmin,
     can: (key: PermissionKey) => permissions.has(key),
     requirePermission: (key: PermissionKey, scopeCheck?: ScopeCheck) =>
       assertPermission(user, permissions, key, scopeCheck),
   };
 }
+
+/** What authedQuery / authedMutation / authedAction add to ctx. */
+export type PermissionCtx = ReturnType<typeof buildPermissionCtx>;
+
+/** ctx inside an authedQuery - for helper functions that take it. */
+export type AuthedQueryCtx = QueryCtx & PermissionCtx;
+
+/** ctx inside an authedMutation - for helper functions that take it. */
+export type AuthedMutationCtx = MutationCtx &
+  PermissionCtx & { audit: (entry: AuditEntry) => Promise<void> };
 
 /**
  * Every public query/mutation/action goes through these (see CLAUDE.md,
@@ -126,7 +162,11 @@ export const authedQuery = customQuery(
   query,
   customCtx(async (ctx) => {
     const user = await requireCurrentUser(ctx);
-    return buildPermissionCtx(user, await loadPermissions(ctx, user));
+    return buildPermissionCtx(
+      user,
+      await loadPermissions(ctx, user),
+      await loadIsSuperAdmin(ctx, user),
+    );
   }),
 );
 
@@ -154,7 +194,11 @@ export const authedMutation = customMutation(
     const user = await requireCurrentUser(ctx);
     const db = appendOnlyGuardedDb(ctx);
     return {
-      ...buildPermissionCtx(user, await loadPermissions(ctx, user)),
+      ...buildPermissionCtx(
+        user,
+        await loadPermissions(ctx, user),
+        await loadIsSuperAdmin(ctx, user),
+      ),
       db,
       audit: (entry: AuditEntry) =>
         logAudit({ ...ctx, db }, { ...entry, actorId: user._id }),
@@ -165,18 +209,23 @@ export const authedMutation = customMutation(
 /** Actions have no ctx.db, so permissions come through an internal query. */
 export const authedAction = customAction(
   action,
-  customCtx(async (ctx) => {
+  // Explicit return type: this ctx comes from an internal query, whose type
+  // would otherwise depend on this very wrapper.
+  customCtx(async (ctx): Promise<PermissionCtx> => {
     const user = await requireCurrentUserFromAction(ctx);
-    const entries: Array<{ key: string; scope: Scope }> = await ctx.runQuery(
-      internal.rbac.getPermissionsForUserInternal,
-      { userId: user._id },
-    );
+    const {
+      permissions: entries,
+      isSuperAdmin,
+    }: { permissions: Array<{ key: string; scope: Scope }>; isSuperAdmin: boolean } =
+      await ctx.runQuery(internal.rbac.getPermissionsForUserInternal, {
+        userId: user._id,
+      });
     const permissions = new Map<PermissionKey, Scope>();
     for (const { key, scope } of entries) {
       if (isPermissionKey(key)) {
         permissions.set(key, scope);
       }
     }
-    return buildPermissionCtx(user, permissions);
+    return buildPermissionCtx(user, permissions, isSuperAdmin);
   }),
 );

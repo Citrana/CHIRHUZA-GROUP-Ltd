@@ -101,17 +101,67 @@ export function searchTextFor(product: {
   category: string;
   brand?: string;
   texture?: string;
+  lengthInches?: number;
+  colourName?: string;
 }): string {
-  return [product.name, product.sku, product.brand, product.texture, product.category]
+  // A length is searchable as "18" and "18in"; the colour by its name.
+  const length =
+    product.lengthInches !== undefined
+      ? `${product.lengthInches} ${product.lengthInches}in`
+      : undefined;
+  return [
+    product.name,
+    product.sku,
+    product.brand,
+    product.texture,
+    product.category,
+    length,
+    product.colourName,
+  ]
     .filter(Boolean)
     .join(" ")
     .toLowerCase();
 }
 
+type SearchableProduct = {
+  name: string;
+  sku: string;
+  category: string;
+  brand?: string;
+  texture?: string;
+  lengthInches?: number;
+  colourId?: Id<"productColours">;
+};
+
+/** searchTextFor, looking up the product's colour name. */
+export async function computeSearchText(
+  ctx: QueryCtx | MutationCtx,
+  product: SearchableProduct,
+): Promise<string> {
+  const colour = product.colourId
+    ? await ctx.db.get("productColours", product.colourId)
+    : null;
+  return searchTextFor({ ...product, colourName: colour?.name });
+}
+
+/**
+ * Recomputes a stored product's search text (e.g. after its colour was
+ * renamed). Writes only when it changed; returns whether it did.
+ */
+export async function refreshProductSearchText(
+  ctx: MutationCtx,
+  product: Doc<"products">,
+): Promise<boolean> {
+  const searchText = await computeSearchText(ctx, product);
+  if (searchText === product.searchText) return false;
+  await ctx.db.patch("products", product._id, { searchText });
+  return true;
+}
+
 /**
  * Whether a product is referenced by a requisition or stock, in which case
- * it can only be archived, never deleted. Nothing references products yet;
- * TODO: the requisitions and stock features must add their checks here.
+ * it can only be archived, never deleted. Checks requisition lines today;
+ * TODO: the stock feature must add its check here.
  * Exported as an object property so tests can stub it.
  */
 export const productUsage: {
@@ -120,7 +170,13 @@ export const productUsage: {
     productId: Id<"products">,
   ) => Promise<boolean>;
 } = {
-  isProductInUse: async () => false,
+  isProductInUse: async (ctx, productId) => {
+    const requisitionLine = await ctx.db
+      .query("requisitionItems")
+      .withIndex("by_productId", (q) => q.eq("productId", productId))
+      .first();
+    return requisitionLine !== null;
+  },
 };
 
 export const PRODUCT_IN_USE =
