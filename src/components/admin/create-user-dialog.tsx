@@ -8,6 +8,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useRoleText } from "@/components/admin/use-role-text";
 import { LocationSelect } from "@/components/admin/location-select";
@@ -125,8 +126,9 @@ export function CreateUserDialog() {
               <DialogTitle>{t("createUser")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-4 py-4">
+              <RequiredFieldsHint />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="new-user-name">{t("nameLabel")}</Label>
+                <Label htmlFor="new-user-name" required>{t("nameLabel")}</Label>
                 <Input
                   id="new-user-name"
                   value={name}
@@ -135,7 +137,7 @@ export function CreateUserDialog() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="new-user-email">{t("emailLabel")}</Label>
+                <Label htmlFor="new-user-email" required>{t("emailLabel")}</Label>
                 <Input
                   id="new-user-email"
                   type="email"
@@ -145,7 +147,7 @@ export function CreateUserDialog() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="new-user-role">{t("roleLabel")}</Label>
+                <Label htmlFor="new-user-role" required>{t("roleLabel")}</Label>
                 <NativeSelect
                   id="new-user-role"
                   value={roleId}
@@ -165,7 +167,7 @@ export function CreateUserDialog() {
                 </NativeSelect>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="new-user-location">{t("locationLabel")}</Label>
+                <Label htmlFor="new-user-location" required={locationRequired}>{t("locationLabel")}</Label>
                 <LocationSelect
                   id="new-user-location"
                   value={locationId}

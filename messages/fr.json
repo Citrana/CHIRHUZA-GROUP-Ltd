@@ -1,6 +1,7 @@
 {
   "Common": {
-    "close": "Fermer"
+    "close": "Fermer",
+    "requiredHint": "Champs obligatoires"
   },
   "DataTable": {
     "search": "Rechercher…",

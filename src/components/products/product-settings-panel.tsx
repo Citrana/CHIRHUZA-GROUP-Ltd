@@ -233,7 +233,7 @@ function LengthsSection({ service }: { service: BusinessUnitKey }) {
       <h2 className="font-heading text-lg font-semibold">{t("lengthsTitle")}</h2>
       <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="new-length">{t("inchesLabel")}</Label>
+          <Label htmlFor="new-length" required>{t("inchesLabel")}</Label>
           <Input
             id="new-length"
             type="number"
@@ -383,7 +383,7 @@ function ColoursSection({ service }: { service: BusinessUnitKey }) {
       <h2 className="font-heading text-lg font-semibold">{t("coloursTitle")}</h2>
       <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2">
         <div className="flex flex-col gap-1.5">
-          <Label htmlFor="new-colour">{t("colourNameLabel")}</Label>
+          <Label htmlFor="new-colour" required>{t("colourNameLabel")}</Label>
           <Input
             id="new-colour"
             value={name}
@@ -425,7 +425,7 @@ function ColoursSection({ service }: { service: BusinessUnitKey }) {
               <DialogTitle>{t("renameTitle")}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col gap-2 py-4">
-              <Label htmlFor="rename-colour">{t("colourNameLabel")}</Label>
+              <Label htmlFor="rename-colour" required>{t("colourNameLabel")}</Label>
               <Input
                 id="rename-colour"
                 value={newName}

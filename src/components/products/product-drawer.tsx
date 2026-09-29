@@ -236,7 +236,7 @@ export function ProductDrawer({
               <DialogDescription>{t("requestDeletionDescription")}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-2 py-4">
-              <Label htmlFor="delete-reason">{t("reasonLabel")}</Label>
+              <Label htmlFor="delete-reason" required>{t("reasonLabel")}</Label>
               <textarea
                 id="delete-reason"
                 value={reason}

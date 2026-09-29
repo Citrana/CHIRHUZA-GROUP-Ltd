@@ -52,7 +52,7 @@ export function ChangePasswordScreen() {
           </p>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="flex flex-col gap-2">
-              <Label htmlFor="newPassword">{t("newPasswordLabel")}</Label>
+              <Label htmlFor="newPassword" required>{t("newPasswordLabel")}</Label>
               <Input
                 id="newPassword"
                 type="password"
@@ -63,7 +63,7 @@ export function ChangePasswordScreen() {
               />
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="confirmPassword">
+              <Label htmlFor="confirmPassword" required>
                 {t("confirmPasswordLabel")}
               </Label>
               <Input

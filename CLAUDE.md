@@ -162,6 +162,9 @@ this repo, now and later — do not relax them for convenience.
   queries that take `paginationOpts` with `useCursorPaginatedQuery`; use the
   standalone `Pagination` component for paged content outside a table.
   Usage guide: `src/components/data-table/README.md`.
+- Form fields the user must fill in use `<Label required>` (red star) on an
+  input with the `required` attribute; optional fields have no star. Forms
+  with several fields show `<RequiredFieldsHint />` ("* Required fields").
 - UI is **mobile-first** — users work from phones. Design for ~360px wide
   first (tap targets ≥ 44px, no horizontal page scroll; wide tables scroll
   inside their own container or become cards on small screens).

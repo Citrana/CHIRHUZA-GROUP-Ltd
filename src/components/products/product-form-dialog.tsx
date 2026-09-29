@@ -15,6 +15,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
@@ -140,6 +141,7 @@ export function ProductFormDialog({
             <DialogTitle>{product ? t("editTitle") : t("createTitle")}</DialogTitle>
           </DialogHeader>
           <div className="flex flex-col gap-4 py-4">
+            <RequiredFieldsHint />
             {product ? (
               <p className="text-sm text-muted-foreground">
                 {t("skuLabel")}: <span className="font-mono">{product.sku}</span>
@@ -150,7 +152,7 @@ export function ProductFormDialog({
               </p>
             ) : null}
             <div className="flex flex-col gap-2">
-              <Label htmlFor="product-name">{t("nameLabel")}</Label>
+              <Label htmlFor="product-name" required>{t("nameLabel")}</Label>
               <Input
                 id="product-name"
                 value={form.name}
@@ -161,7 +163,7 @@ export function ProductFormDialog({
             </div>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="product-category">{t("categoryLabel")}</Label>
+                <Label htmlFor="product-category" required>{t("categoryLabel")}</Label>
                 <NativeSelect
                   id="product-category"
                   value={form.category}
@@ -179,7 +181,7 @@ export function ProductFormDialog({
                 </NativeSelect>
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="product-unit">{t("unitLabel")}</Label>
+                <Label htmlFor="product-unit" required>{t("unitLabel")}</Label>
                 <NativeSelect
                   id="product-unit"
                   value={form.unit}

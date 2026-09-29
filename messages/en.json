@@ -1,6 +1,7 @@
 {
   "Common": {
-    "close": "Close"
+    "close": "Close",
+    "requiredHint": "Required fields"
   },
   "DataTable": {
     "search": "Search…",
