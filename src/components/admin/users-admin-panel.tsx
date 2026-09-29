@@ -122,7 +122,6 @@ export function UsersAdminPanel() {
         data={users}
         getRowId={(user) => user._id}
         search={{ placeholder: t("searchPlaceholder") }}
-        pagination={{ mode: "client", pageSize: 10 }}
         initialSorting={[{ id: "name", desc: false }]}
         renderCard={(user) => (
           <div className="flex flex-col gap-3">

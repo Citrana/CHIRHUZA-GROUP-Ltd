@@ -47,8 +47,7 @@ export function ProductsPanel({ service }: { service: BusinessUnitKey }) {
           ...(category ? { category } : {}),
           ...(status ? { status } : {}),
         }
-      : "skip",
-    { initialPageSize: 25 },
+      : "skip"
   );
 
   if (canView === undefined) return null;

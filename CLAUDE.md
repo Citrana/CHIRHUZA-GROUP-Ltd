@@ -157,7 +157,8 @@ this repo, now and later — do not relax them for convenience.
 - Lists and tables use the shared `DataTable`
   (`src/components/data-table/`) — don't hand-roll `<table>` markup. Its
   features are opt-in per table: search, toolbar (filters/actions), per-column
-  sorting, client or server pagination, expandable rows, responsive columns
+  sorting, pagination (on by default: 10 / 20 / 50 rows per page, numbered
+  pages for client data), expandable rows, responsive columns
   (`meta.hideBelow`) and a phone card layout (`renderCard`). Paginate Convex
   queries that take `paginationOpts` with `useCursorPaginatedQuery`; use the
   standalone `Pagination` component for paged content outside a table.

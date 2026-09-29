@@ -16,7 +16,11 @@
     "next": "Page suivante",
     "details": "Détails",
     "expandRow": "Afficher les détails",
-    "collapseRow": "Masquer les détails"
+    "collapseRow": "Masquer les détails",
+    "firstPage": "Première page",
+    "lastPage": "Dernière page",
+    "goToPage": "Page {page}",
+    "pageOf": "{page} / {total}"
   },
   "AppHeader": {
     "brand": "CHIRHUZA GROUP Ltd",
