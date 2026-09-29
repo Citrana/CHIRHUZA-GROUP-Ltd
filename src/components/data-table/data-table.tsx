@@ -23,7 +23,7 @@ import {
   type DataTableColumn,
 } from "@/components/data-table/features";
 import {
-  DEFAULT_PAGE_SIZES,
+  DEFAULT_PAGE_SIZE,
   Pagination,
   type PaginationProps,
 } from "@/components/data-table/pagination";
@@ -63,11 +63,12 @@ export type DataTableProps<TData extends RowData> = {
   /** Extra filters / actions shown beside the search box. */
   toolbar?: ReactNode;
   /**
-   * `client`: page the loaded rows here. `server`: rows are already one
-   * page (e.g. from useCursorPaginatedQuery); pass its `pagination`.
-   * Omit for no pagination.
+   * On by default: omitted = `{ mode: "client" }` (pages the loaded rows,
+   * 10 per page). `server`: rows are already one page (e.g. from
+   * useCursorPaginatedQuery); pass its `pagination`. `false` turns
+   * pagination off.
    */
-  pagination?: DataTablePagination;
+  pagination?: DataTablePagination | false;
   initialSorting?: SortingState;
   /** Clicking a row toggles this detail view underneath it. */
   renderExpanded?: (row: TData) => ReactNode;
@@ -116,13 +117,16 @@ export function DataTable<TData extends RowData>({
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [clientSearch, setClientSearch] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
-  const clientPaging = pagination?.mode === "client";
+  // Every table paginates unless it opts out with `pagination={false}`.
+  const paging: DataTablePagination | null =
+    pagination === false ? null : (pagination ?? { mode: "client" });
+  const clientPaging = paging?.mode === "client";
   const [pageState, setPageState] = useState<PaginationState>({
     pageIndex: 0,
     pageSize:
-      pagination?.mode === "client"
-        ? (pagination.pageSize ?? DEFAULT_PAGE_SIZES[0])
-        : DEFAULT_PAGE_SIZES[0],
+      paging?.mode === "client"
+        ? (paging.pageSize ?? DEFAULT_PAGE_SIZE)
+        : DEFAULT_PAGE_SIZE,
   });
   const searchIsServer = search?.onChange !== undefined;
   const changeClientSearch = useCallback((value: string) => {
@@ -196,9 +200,9 @@ export function DataTable<TData extends RowData>({
 
 
   let paginationProps: PaginationProps | null = null;
-  if (pagination?.mode === "server") {
-    paginationProps = pagination;
-  } else if (pagination?.mode === "client") {
+  if (paging?.mode === "server") {
+    paginationProps = paging;
+  } else if (paging?.mode === "client") {
     const total = table.getFilteredRowModel().rows.length;
     const { pageIndex, pageSize } = pageState;
     const start = total === 0 ? 0 : pageIndex * pageSize + 1;
@@ -209,19 +213,19 @@ export function DataTable<TData extends RowData>({
       onPrevious: () => table.previousPage(),
       onNext: () => table.nextPage(),
       pageSize,
-      pageSizeOptions: pagination.pageSizeOptions,
+      pageSizeOptions: paging.pageSizeOptions,
       onPageSizeChange: (size) => table.setPageSize(size),
       rangeStart: start,
       rangeEnd: total === 0 ? 0 : start + rows.length - 1,
       totalCount: total,
+      pageCount: Math.max(pageCount, 1),
+      onPageChange: (page) => table.setPageIndex(page - 1),
     };
   }
-  // Hide the pager when everything fits on a single page anyway.
+  // Shown whenever there are rows, so the rows-per-page choice is always
+  // reachable (and on an emptied later page, to get back).
   const showPagination =
-    paginationProps !== null &&
-    (paginationProps.canPrevious ||
-      paginationProps.canNext ||
-      (paginationProps.totalCount ?? 0) > paginationProps.pageSize);
+    paginationProps !== null && (rows.length > 0 || paginationProps.canPrevious);
 
   const status =
     data === undefined ? t("loading") : rows.length === 0 ? (emptyMessage ?? t("noResults")) : null;

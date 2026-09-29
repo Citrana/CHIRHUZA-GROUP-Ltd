@@ -9,7 +9,10 @@ import {
   type PaginatedQueryReference,
 } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import type { PaginationProps } from "@/components/data-table/pagination";
+import {
+  DEFAULT_PAGE_SIZE,
+  type PaginationProps,
+} from "@/components/data-table/pagination";
 import {
   currentCursor,
   initialCursorPagination,
@@ -29,7 +32,7 @@ import {
 export function useCursorPaginatedQuery<Query extends PaginatedQueryReference>(
   query: Query,
   args: PaginatedQueryArgs<Query> | "skip",
-  { initialPageSize = 25 }: { initialPageSize?: number } = {},
+  { initialPageSize = DEFAULT_PAGE_SIZE }: { initialPageSize?: number } = {},
 ): {
   results: PaginatedQueryItem<Query>[] | undefined;
   isLoading: boolean;

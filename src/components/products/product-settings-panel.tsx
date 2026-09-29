@@ -415,7 +415,6 @@ function ColoursSection({ service }: { service: BusinessUnitKey }) {
         getRowId={(c) => c._id}
         emptyMessage={t("noColours")}
         search={{ placeholder: t("searchColours") }}
-        pagination={{ mode: "client", pageSize: 10 }}
       />
 
       <Dialog open={renaming !== null} onOpenChange={(open) => !open && setRenaming(null)}>

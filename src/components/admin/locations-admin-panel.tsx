@@ -121,7 +121,6 @@ export function LocationsAdminPanel() {
         getRowId={(location) => location._id}
         emptyMessage={t("empty")}
         search={{ placeholder: t("searchPlaceholder") }}
-        pagination={{ mode: "client", pageSize: 10 }}
         initialSorting={[{ id: "name", desc: false }]}
         toolbar={
           <div className="flex flex-col gap-1.5 sm:w-56">

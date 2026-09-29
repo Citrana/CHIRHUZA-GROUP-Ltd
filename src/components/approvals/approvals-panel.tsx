@@ -69,8 +69,7 @@ export function ApprovalsPanel({ service }: { service: BusinessUnitKey }) {
       // Business-time-zone days (Africa/Lubumbashi), per CLAUDE.md.
       ...(filters.fromDay ? { from: businessDayStartUtc(filters.fromDay) } : {}),
       ...(filters.toDay ? { to: businessDayEndUtc(filters.toDay) } : {}),
-    },
-    { initialPageSize: 25 },
+    }
   );
 
   const set = <K extends keyof Filters>(key: K, value: Filters[K]) =>

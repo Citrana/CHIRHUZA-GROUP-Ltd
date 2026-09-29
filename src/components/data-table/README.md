@@ -14,7 +14,8 @@ differs from v8, so v8 docs and most shadcn "data table" examples
 |---|---|
 | `data-table.tsx` | `DataTable`: the table component. |
 | `features.ts` | `dataTableFeatures`: the TanStack v9 features every DataTable registers. Also `DataTableColumn<Row>` (the column type) and `DataTableColumnMeta`. |
-| `pagination.tsx` | `Pagination`: Prev / Next + rows-per-page bar. Used by DataTable, and usable on its own. |
+| `pagination.tsx` | `Pagination`: rows-per-page (10 / 20 / 50) + numbered pages or Prev / Next. Used by DataTable, and usable on its own. |
+| `page-window.ts` | `pageWindow`: which page numbers / ellipses to show (unit-tested). |
 | `data-table-search.tsx` | `DataTableSearch`: debounced search box used by DataTable. |
 | `use-cursor-paginated-query.ts` | `useCursorPaginatedQuery`: page-by-page view of a Convex paginated query. |
 | `cursor-pagination.ts` | Pure cursor-stack logic behind the hook (unit-tested). |
@@ -67,7 +68,7 @@ needed.
 | `emptyMessage` | `string` | "No results." | Shown when there are no rows. Also shown when a search matches nothing. |
 | `search` | `{ placeholder?, value?, onChange? }` | off | Shows a search box. **Without `onChange`:** filters the loaded rows client-side. **With `value` + `onChange`:** you own the text and filter on the server (pass it to your query). |
 | `toolbar` | `ReactNode` | none | Filters or actions shown beside the search box. Wraps on phones. |
-| `pagination` | `{ mode: "client", pageSize?, pageSizeOptions? }` or `{ mode: "server", ...PaginationProps }` | off | See [Pagination](#pagination). |
+| `pagination` | `{ mode: "client", pageSize?, pageSizeOptions? }`, `{ mode: "server", ...PaginationProps }`, or `false` | **on** (`client`, 10 per page) | See [Pagination](#pagination). `false` turns it off. |
 | `initialSorting` | `SortingState` | `[]` | e.g. `[{ id: "name", desc: false }]`. |
 | `renderExpanded` | `(row) => ReactNode` | off | Makes rows clickable. A click, Enter or Space toggles this detail view under the row. |
 | `onRowClick` | `(row) => void` | off | Makes rows clickable (click, Enter or Space) and calls this instead, e.g. to open a detail drawer (see the Approvals page). Takes precedence over `renderExpanded`, so use one or the other. |
@@ -122,10 +123,15 @@ const columns: DataTableColumn<UserRow>[] = [
 
 ## Pagination
 
-### Client (`mode: "client"`)
+**Every table is paginated by default**: users choose 10, 20 or 50 rows per
+page (default 10), and the pager is shown whenever the table has rows.
+Pass `pagination={false}` only for a list that must never page.
+
+### Client (the default)
 
 For lists that are loaded in full (hundreds of rows at most): users,
-locations, roles.
+locations, roles, settings. Nothing to pass - or `{ mode: "client",
+pageSize: 20 }` to start at another size.
 
 ```tsx
 <DataTable
@@ -133,13 +139,13 @@ locations, roles.
   data={users}
   getRowId={(u) => u._id}
   search={{ placeholder: t("searchPlaceholder") }}
-  pagination={{ mode: "client", pageSize: 10 }}
   initialSorting={[{ id: "name", desc: false }]}
 />
 ```
 
-The pager shows "Showing 1–10 of 42". It hides itself when everything fits
-on one page. Searching goes back to page 1. Live data updates (e.g. after
+The pager shows "Showing 11–20 of 42" and numbered pages
+`« ‹ 1 2 3 4 5 … 12 › »` (first, previous, numbers, next, last); on
+phones the numbers collapse to `‹ 2 / 12 ›`. Searching goes back to page 1. Live data updates (e.g. after
 editing a row) keep you on the current page. If that page stops existing,
 the table steps back to the last one.
 
@@ -177,7 +183,7 @@ export const list = authedQuery({
 const { results, pagination } = useCursorPaginatedQuery(
   api.sales.list,
   canView ? { status } : "skip",   // args without paginationOpts
-  { initialPageSize: 25 },
+  // { initialPageSize: 20 } to start at another size (default 10)
 );
 
 <DataTable
@@ -191,7 +197,8 @@ const { results, pagination } = useCursorPaginatedQuery(
 - Changing the args (filters) or the page size **goes back to page 1**.
 - While the next page loads, the current one stays on screen.
 - Cursor pagination has **no grand total**: the pager shows "Showing
-  26–50 · Page 2", with no "of N".
+  11–20 · ‹ Page 2 ›" - no "of N", numbered pages or jump-to-last, since
+  those need the total.
 
 ### Standalone `Pagination`
 

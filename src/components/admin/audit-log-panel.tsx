@@ -92,8 +92,7 @@ export function AuditLogPanel() {
   };
   const { results, pagination } = useCursorPaginatedQuery(
     api.auditLogs.list,
-    canView ? args : "skip",
-    { initialPageSize: 25 },
+    canView ? args : "skip"
   );
 
   if (canView === undefined) {
