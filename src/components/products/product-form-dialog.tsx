@@ -58,11 +58,14 @@ export function ProductFormDialog({
   product,
   open,
   onOpenChange,
+  onCreated,
 }: {
   service: BusinessUnitKey;
   product?: Doc<"products">;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** Called with the new product's id after a successful create. */
+  onCreated?: (productId: Id<"products">) => void;
 }) {
   const t = useTranslations("Products");
   const tCategories = useTranslations("ProductCategories");
@@ -123,7 +126,8 @@ export function ProductFormDialog({
       if (product) {
         await update({ productId: product._id, ...fields });
       } else {
-        await create({ businessUnitKey: service, ...fields });
+        const productId = await create({ businessUnitKey: service, ...fields });
+        onCreated?.(productId);
       }
       onOpenChange(false);
     } catch {

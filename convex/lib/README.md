@@ -40,6 +40,11 @@ Shared server-side helpers, not routable Convex functions themselves.
   statuses), `nextSku`, `searchTextFor`, `productUsage.isProductInUse`
   (checks requisition lines; TODO: the stock feature adds its check) and the approved
   product delete handler.
+- `money.ts` — `currencyValidator` / `usdValidator`, `parseMoneyToMinor`,
+  `minorToInput`, `formatMoney` (shared with the UI's `MoneyInput`).
+- `stockBatches.ts` — batch/line/expense validators, `lineProblems`,
+  `resolutionFor`, `receiptProblem`, requisition status/link syncing, and
+  the `stock_batch` approval + rejection handlers.
 - `requisitions.ts` — requisition statuses/resolutions, `isEditable`,
   `nextSequenceNumber` (per-unit document numbers like `REQ-00001`), and
   the requisition approval + rejection handlers.

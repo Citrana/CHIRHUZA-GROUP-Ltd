@@ -20,11 +20,13 @@ import type * as lib_approvals from "../lib/approvals.js";
 import type * as lib_audit from "../lib/audit.js";
 import type * as lib_auth from "../lib/auth.js";
 import type * as lib_businessUnits from "../lib/businessUnits.js";
+import type * as lib_money from "../lib/money.js";
 import type * as lib_password from "../lib/password.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_products from "../lib/products.js";
 import type * as lib_rbac from "../lib/rbac.js";
 import type * as lib_requisitions from "../lib/requisitions.js";
+import type * as lib_stockBatches from "../lib/stockBatches.js";
 import type * as lib_time from "../lib/time.js";
 import type * as locations from "../locations.js";
 import type * as productOptions from "../productOptions.js";
@@ -32,6 +34,7 @@ import type * as products from "../products.js";
 import type * as rbac from "../rbac.js";
 import type * as requisitions from "../requisitions.js";
 import type * as seed from "../seed.js";
+import type * as stockBatches from "../stockBatches.js";
 import type * as users from "../users.js";
 
 import type {
@@ -53,11 +56,13 @@ declare const fullApi: ApiFromModules<{
   "lib/audit": typeof lib_audit;
   "lib/auth": typeof lib_auth;
   "lib/businessUnits": typeof lib_businessUnits;
+  "lib/money": typeof lib_money;
   "lib/password": typeof lib_password;
   "lib/permissions": typeof lib_permissions;
   "lib/products": typeof lib_products;
   "lib/rbac": typeof lib_rbac;
   "lib/requisitions": typeof lib_requisitions;
+  "lib/stockBatches": typeof lib_stockBatches;
   "lib/time": typeof lib_time;
   locations: typeof locations;
   productOptions: typeof productOptions;
@@ -65,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   rbac: typeof rbac;
   requisitions: typeof requisitions;
   seed: typeof seed;
+  stockBatches: typeof stockBatches;
   users: typeof users;
 }>;
 
