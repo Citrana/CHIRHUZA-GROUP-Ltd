@@ -53,7 +53,8 @@
   "Nav": {
     "manageUsers": "Manage users",
     "manageRoles": "Manage roles",
-    "manageLocations": "Locations"
+    "manageLocations": "Locations",
+    "auditLog": "Audit log"
   },
   "Auth": {
     "logout": "Log out",
@@ -255,6 +256,48 @@
     },
     "locations": {
       "manage": "Manage locations"
+    },
+    "audit": {
+      "view": "View the audit log"
+    }
+  },
+  "AuditLog": {
+    "title": "Audit log",
+    "subtitle": "Every change made in the system. Entries can never be edited or deleted.",
+    "accessDenied": "You don't have access to this page.",
+    "actorLabel": "Who",
+    "allActors": "Everyone",
+    "actionLabel": "Action",
+    "allActions": "All actions",
+    "entityLabel": "Record type",
+    "allEntities": "All types",
+    "entityIdLabel": "Record ID",
+    "entityIdPlaceholder": "Optional",
+    "fromLabel": "From",
+    "toLabel": "To",
+    "clearFilters": "Clear filters",
+    "empty": "No entries match these filters.",
+    "loadMore": "Load more",
+    "loading": "Loading…",
+    "by": "by {name}",
+    "unknownActor": "Unknown user",
+    "reason": "Reason",
+    "field": "Field",
+    "before": "Before",
+    "after": "After",
+    "emptyValue": "—",
+    "timeZoneNote": "Dates and times are in Lubumbashi time (UTC+2).",
+    "actions": {
+      "create": "Created",
+      "update": "Updated",
+      "delete": "Deleted",
+      "approve": "Approved",
+      "reject": "Rejected"
+    },
+    "entities": {
+      "users": "User",
+      "rolePermissions": "Role permission",
+      "locations": "Location"
     }
   }
 }

@@ -53,7 +53,8 @@
   "Nav": {
     "manageUsers": "Gérer les utilisateurs",
     "manageRoles": "Gérer les rôles",
-    "manageLocations": "Sites"
+    "manageLocations": "Sites",
+    "auditLog": "Journal d'audit"
   },
   "Auth": {
     "logout": "Se déconnecter",
@@ -255,6 +256,48 @@
     },
     "locations": {
       "manage": "Gérer les sites"
+    },
+    "audit": {
+      "view": "Voir le journal d'audit"
+    }
+  },
+  "AuditLog": {
+    "title": "Journal d'audit",
+    "subtitle": "Chaque modification effectuée dans le système. Les entrées ne peuvent jamais être modifiées ni supprimées.",
+    "accessDenied": "Vous n'avez pas accès à cette page.",
+    "actorLabel": "Qui",
+    "allActors": "Tout le monde",
+    "actionLabel": "Action",
+    "allActions": "Toutes les actions",
+    "entityLabel": "Type d'enregistrement",
+    "allEntities": "Tous les types",
+    "entityIdLabel": "ID de l'enregistrement",
+    "entityIdPlaceholder": "Facultatif",
+    "fromLabel": "Du",
+    "toLabel": "Au",
+    "clearFilters": "Effacer les filtres",
+    "empty": "Aucune entrée ne correspond à ces filtres.",
+    "loadMore": "Charger plus",
+    "loading": "Chargement…",
+    "by": "par {name}",
+    "unknownActor": "Utilisateur inconnu",
+    "reason": "Motif",
+    "field": "Champ",
+    "before": "Avant",
+    "after": "Après",
+    "emptyValue": "—",
+    "timeZoneNote": "Les dates et heures sont à l'heure de Lubumbashi (UTC+2).",
+    "actions": {
+      "create": "Créé",
+      "update": "Modifié",
+      "delete": "Supprimé",
+      "approve": "Approuvé",
+      "reject": "Rejeté"
+    },
+    "entities": {
+      "users": "Utilisateur",
+      "rolePermissions": "Permission de rôle",
+      "locations": "Site"
     }
   }
 }
