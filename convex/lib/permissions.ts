@@ -47,6 +47,7 @@ export const PERMISSIONS = [
   { key: "users.manage", module: "admin", description: "Manage users" },
   { key: "roles.manage", module: "admin", description: "Manage roles and permissions" },
   { key: "locations.manage", module: "admin", description: "Manage locations" },
+  { key: "audit.view", module: "admin", description: "View the audit log" },
 ] as const;
 
 export type PermissionKey = (typeof PERMISSIONS)[number]["key"];
@@ -191,5 +192,11 @@ export const SEED_STEPS: readonly SeedStep[] = [
           return [role.key, permissionKey, scope] as const;
         }),
     ),
+  },
+  {
+    // Chief Admin's defaults include every *.view key; this brings the new
+    // audit.view to a Chief Admin role that already existed.
+    key: "2026-09-audit-view-chief-admin",
+    grants: [["chief_admin", "audit.view", "all_locations"]],
   },
 ];

@@ -46,20 +46,23 @@ test("a Super Admin creates and edits a location, each change audited", async ()
   });
 
   const logs = await t.run((ctx) => ctx.db.query("auditLogs").collect());
-  expect(logs.map((l) => l.action)).toEqual([
-    "location.created",
-    "location.updated",
-  ]);
+  expect(logs.map((l) => l.action)).toEqual(["create", "update"]);
   expect(logs[0]).toMatchObject({
     actorId: adminId,
-    entityType: "locations",
+    entityTable: "locations",
     entityId: locationId,
-    details: { businessUnit: "hair", name: "Kenya Shop" },
+    businessUnitId: hairId,
+    after: { businessUnit: "hair", name: "Kenya Shop", type: "shop", active: true },
   });
-  expect(logs[1].details).toEqual({
-    address: "Av. Kasai 12 -> Av. Kasai 14",
-    active: "true -> false",
+  expect(logs[0].before).toBeUndefined();
+  // Updates record only the changed fields.
+  expect(logs[1]).toMatchObject({
+    action: "update",
+    businessUnitId: hairId,
+    before: { address: "Av. Kasai 12", active: true },
+    after: { address: "Av. Kasai 14", active: false },
   });
+  expect(Object.keys(logs[1].after!).sort()).toEqual(["active", "address"]);
 });
 
 test("an update with no changes writes no audit entry", async () => {

@@ -76,7 +76,21 @@ this repo, now and later — do not relax them for convenience.
 
 ## Audit logging
 
-- Every add, update, and delete writes an entry to an audit log table.
+- Every add, update, and delete writes an entry to the `auditLogs` table,
+  in the same mutation as the change.
+- Write entries only with `ctx.audit({...})` (inside `authedMutation`; the
+  caller is the actor) or `logAudit(ctx, {...})` (`convex/lib/audit.ts`,
+  for internal mutations). Actions go through
+  `internal.auditLogs.insertFromActionInternal`.
+- Entry shape: `action` (`create` | `update` | `delete` | `approve` |
+  `reject`), `entityTable`, `entityId`, optional `businessUnitId`,
+  `before` / `after` JSON snapshots, optional `reason`, `timestamp` (UTC ms).
+  Creates log the full new record as `after`, deletes the full old record as
+  `before`, and updates only the changed fields (use `diff(...)`; skip the
+  entry when it returns null). Include readable fields (role key, location
+  name) next to ids so the log is understandable on its own.
+- **Never** put secrets (passwords, tokens) in a snapshot.
+- The log is read on `/admin/audit`, gated by `audit.view`.
 
 ## Approvals
 
@@ -87,6 +101,10 @@ this repo, now and later — do not relax them for convenience.
 
 - Append-only tables — the audit log, inventory movements, and similar
   event-style tables — are **never** updated or deleted after being written.
+  No function (public or internal) may patch, replace or delete their rows.
+  `authedMutation`'s `ctx.db` rejects such writes at runtime (add new
+  append-only tables to `APPEND_ONLY_RULES` in `convex/lib/rbac.ts`), and a
+  test scans `convex/` source for them on `auditLogs`.
   Correct a mistake with a new compensating entry, not a mutation.
 
 ## Internationalization
@@ -193,7 +211,8 @@ RBAC (six seeded roles, permission catalog, Super Admin role editor at
 `/admin/roles`, role assignment at `/admin/users`), business units and
 locations (`/admin/locations`, user locations on `/admin/users`), and the
 service picker + mobile-first app shell (`/hair` with placeholder module
-pages). No business features yet — they come in later steps, built on top
+pages), and the append-only audit log (`/admin/audit`). No business
+features yet — they come in later steps, built on top
 of the rules above.
 
 <!-- convex-ai-start -->

@@ -1,7 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { internalQuery } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/rbac";
-import { logAudit } from "./lib/audit";
+import { diff, snapshot } from "./lib/audit";
 import { locationTypeValidator } from "./lib/businessUnits";
 
 function cleanName(name: string): string {
@@ -79,18 +79,12 @@ export const create = authedMutation({
       active: args.active,
     };
     const locationId = await ctx.db.insert("locations", location);
-    await logAudit(ctx, {
-      actorId: ctx.user._id,
-      action: "location.created",
-      entityType: "locations",
+    await ctx.audit({
+      action: "create",
+      entityTable: "locations",
       entityId: locationId,
-      details: {
-        businessUnit: unit.key,
-        name: location.name,
-        type: location.type,
-        address: location.address,
-        active: String(location.active),
-      },
+      businessUnitId: location.businessUnitId,
+      after: { ...snapshot(location), businessUnit: unit.key },
     });
     return locationId;
   },
@@ -117,23 +111,17 @@ export const update = authedMutation({
       address: args.address.trim(),
       active: args.active,
     };
-    const details: Record<string, string> = {};
-    for (const field of ["name", "type", "address", "active"] as const) {
-      const before = existing[field];
-      if (before !== next[field]) {
-        details[field] = `${String(before)} -> ${String(next[field])}`;
-      }
-    }
-    if (Object.keys(details).length === 0) {
+    const changes = diff(snapshot(existing, Object.keys(next) as Array<keyof typeof next>), next);
+    if (!changes) {
       return;
     }
     await ctx.db.patch("locations", locationId, next);
-    await logAudit(ctx, {
-      actorId: ctx.user._id,
-      action: "location.updated",
-      entityType: "locations",
+    await ctx.audit({
+      action: "update",
+      entityTable: "locations",
       entityId: locationId,
-      details,
+      businessUnitId: existing.businessUnitId,
+      ...changes,
     });
   },
 });

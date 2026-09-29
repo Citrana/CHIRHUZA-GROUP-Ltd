@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as businessUnits from "../businessUnits.js";
 import type * as healthCheck from "../healthCheck.js";
@@ -18,6 +19,7 @@ import type * as lib_businessUnits from "../lib/businessUnits.js";
 import type * as lib_password from "../lib/password.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_rbac from "../lib/rbac.js";
+import type * as lib_time from "../lib/time.js";
 import type * as locations from "../locations.js";
 import type * as rbac from "../rbac.js";
 import type * as seed from "../seed.js";
@@ -30,6 +32,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  auditLogs: typeof auditLogs;
   auth: typeof auth;
   businessUnits: typeof businessUnits;
   healthCheck: typeof healthCheck;
@@ -40,6 +43,7 @@ declare const fullApi: ApiFromModules<{
   "lib/password": typeof lib_password;
   "lib/permissions": typeof lib_permissions;
   "lib/rbac": typeof lib_rbac;
+  "lib/time": typeof lib_time;
   locations: typeof locations;
   rbac: typeof rbac;
   seed: typeof seed;
