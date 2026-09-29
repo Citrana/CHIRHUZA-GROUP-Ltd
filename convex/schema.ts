@@ -4,6 +4,10 @@ import { authTables } from "@convex-dev/auth/server";
 import { scopeValidator } from "./lib/permissions";
 import { auditActionValidator } from "./lib/audit";
 import {
+  requisitionItemResolutionValidator,
+  requisitionStatusValidator,
+} from "./lib/requisitions";
+import {
   productCategoryValidator,
   productStatusValidator,
   productUnitValidator,
@@ -149,6 +153,44 @@ export default defineSchema({
     businessUnitId: v.id("businessUnits"),
     next: v.number(),
   }).index("by_businessUnitId", ["businessUnitId"]),
+
+  // Requisitions (convex/lib/requisitions.ts): a location's request for
+  // stock, approved through the approval engine (type "requisition").
+  requisitions: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    locationId: v.id("locations"),
+    // e.g. REQ-00001, per business unit (numberSequences).
+    number: v.string(),
+    note: v.optional(v.string()),
+    status: requisitionStatusValidator,
+    createdBy: v.id("users"),
+    // UTC ms of the latest submission.
+    submittedAt: v.optional(v.number()),
+    // The latest submission's approval.
+    approvalId: v.optional(v.id("approvals")),
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"])
+    .index("by_businessUnitId_and_createdBy", ["businessUnitId", "createdBy"]),
+
+  // One line per product per requisition.
+  requisitionItems: defineTable({
+    requisitionId: v.id("requisitions"),
+    productId: v.id("products"),
+    qtyRequested: v.number(),
+    note: v.optional(v.string()),
+    // Set by purchasing; "pending" until then.
+    resolution: requisitionItemResolutionValidator,
+  })
+    .index("by_requisitionId_and_productId", ["requisitionId", "productId"])
+    .index("by_productId", ["productId"]),
+
+  // Per-business-unit document number sequences (e.g. key "requisition").
+  numberSequences: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    key: v.string(),
+    next: v.number(),
+  }).index("by_businessUnitId_and_key", ["businessUnitId", "key"]),
 
   // The generic approval engine (convex/lib/approvals.ts). Created only via
   // requestApproval; status moves pending -> approved/rejected exactly once,

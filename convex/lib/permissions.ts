@@ -160,6 +160,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.set_price",
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.settings",
+      // Sees all requisitions (even before approval) to discuss them early.
+      "requisition.view",
     ]),
   },
   {
@@ -215,5 +217,11 @@ export const SEED_STEPS: readonly SeedStep[] = [
       ["chief_admin", "products.settings", "all_locations"],
       ["chief_inventory_admin", "products.settings", "all_locations"],
     ],
+  },
+  {
+    // The Chief Inventory Admin buys what requisitions ask for, and sees
+    // them all (even before approval) to discuss them early.
+    key: "2026-09-requisition-view-inventory",
+    grants: [["chief_inventory_admin", "requisition.view", "all_locations"]],
   },
 ];

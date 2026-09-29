@@ -46,14 +46,16 @@ export type ApprovalRequest = {
 /**
  * Whether `user` has the right to decide `approval` at all (regardless of
  * its status): holds the required permission, within scope, and isn't the
- * requester - nobody approves their own request (CLAUDE.md).
+ * requester - nobody approves their own request (CLAUDE.md), except the
+ * Super Admin.
  */
 export function hasDeciderRights(
   user: Doc<"users">,
   permissions: PermissionMap,
   approval: Doc<"approvals">,
+  isSuperAdmin: boolean,
 ): boolean {
-  if (approval.requestedBy === user._id) return false;
+  if (approval.requestedBy === user._id && !isSuperAdmin) return false;
   if (!isPermissionKey(approval.requiredPermission)) return false;
   const scope = permissions.get(approval.requiredPermission);
   if (scope === undefined) return false;
@@ -68,10 +70,11 @@ export function canDecide(
   user: Doc<"users">,
   permissions: PermissionMap,
   approval: Doc<"approvals">,
+  isSuperAdmin: boolean,
 ): boolean {
   return (
     approval.status === "pending" &&
-    hasDeciderRights(user, permissions, approval)
+    hasDeciderRights(user, permissions, approval, isSuperAdmin)
   );
 }
 
@@ -80,11 +83,12 @@ export function canSeeApproval(
   user: Doc<"users">,
   permissions: PermissionMap,
   approval: Doc<"approvals">,
+  isSuperAdmin: boolean,
 ): boolean {
   return (
     permissions.has("approvals.view_all") ||
     approval.requestedBy === user._id ||
-    hasDeciderRights(user, permissions, approval)
+    hasDeciderRights(user, permissions, approval, isSuperAdmin)
   );
 }
 

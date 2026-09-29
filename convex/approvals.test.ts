@@ -317,3 +317,31 @@ test("anonymous callers are rejected", async () => {
     s.t.query(api.approvals.list, { businessUnitKey: "hair", paginationOpts: PAGE }),
   ).rejects.toThrow(/Not authenticated/);
 });
+
+test("the Super Admin may decide their own request; it's flagged in the audit", async () => {
+  const s = await setup();
+  const superAdmin = await insertUserWithRole(s.t, "super_admin", { email: "sa@x.com" });
+  const id = await request(s, superAdmin);
+
+  expect(
+    await s.t.withIdentity({ subject: superAdmin }).query(api.approvals.pendingCount, { businessUnitKey: "hair" }),
+  ).toBe(1);
+  await s.t.withIdentity({ subject: superAdmin }).mutation(api.approvals.decideApproval, {
+    approvalId: id,
+    decision: "approve",
+  });
+
+  expect((await getApproval(s, id))!.status).toBe("approved");
+  const audit = await auditFor(s, id);
+  expect(audit[1]).toMatchObject({ action: "approve", after: { status: "approved", selfApproved: true } });
+});
+
+test("a decision on someone else's request isn't flagged as self-approved", async () => {
+  const s = await setup();
+  const id = await request(s, s.agentA);
+  await s.t.withIdentity({ subject: s.chief }).mutation(api.approvals.decideApproval, {
+    approvalId: id,
+    decision: "approve",
+  });
+  expect((await auditFor(s, id))[1].after).toEqual({ status: "approved" });
+});

@@ -34,6 +34,13 @@ this repo, now and later — do not relax them for convenience.
 - The Super Admin role is locked: it always holds every permission and
   can't be edited, and the last active Super Admin can't be demoted or
   blocked.
+- The Super Admin can do **everything** on the platform: besides holding
+  every permission, they are exempt from separation-of-duties rules
+  (approving their own requests, confirming products they created, editing
+  others' draft/rejected requisitions). Check `ctx.isSuperAdmin` for such
+  exemptions, and flag self-actions in the audit (e.g. `selfApproved`,
+  `selfConfirmed`). The lock-out guards (own role/status, last Super Admin)
+  still apply to them.
 - Frontend: `useCan(key)` / `useCanAnyInModule(module)`
   (`src/lib/use-can.ts`) hide UI only. Skip (`"skip"`) queries the user
   can't run rather than letting them throw.
@@ -102,7 +109,9 @@ this repo, now and later — do not relax them for convenience.
 ## Approvals
 
 - Nobody can approve their own request (delete approvals or otherwise). The
-  requester and the approver must always be different users.
+  requester and the approver must always be different users — **except the
+  Super Admin**, whose self-approvals are allowed and flagged in the audit
+  log (`selfApproved: true`).
 - There is **one** approval engine (`convex/lib/approvals.ts`,
   `convex/approvals.ts`). A feature never applies an approvable change
   directly: its mutation checks the caller may *request* it, then calls
@@ -116,6 +125,12 @@ this repo, now and later — do not relax them for convenience.
   pending. Handlers audit what they change. A new approval type goes in
   `convex/lib/approvalTypes.ts` (the compiler then demands a handler and a
   default permission) plus `Approvals.types.<type>` in both message files.
+- A type may also register an optional rejection hook in
+  `APPROVAL_REJECTION_HANDLERS`, run in the same transaction when its
+  approval is rejected. It is for **status bookkeeping only** (e.g. marking
+  a requisition "rejected"), never for applying a change.
+- Helpers that take an authed ctx use the `AuthedQueryCtx` /
+  `AuthedMutationCtx` types from `convex/lib/rbac.ts`.
 - Payload convention: `{ before?: {...}, after?: {...}, ...extra data the
   handler needs }` — the Approvals page shows `before`/`after` as a diff.
   Money inside it follows the Money rule (integer minor units + currency).
@@ -248,8 +263,10 @@ RBAC (six seeded roles, permission catalog, Super Admin role editor at
 locations (`/admin/locations`, user locations on `/admin/users`), and the
 service picker + mobile-first app shell (`/hair` with placeholder module
 pages), the append-only audit log (`/admin/audit`), the generic approval
-engine (`/[service]/approvals`), and the Hair product catalogue
-(`/[service]/products`, with lengths/colours in `/[service]/settings`).
+engine (`/[service]/approvals`), the Hair product catalogue
+(`/[service]/products`, with lengths/colours in `/[service]/settings`), and
+requisitions (`/[service]/requisitions`: draft -> submit -> approve;
+purchasing comes next).
 Other business modules come in later steps, built on top
 of the rules above.
 

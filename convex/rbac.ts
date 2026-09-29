@@ -6,6 +6,7 @@ import { getCurrentUserOrNull } from "./lib/auth";
 import {
   authedMutation,
   authedQuery,
+  loadIsSuperAdmin,
   loadPermissions,
   roleRequiresLocation,
 } from "./lib/rbac";
@@ -141,14 +142,20 @@ export const seedRbac = internalMutation({
 /** Used by authedAction, which has no ctx.db. */
 export const getPermissionsForUserInternal = internalQuery({
   args: { userId: v.id("users") },
-  returns: v.array(v.object({ key: v.string(), scope: scopeValidator })),
+  returns: v.object({
+    permissions: v.array(v.object({ key: v.string(), scope: scopeValidator })),
+    isSuperAdmin: v.boolean(),
+  }),
   handler: async (ctx, { userId }) => {
     const user = await ctx.db.get("users", userId);
     if (!user) {
-      return [];
+      return { permissions: [], isSuperAdmin: false };
     }
     const permissions = await loadPermissions(ctx, user);
-    return [...permissions].map(([key, scope]) => ({ key, scope }));
+    return {
+      permissions: [...permissions].map(([key, scope]) => ({ key, scope })),
+      isSuperAdmin: await loadIsSuperAdmin(ctx, user),
+    };
   },
 });
 

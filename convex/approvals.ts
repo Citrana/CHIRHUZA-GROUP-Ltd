@@ -9,7 +9,10 @@ import {
   canSeeApproval,
   insertApproval,
 } from "./lib/approvals";
-import { APPROVAL_HANDLERS } from "./lib/approvalHandlers";
+import {
+  APPROVAL_HANDLERS,
+  APPROVAL_REJECTION_HANDLERS,
+} from "./lib/approvalHandlers";
 import {
   approvalDecisionValidator,
   approvalStatusValidator,
@@ -52,13 +55,18 @@ export const decideApproval = authedMutation({
         (approval.locationId !== undefined &&
           approval.locationId === user.locationId),
     );
-    if (approval.requestedBy === ctx.user._id) {
+    // Separation of duties - except for the Super Admin (flagged in the audit).
+    const selfDecision = approval.requestedBy === ctx.user._id;
+    if (selfDecision && !ctx.isSuperAdmin) {
       throw new ConvexError("You cannot decide your own request.");
     }
 
+    // Looked up at call time so features (and tests) can register handlers.
     if (decision === "approve") {
-      // Looked up at call time so features (and tests) can register handlers.
       await APPROVAL_HANDLERS[approval.type](ctx, approval, ctx.user);
+    } else {
+      // Status bookkeeping only (e.g. requisition -> "rejected").
+      await APPROVAL_REJECTION_HANDLERS[approval.type]?.(ctx, approval, ctx.user);
     }
 
     const status = decision === "approve" ? "approved" : "rejected";
@@ -75,7 +83,7 @@ export const decideApproval = authedMutation({
       entityId: approvalId,
       businessUnitId: approval.businessUnitId,
       before: { status: "pending" },
-      after: { status },
+      after: { status, ...(selfDecision ? { selfApproved: true } : {}) },
       ...(decisionNote ? { reason: decisionNote } : {}),
     });
   },
@@ -85,6 +93,7 @@ async function withNames(
   ctx: QueryCtx,
   user: Doc<"users">,
   permissions: PermissionMap,
+  isSuperAdmin: boolean,
   approval: Doc<"approvals">,
 ) {
   const requester = await ctx.db.get("users", approval.requestedBy);
@@ -95,7 +104,7 @@ async function withNames(
     ...approval,
     requesterName: requester?.name || requester?.email || null,
     deciderName: decider?.name || decider?.email || null,
-    canDecide: canDecide(user, permissions, approval),
+    canDecide: canDecide(user, permissions, approval, isSuperAdmin),
   };
 }
 
@@ -196,7 +205,9 @@ export const list = authedQuery({
     return {
       ...result,
       page: await Promise.all(
-        result.page.map((a) => withNames(ctx, ctx.user, ctx.permissions, a)),
+        result.page.map((a) =>
+          withNames(ctx, ctx.user, ctx.permissions, ctx.isSuperAdmin, a),
+        ),
       ),
     };
   },
@@ -207,10 +218,13 @@ export const get = authedQuery({
   args: { approvalId: v.id("approvals") },
   handler: async (ctx, { approvalId }) => {
     const approval = await ctx.db.get("approvals", approvalId);
-    if (!approval || !canSeeApproval(ctx.user, ctx.permissions, approval)) {
+    if (
+      !approval ||
+      !canSeeApproval(ctx.user, ctx.permissions, approval, ctx.isSuperAdmin)
+    ) {
       return null;
     }
-    return await withNames(ctx, ctx.user, ctx.permissions, approval);
+    return await withNames(ctx, ctx.user, ctx.permissions, ctx.isSuperAdmin, approval);
   },
 });
 
@@ -233,8 +247,9 @@ export const pendingCount = authedQuery({
         q.eq("businessUnitId", unit._id).eq("status", "pending"),
       )
       .take(PENDING_COUNT_LIMIT);
-    return pending.filter((a) => canDecide(ctx.user, ctx.permissions, a))
-      .length;
+    return pending.filter((a) =>
+      canDecide(ctx.user, ctx.permissions, a, ctx.isSuperAdmin),
+    ).length;
   },
 });
 

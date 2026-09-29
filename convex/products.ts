@@ -1,5 +1,7 @@
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
+import { internalMutation } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { authedMutation, authedQuery } from "./lib/rbac";
@@ -16,7 +18,8 @@ import {
   productStatusValidator,
   productUnitValidator,
   productUsage,
-  searchTextFor,
+  computeSearchText,
+  refreshProductSearchText,
 } from "./lib/products";
 
 /**
@@ -199,7 +202,7 @@ export const get = authedQuery({
       canConfirm:
         product.status === "pending_confirmation" &&
         ctx.can("products.confirm") &&
-        product.createdBy !== ctx.user._id,
+        (product.createdBy !== ctx.user._id || ctx.isSuperAdmin),
     };
   },
 });
@@ -234,7 +237,15 @@ export const create = authedMutation({
       status: confirmed ? ("active" as const) : ("pending_confirmation" as const),
       createdBy: ctx.user._id,
       ...(confirmed ? { confirmedBy: ctx.user._id, confirmedAt: Date.now() } : {}),
-      searchText: searchTextFor({ name, sku, category: args.category, brand, texture }),
+      searchText: await computeSearchText(ctx, {
+        name,
+        sku,
+        category: args.category,
+        brand,
+        texture,
+        lengthInches: args.lengthInches,
+        colourId: args.colourId,
+      }),
     };
     const productId = await ctx.db.insert("products", product);
     await ctx.audit({
@@ -280,7 +291,15 @@ export const update = authedMutation({
       texture,
       lengthInches: args.lengthInches,
       colourId: args.colourId,
-      searchText: searchTextFor({ name, sku: product.sku, category: args.category, brand, texture }),
+      searchText: await computeSearchText(ctx, {
+        name,
+        sku: product.sku,
+        category: args.category,
+        brand,
+        texture,
+        lengthInches: args.lengthInches,
+        colourId: args.colourId,
+      }),
     });
     await ctx.audit({
       action: "update",
@@ -292,7 +311,10 @@ export const update = authedMutation({
   },
 });
 
-/** A chief confirms a product created pending confirmation. Never your own. */
+/**
+ * A chief confirms a product created pending confirmation. Never your own -
+ * except the Super Admin (flagged `selfConfirmed` in the audit).
+ */
 export const confirm = authedMutation({
   args: { productId: v.id("products") },
   handler: async (ctx, { productId }) => {
@@ -301,7 +323,8 @@ export const confirm = authedMutation({
     if (product.status !== "pending_confirmation") {
       throw new ConvexError("This product isn't waiting for confirmation.");
     }
-    if (product.createdBy === ctx.user._id) {
+    const selfConfirmed = product.createdBy === ctx.user._id;
+    if (selfConfirmed && !ctx.isSuperAdmin) {
       throw new ConvexError("You cannot confirm a product you created.");
     }
     await ctx.db.patch("products", productId, {
@@ -315,7 +338,7 @@ export const confirm = authedMutation({
       entityId: productId,
       businessUnitId: product.businessUnitId,
       before: { status: "pending_confirmation" },
-      after: { status: "active" },
+      after: { status: "active", ...(selfConfirmed ? { selfConfirmed: true } : {}) },
     });
   },
 });
@@ -373,5 +396,33 @@ export const requestDeletion = authedMutation({
       payload: { before: await describe(ctx, product) },
       reason,
     });
+  },
+});
+
+const REBUILD_BATCH = 100;
+
+/**
+ * Recomputes every product's search text (name, SKU, brand, texture,
+ * category, length, colour), in batches that re-schedule themselves.
+ * Idempotent - only rewrites rows whose text changed. Run after changing
+ * what search covers:
+ *   pnpm dlx convex run products:rebuildSearchText
+ */
+export const rebuildSearchText = internalMutation({
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.null(),
+  handler: async (ctx, { cursor }) => {
+    const { page, isDone, continueCursor } = await ctx.db
+      .query("products")
+      .paginate({ numItems: REBUILD_BATCH, cursor: cursor ?? null });
+    for (const product of page) {
+      await refreshProductSearchText(ctx, product);
+    }
+    if (!isDone) {
+      await ctx.scheduler.runAfter(0, internal.products.rebuildSearchText, {
+        cursor: continueCursor,
+      });
+    }
+    return null;
   },
 });
