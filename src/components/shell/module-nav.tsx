@@ -6,6 +6,7 @@ import { Link, usePathname } from "@/i18n/navigation";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { useVisibleModules } from "@/lib/use-visible-modules";
 import { cn } from "@/lib/utils";
+import { PendingApprovalsBadge } from "@/components/approvals/pending-approvals-badge";
 
 /**
  * The shell's module menu: Home plus every module the user has a
@@ -26,8 +27,9 @@ export function ModuleNav({
 
   const homeHref = `/${service}`;
   const items = [
-    { href: homeHref, label: t("home"), icon: House },
+    { key: "home", href: homeHref, label: t("home"), icon: House },
     ...(modules ?? []).map((m) => ({
+      key: m.key,
       href: `/${service}/${m.key}`,
       label: tModules(m.key),
       icon: m.icon,
@@ -36,7 +38,7 @@ export function ModuleNav({
 
   return (
     <nav className="flex h-full flex-col gap-1 p-3" aria-label={t("modules")}>
-      {items.map(({ href, label, icon: Icon }) => {
+      {items.map(({ key, href, label, icon: Icon }) => {
         const active =
           href === homeHref
             ? pathname === homeHref
@@ -56,6 +58,15 @@ export function ModuleNav({
           >
             <Icon className="size-4 shrink-0" aria-hidden />
             {label}
+            {key === "approvals" ? (
+              <PendingApprovalsBadge
+                service={service}
+                className={cn(
+                  "ml-auto",
+                  active && "bg-primary-foreground text-primary",
+                )}
+              />
+            ) : null}
           </Link>
         );
       })}

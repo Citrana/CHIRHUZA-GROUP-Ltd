@@ -9,7 +9,9 @@ export function useVisibleModules(): ShellModule[] | undefined {
   if (permissions === undefined) {
     return undefined;
   }
-  return SHELL_MODULES.filter((m) =>
-    holdsAnyInModule(permissions, m.permissionModule),
+  return SHELL_MODULES.filter(
+    (m) =>
+      ("alwaysVisible" in m && m.alwaysVisible) ||
+      holdsAnyInModule(permissions, m.permissionModule),
   );
 }

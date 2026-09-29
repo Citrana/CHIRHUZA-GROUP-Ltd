@@ -71,6 +71,11 @@ export type DataTableProps<TData extends RowData> = {
   initialSorting?: SortingState;
   /** Clicking a row toggles this detail view underneath it. */
   renderExpanded?: (row: TData) => ReactNode;
+  /**
+   * Clicking (or Enter/Space on) a row calls this - e.g. to open a detail
+   * drawer. Takes precedence over `renderExpanded`; use one or the other.
+   */
+  onRowClick?: (row: TData) => void;
   /** On phones (< md), show these cards instead of the table. */
   renderCard?: (row: TData) => ReactNode;
   className?: string;
@@ -101,10 +106,13 @@ export function DataTable<TData extends RowData>({
   pagination,
   initialSorting = [],
   renderExpanded,
+  onRowClick,
   renderCard,
   className,
 }: DataTableProps<TData>) {
   const t = useTranslations("DataTable");
+  // Inline expansion only applies when rows don't open something else.
+  const renderInline = onRowClick ? undefined : renderExpanded;
   const [sorting, setSorting] = useState<SortingState>(initialSorting);
   const [clientSearch, setClientSearch] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
@@ -155,7 +163,7 @@ export function DataTable<TData extends RowData>({
 
   const rows = table.getRowModel().rows;
   const colSpan =
-    table.getAllLeafColumns().length + (renderExpanded ? 1 : 0);
+    table.getAllLeafColumns().length + (renderInline ? 1 : 0);
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -165,23 +173,27 @@ export function DataTable<TData extends RowData>({
       return next;
     });
 
-  const rowHandlers = (id: string) =>
-    renderExpanded
-      ? {
-          role: "button" as const,
-          tabIndex: 0,
-          "aria-expanded": expanded.has(id),
-          onClick: (e: MouseEvent) => {
-            if (!isFromInteractive(e)) toggle(id);
-          },
-          onKeyDown: (e: KeyboardEvent) => {
-            if ((e.key === "Enter" || e.key === " ") && !isFromInteractive(e)) {
-              e.preventDefault();
-              toggle(id);
-            }
-          },
+  const rowsAreClickable = onRowClick !== undefined || renderExpanded !== undefined;
+
+  const rowHandlers = (id: string, original: TData) => {
+    if (!rowsAreClickable) return {};
+    const activate = () => (onRowClick ? onRowClick(original) : toggle(id));
+    return {
+      role: "button" as const,
+      tabIndex: 0,
+      ...(onRowClick ? {} : { "aria-expanded": expanded.has(id) }),
+      onClick: (e: MouseEvent) => {
+        if (!isFromInteractive(e)) activate();
+      },
+      onKeyDown: (e: KeyboardEvent) => {
+        if ((e.key === "Enter" || e.key === " ") && !isFromInteractive(e)) {
+          e.preventDefault();
+          activate();
         }
-      : {};
+      },
+    };
+  };
+
 
   let paginationProps: PaginationProps | null = null;
   if (pagination?.mode === "server") {
@@ -241,15 +253,15 @@ export function DataTable<TData extends RowData>({
                 key={row.id}
                 className={cn(
                   "rounded-lg border border-border bg-card p-4",
-                  renderExpanded &&
+                  rowsAreClickable &&
                     "cursor-pointer focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none",
                 )}
-                {...rowHandlers(row.id)}
+                {...rowHandlers(row.id, row.original)}
               >
                 {renderCard(row.original)}
-                {renderExpanded && expanded.has(row.id) ? (
+                {renderInline && expanded.has(row.id) ? (
                   <div className="mt-3 border-t border-border pt-3">
-                    {renderExpanded(row.original)}
+                    {renderInline(row.original)}
                   </div>
                 ) : null}
               </li>
@@ -308,7 +320,7 @@ export function DataTable<TData extends RowData>({
                     </th>
                   );
                 })}
-                {renderExpanded ? (
+                {renderInline ? (
                   <th className="w-10 p-3">
                     <span className="sr-only">{t("details")}</span>
                   </th>
@@ -331,11 +343,11 @@ export function DataTable<TData extends RowData>({
                     <tr
                       className={cn(
                         "border-t border-border",
-                        renderExpanded &&
+                        rowsAreClickable &&
                           "cursor-pointer hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:outline-none",
                         isOpen && "bg-muted/30",
                       )}
-                      {...rowHandlers(row.id)}
+                      {...rowHandlers(row.id, row.original)}
                     >
                       {row.getAllCells().map((cell) => {
                         const meta = cell.column.columnDef.meta;
@@ -352,7 +364,7 @@ export function DataTable<TData extends RowData>({
                           </td>
                         );
                       })}
-                      {renderExpanded ? (
+                      {renderInline ? (
                         <td className="p-3 text-muted-foreground">
                           <ChevronDown
                             className={cn("size-4 transition-transform", isOpen && "rotate-180")}
@@ -361,10 +373,10 @@ export function DataTable<TData extends RowData>({
                         </td>
                       ) : null}
                     </tr>
-                    {renderExpanded && isOpen ? (
+                    {renderInline && isOpen ? (
                       <tr className="bg-muted/30">
                         <td colSpan={colSpan} className="px-3 pb-4">
-                          {renderExpanded(row.original)}
+                          {renderInline(row.original)}
                         </td>
                       </tr>
                     ) : null}
