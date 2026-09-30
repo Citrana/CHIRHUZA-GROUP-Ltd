@@ -85,12 +85,21 @@ const all = (keys: PermissionKey[]) =>
 
 const VIEW_KEYS = PERMISSION_KEYS.filter((k) => k.endsWith(".view"));
 
-/** Granted to every role (Sales Agent at own_location, others all_locations). */
+/**
+ * Granted to every role (Sales Agent at own_location, others all_locations).
+ * Approving withdrawals is NOT in it: that's the Chief Admin's (and the
+ * Super Admin's) alone.
+ */
 const PRODUCTS_AND_WITHDRAWALS: PermissionKey[] = [
   "products.view",
   "products.manage",
   "withdrawals.view",
   "withdrawals.request",
+];
+
+/** What the first seed step granted to every role - frozen, never edit. */
+const PRODUCTS_AND_WITHDRAWALS_2026_09: PermissionKey[] = [
+  ...PRODUCTS_AND_WITHDRAWALS,
   "withdrawals.approve",
 ];
 
@@ -110,7 +119,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
   {
     key: "chief_admin",
     name: "Chief Admin",
-    description: "Oversees analytics and approves edits, stock, payroll, expenses and requisitions.",
+    description: "Oversees analytics and approves edits, stock, payroll, withdrawals, expenses and requisitions.",
     permissions: all([
       ...VIEW_KEYS,
       "analytics.view",
@@ -123,6 +132,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "deletes.approve",
       "approvals.view_all",
       ...PRODUCTS_AND_WITHDRAWALS,
+      "withdrawals.approve",
       "products.confirm",
       "products.settings",
       "products.set_price",
@@ -138,6 +148,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.view",
       "sales.view",
       "requisition.view",
+      "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
     ]),
   },
@@ -153,6 +164,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "sales.create",
       "sales.edit.approve",
       "requisition.create",
+      "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.confirm",
       "products.set_price",
@@ -166,6 +178,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.view",
       "stock.create",
       "stock.set_price",
+      "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.settings",
       // Sees all requisitions (even before approval) to discuss them early.
@@ -180,6 +193,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       ["sales.view", "own_location"],
       ["sales.create", "own_location"],
       ["sales.edit.request", "own_location"],
+      ["payroll.create", "own_location"],
       ...PRODUCTS_AND_WITHDRAWALS.map((k) => [k, "own_location"] as const),
     ],
   },
@@ -188,6 +202,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
 type SeedStep = {
   key: string;
   grants: ReadonlyArray<readonly [roleKey: string, PermissionKey, Scope]>;
+  /** Grants taken away from existing roles (applied once, after grants). */
+  revokes?: ReadonlyArray<readonly [roleKey: string, PermissionKey]>;
 };
 
 /**
@@ -203,7 +219,7 @@ export const SEED_STEPS: readonly SeedStep[] = [
     key: "2026-09-products-withdrawals-all-roles",
     grants: SYSTEM_ROLES.filter((r) => r.key !== SUPER_ADMIN_ROLE_KEY).flatMap(
       (role) =>
-        PRODUCTS_AND_WITHDRAWALS.map((permissionKey) => {
+        PRODUCTS_AND_WITHDRAWALS_2026_09.map((permissionKey) => {
           const scope: Scope =
             role.key === "sales_agent" ? "own_location" : "all_locations";
           return [role.key, permissionKey, scope] as const;
@@ -252,6 +268,24 @@ export const SEED_STEPS: readonly SeedStep[] = [
       ["chief_admin", "products.set_price", "all_locations"],
       ["chief_sales_admin", "products.set_price", "all_locations"],
       ["sales_agent", "sales.view", "own_location"],
+    ],
+  },
+  {
+    // Payroll and withdrawals: anyone may submit payroll; only the Chief
+    // Admin (and the Super Admin) approves withdrawals.
+    key: "2026-10-payroll-withdrawals",
+    grants: [
+      ["manager_admin", "payroll.create", "all_locations"],
+      ["chief_sales_admin", "payroll.create", "all_locations"],
+      ["chief_inventory_admin", "payroll.create", "all_locations"],
+      ["sales_agent", "payroll.create", "own_location"],
+      ["chief_admin", "withdrawals.approve", "all_locations"],
+    ],
+    revokes: [
+      ["manager_admin", "withdrawals.approve"],
+      ["chief_sales_admin", "withdrawals.approve"],
+      ["chief_inventory_admin", "withdrawals.approve"],
+      ["sales_agent", "withdrawals.approve"],
     ],
   },
 ];

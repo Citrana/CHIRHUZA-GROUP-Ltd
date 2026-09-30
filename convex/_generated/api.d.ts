@@ -24,8 +24,10 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_businessUnits from "../lib/businessUnits.js";
 import type * as lib_distributions from "../lib/distributions.js";
 import type * as lib_inventory from "../lib/inventory.js";
+import type * as lib_locationScope from "../lib/locationScope.js";
 import type * as lib_money from "../lib/money.js";
 import type * as lib_password from "../lib/password.js";
+import type * as lib_payroll from "../lib/payroll.js";
 import type * as lib_permissions from "../lib/permissions.js";
 import type * as lib_products from "../lib/products.js";
 import type * as lib_rbac from "../lib/rbac.js";
@@ -33,7 +35,9 @@ import type * as lib_requisitions from "../lib/requisitions.js";
 import type * as lib_sales from "../lib/sales.js";
 import type * as lib_stockBatches from "../lib/stockBatches.js";
 import type * as lib_time from "../lib/time.js";
+import type * as lib_withdrawals from "../lib/withdrawals.js";
 import type * as locations from "../locations.js";
+import type * as payroll from "../payroll.js";
 import type * as productOptions from "../productOptions.js";
 import type * as products from "../products.js";
 import type * as rbac from "../rbac.js";
@@ -42,6 +46,7 @@ import type * as sales from "../sales.js";
 import type * as seed from "../seed.js";
 import type * as stockBatches from "../stockBatches.js";
 import type * as users from "../users.js";
+import type * as withdrawals from "../withdrawals.js";
 
 import type {
   ApiFromModules,
@@ -66,8 +71,10 @@ declare const fullApi: ApiFromModules<{
   "lib/businessUnits": typeof lib_businessUnits;
   "lib/distributions": typeof lib_distributions;
   "lib/inventory": typeof lib_inventory;
+  "lib/locationScope": typeof lib_locationScope;
   "lib/money": typeof lib_money;
   "lib/password": typeof lib_password;
+  "lib/payroll": typeof lib_payroll;
   "lib/permissions": typeof lib_permissions;
   "lib/products": typeof lib_products;
   "lib/rbac": typeof lib_rbac;
@@ -75,7 +82,9 @@ declare const fullApi: ApiFromModules<{
   "lib/sales": typeof lib_sales;
   "lib/stockBatches": typeof lib_stockBatches;
   "lib/time": typeof lib_time;
+  "lib/withdrawals": typeof lib_withdrawals;
   locations: typeof locations;
+  payroll: typeof payroll;
   productOptions: typeof productOptions;
   products: typeof products;
   rbac: typeof rbac;
@@ -84,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   stockBatches: typeof stockBatches;
   users: typeof users;
+  withdrawals: typeof withdrawals;
 }>;
 
 /**

@@ -3,6 +3,8 @@ import type { MutationCtx } from "../_generated/server";
 import type { Doc } from "../_generated/dataModel";
 import type { ApprovalType } from "./approvalTypes";
 import { deleteApprovedProduct } from "./products";
+import { applyPayrollApproval, applyPayrollRejection } from "./payroll";
+import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals";
 import {
   applyDistributionApproval,
   applyDistributionRejection,
@@ -68,11 +70,11 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   sale_edit: notImplementedYet,
   delete: dispatchDelete,
   expense: notImplementedYet,
-  payroll: notImplementedYet,
+  payroll: applyPayrollApproval,
   requisition: applyRequisitionApproval,
   stock_batch: applyStockBatchApproval,
   distribution: applyDistributionApproval,
-  withdrawal: notImplementedYet,
+  withdrawal: applyWithdrawalApproval,
 };
 
 /**
@@ -85,4 +87,6 @@ export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalH
   requisition: applyRequisitionRejection,
   stock_batch: applyStockBatchRejection,
   distribution: applyDistributionRejection,
+  payroll: applyPayrollRejection,
+  withdrawal: applyWithdrawalRejection,
 };

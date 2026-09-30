@@ -36,3 +36,19 @@ export function businessDayOf(ms: number): string {
 export function addBusinessDays(day: string, n: number): string {
   return new Date(parseDay(day) + n * DAY_MS).toISOString().slice(0, 10);
 }
+
+/**
+ * A moment on business day `day` (YYYY-MM-DD) for something recorded at
+ * `now`: `now` itself if `day` is today, otherwise that day at the same
+ * Lubumbashi clock time (so it stays inside the chosen day).
+ */
+export function atClockTimeOn(day: string, now: number): number {
+  const today = businessDayOf(now);
+  if (day === today) return now;
+  return businessDayStartUtc(day) + (now - businessDayStartUtc(today));
+}
+
+/** Whether `day` is a real YYYY-MM-DD calendar date. */
+export function isBusinessDay(day: string): boolean {
+  return /^\d{4}-\d{2}-\d{2}$/.test(day) && businessDayOf(businessDayStartUtc(day)) === day;
+}

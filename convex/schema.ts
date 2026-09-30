@@ -10,6 +10,8 @@ import {
 } from "./lib/stockBatches";
 import { currencyValidator, usdValidator } from "./lib/money";
 import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
+import { payrollStatusValidator } from "./lib/payroll";
+import { withdrawalStatusValidator } from "./lib/withdrawals";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -409,6 +411,55 @@ export default defineSchema({
     .index("by_saleId", ["saleId"])
     .index("by_inventoryBatchId", ["inventoryBatchId"])
     .index("by_productId", ["productId"]),
+
+  // Payroll (convex/lib/payroll.ts): salary payments, approved by the Chief
+  // Admin (approval type "payroll"). USD cents; a period is a month.
+  payrollEntries: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    locationId: v.optional(v.id("locations")),
+    // A platform user, or just a name; workerName is always stored.
+    userId: v.optional(v.id("users")),
+    workerName: v.string(),
+    // "YYYY-MM".
+    period: v.string(),
+    amount: v.number(),
+    currency: usdValidator,
+    note: v.optional(v.string()),
+    status: payrollStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    createdBy: v.id("users"),
+    // UTC ms.
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_businessUnitId_and_period", ["businessUnitId", "period"])
+    .index("by_locationId_and_period", ["locationId", "period"])
+    .index("by_createdBy", ["createdBy"]),
+
+  // Withdrawals (convex/lib/withdrawals.ts): cash taken for no business
+  // purpose. Approved by the Chief Admin (type "withdrawal"). Never a
+  // business cost: excluded from profit, shown separately in analytics.
+  withdrawals: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // The till it came from; missing = business-level cash.
+    locationId: v.optional(v.id("locations")),
+    amount: v.number(),
+    currency: usdValidator,
+    takenBy: v.id("users"),
+    reason: v.string(),
+    // UTC ms within the business day the cash was taken.
+    date: v.number(),
+    note: v.optional(v.string()),
+    status: withdrawalStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    requestedBy: v.id("users"),
+    // UTC ms.
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_businessUnitId_and_date", ["businessUnitId", "date"])
+    .index("by_locationId_and_date", ["locationId", "date"])
+    .index("by_requestedBy", ["requestedBy"]),
 
   numberSequences: defineTable({
     businessUnitId: v.id("businessUnits"),

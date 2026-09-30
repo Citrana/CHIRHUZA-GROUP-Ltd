@@ -17,13 +17,13 @@ const PRODUCTS_AND_WITHDRAWALS = [
   "products.manage",
   "withdrawals.view",
   "withdrawals.request",
-  "withdrawals.approve",
 ] as const;
 
 const SALES_AGENT_DEFAULTS = {
   "sales.view": "own_location",
   "sales.create": "own_location",
   "sales.edit.request": "own_location",
+  "payroll.create": "own_location",
   ...Object.fromEntries(
     PRODUCTS_AND_WITHDRAWALS.map((k) => [k, "own_location"]),
   ),
@@ -347,4 +347,29 @@ test("listRoleOptions flags roles that require a location", async () => {
   expect(
     options.filter((o) => o.requiresLocation).map((o) => o.key),
   ).toEqual(["sales_agent"]);
+});
+
+test("a seed step can revoke: withdrawal approval is the Chief Admin's alone", async () => {
+  const t = await setup();
+  const perms = async (roleKey: string) => {
+    const userId = await insertUserWithRole(t, roleKey, { email: `${roleKey}-${Math.random()}@x.com` });
+    return await t.withIdentity({ subject: userId }).query(api.rbac.getMyPermissions, {});
+  };
+  // After the full seed (grant step, then the revoke step), only the
+  // Chief Admin approves withdrawals among the non-locked roles.
+  for (const role of ["manager_admin", "chief_sales_admin", "chief_inventory_admin", "sales_agent"]) {
+    expect(await perms(role)).not.toHaveProperty("withdrawals.approve");
+    expect(await perms(role)).toHaveProperty("payroll.create");
+  }
+  expect(await perms("chief_admin")).toMatchObject({ "withdrawals.approve": "all_locations" });
+
+  // An admin re-grants it to a role: re-seeding doesn't revoke it again.
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "sa@x.com" });
+  await t.withIdentity({ subject: adminId }).mutation(api.rbac.setRolePermission, {
+    roleId: await getRoleId(t, "manager_admin"),
+    permissionKey: "withdrawals.approve",
+    scope: "all_locations",
+  });
+  await t.mutation(internal.rbac.seedRbac, {});
+  expect(await perms("manager_admin")).toMatchObject({ "withdrawals.approve": "all_locations" });
 });
