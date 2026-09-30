@@ -3,10 +3,11 @@
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import type { PaginatedQueryItem } from "convex/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { formatMoney } from "../../../convex/lib/money";
 import {
   PRODUCT_CATEGORIES,
   PRODUCT_STATUSES,
@@ -29,6 +30,7 @@ type ProductRow = PaginatedQueryItem<typeof api.products.list>;
 /** The service's product catalogue: search, filters, create, and details. */
 export function ProductsPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Products");
+  const locale = useLocale();
   const tCategories = useTranslations("ProductCategories");
   const canView = useCan("products.view");
   const canManage = useCan("products.manage");
@@ -102,6 +104,13 @@ export function ProductsPanel({ service }: { service: BusinessUnitKey }) {
       header: t("detailsHeader"),
       cell: ({ row }) => details(row.original) || t("none"),
       meta: { hideBelow: "lg", className: "whitespace-nowrap text-muted-foreground" },
+    },
+    {
+      id: "price",
+      header: t("suggestedPriceHeader"),
+      cell: ({ row }) =>
+        row.original.suggestedPrice !== undefined ? formatMoney(row.original.suggestedPrice, "USD", locale) : "—",
+      meta: { hideBelow: "md", className: "whitespace-nowrap tabular-nums" },
     },
     {
       id: "status",

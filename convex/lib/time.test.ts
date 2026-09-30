@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { businessDayEndUtc, businessDayStartUtc } from "./time";
+import { addBusinessDays, businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./time";
 
 test("a business day starts at 22:00 UTC the previous day (UTC+2)", () => {
   expect(new Date(businessDayStartUtc("2026-09-28")).toISOString()).toBe(
@@ -21,4 +21,17 @@ test("month and year boundaries roll over correctly", () => {
 
 test("rejects malformed dates", () => {
   expect(() => businessDayStartUtc("28/09/2026")).toThrow();
+});
+
+test("businessDayOf follows Lubumbashi midnight (22:00 UTC)", () => {
+  expect(businessDayOf(Date.UTC(2026, 8, 29, 21, 59, 59, 999))).toBe("2026-09-29");
+  expect(businessDayOf(Date.UTC(2026, 8, 29, 22, 0))).toBe("2026-09-30");
+  expect(businessDayOf(businessDayStartUtc("2026-10-01"))).toBe("2026-10-01");
+  expect(businessDayOf(businessDayEndUtc("2026-10-01"))).toBe("2026-10-01");
+});
+
+test("addBusinessDays crosses month and year ends", () => {
+  expect(addBusinessDays("2026-10-01", -1)).toBe("2026-09-30");
+  expect(addBusinessDays("2026-12-31", 1)).toBe("2027-01-01");
+  expect(addBusinessDays("2026-03-01", -7)).toBe("2026-02-22");
 });

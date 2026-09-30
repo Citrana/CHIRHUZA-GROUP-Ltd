@@ -21,6 +21,7 @@ const PRODUCTS_AND_WITHDRAWALS = [
 ] as const;
 
 const SALES_AGENT_DEFAULTS = {
+  "sales.view": "own_location",
   "sales.create": "own_location",
   "sales.edit.request": "own_location",
   ...Object.fromEntries(

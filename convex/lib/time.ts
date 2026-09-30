@@ -26,3 +26,13 @@ export function businessDayStartUtc(day: string): number {
 export function businessDayEndUtc(day: string): number {
   return businessDayStartUtc(day) + DAY_MS - 1;
 }
+
+/** The business day (YYYY-MM-DD, Lubumbashi) that a UTC ms instant falls on. */
+export function businessDayOf(ms: number): string {
+  return new Date(ms + BUSINESS_UTC_OFFSET_MS).toISOString().slice(0, 10);
+}
+
+/** `day` (YYYY-MM-DD) moved by `n` days (negative = earlier). */
+export function addBusinessDays(day: string, n: number): string {
+  return new Date(parseDay(day) + n * DAY_MS).toISOString().slice(0, 10);
+}

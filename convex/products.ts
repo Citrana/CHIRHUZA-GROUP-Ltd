@@ -23,8 +23,10 @@ import {
 } from "./lib/products";
 
 /**
- * The product catalogue (no prices - see convex/lib/products.ts). Every
- * change is audited; deletes go through the approval engine.
+ * The product catalogue. Purchase prices live on stock lots; a product may
+ * carry an optional suggested selling price (products.set_price), which
+ * the sale form pre-fills. Every change is audited; deletes go through
+ * the approval engine.
  */
 
 const editableFields = {
@@ -181,6 +183,92 @@ export const list = authedQuery({
   },
 });
 
+/**
+ * The price list: for each product, its suggested selling price, what each
+ * of its lots was bought at, what's on hand, and the last price it actually
+ * sold at. For anyone with stock or sales access (purchase costs included);
+ * products.set_price holders may change the selling price from here.
+ */
+export const priceList = authedQuery({
+  args: {
+    businessUnitKey: businessUnitKeyValidator,
+    paginationOpts: paginationOptsValidator,
+    search: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    await ctx.requirePermission("products.view");
+    if (!ctx.can("stock.view") && !ctx.can("sales.view") && !ctx.can("sales.create")) {
+      throw new ConvexError("Forbidden: the price list needs stock or sales access.");
+    }
+    const unit = await requireBusinessUnit(ctx, args.businessUnitKey);
+    const term = args.search?.trim().toLowerCase();
+    const result = term
+      ? await ctx.db
+          .query("products")
+          .withSearchIndex("search_text", (q) => q.search("searchText", term).eq("businessUnitId", unit._id))
+          .paginate(args.paginationOpts)
+      : await ctx.db
+          .query("products")
+          .withIndex("by_businessUnitId_and_name", (q) => q.eq("businessUnitId", unit._id))
+          .paginate(args.paginationOpts);
+    const page = await Promise.all(
+      result.page
+        .filter((product) => product.status !== "archived")
+        .map(async (product) => {
+          const colour = product.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+          const suggested = product.suggestedPrice ?? null;
+          const rawLots = await ctx.db
+            .query("inventoryBatches")
+            .withIndex("by_productId", (q) => q.eq("productId", product._id))
+            .take(200);
+          const lots = await Promise.all(
+            rawLots.map(async (lot) => {
+              const [batch, levels] = await Promise.all([
+                ctx.db.get("stockBatches", lot.stockBatchId),
+                ctx.db
+                  .query("stockLevels")
+                  .withIndex("by_inventoryBatchId_and_holderId", (q) => q.eq("inventoryBatchId", lot._id))
+                  .take(500),
+              ]);
+              return {
+                _id: lot._id,
+                batchNumber: batch?.number ?? null,
+                purchasedAt: lot.createdAt,
+                unitCost: lot.unitCost,
+                receivedQty: lot.receivedQty,
+                onHand: levels.reduce((s, l) => s + l.qtyOnHand, 0),
+                marginAtSuggested: suggested === null ? null : suggested - lot.unitCost,
+              };
+            }),
+          );
+          lots.sort((a, b) => b.purchasedAt - a.purchasedAt);
+          const costs = lots.map((l) => l.unitCost);
+          const lastItem = await ctx.db
+            .query("saleItems")
+            .withIndex("by_productId", (q) => q.eq("productId", product._id))
+            .order("desc")
+            .first();
+          const lastSale = lastItem ? await ctx.db.get("sales", lastItem.saleId) : null;
+          return {
+            _id: product._id,
+            name: product.name,
+            sku: product.sku,
+            status: product.status,
+            lengthInches: product.lengthInches ?? null,
+            colourName: colour?.name ?? null,
+            suggestedPrice: suggested,
+            lots,
+            onHand: lots.reduce((s, l) => s + l.onHand, 0),
+            minCost: costs.length ? Math.min(...costs) : null,
+            maxCost: costs.length ? Math.max(...costs) : null,
+            lastSold: lastItem && lastSale ? { unitPrice: lastItem.unitPrice, soldAt: lastSale.createdAt } : null,
+          };
+        }),
+    );
+    return { ...result, page };
+  },
+});
+
 /** One product for the detail drawer, with what this user may do to it. */
 export const get = authedQuery({
   args: { productId: v.id("products") },
@@ -307,6 +395,40 @@ export const update = authedMutation({
       entityId: productId,
       businessUnitId: product.businessUnitId,
       ...changes,
+    });
+  },
+});
+
+/**
+ * Sets (or, with `price: null`, clears) the suggested selling price, in
+ * USD cents. Separate from `update` (products.manage, held by everyone):
+ * only products.set_price holders decide the price that a sale at another
+ * price must justify with a discount reason.
+ */
+export const setSuggestedPrice = authedMutation({
+  args: { productId: v.id("products"), price: v.union(v.number(), v.null()) },
+  handler: async (ctx, { productId, price }) => {
+    await ctx.requirePermission("products.set_price");
+    const product = await requireProduct(ctx, productId);
+    if (price !== null && (!Number.isSafeInteger(price) || price < 1)) {
+      throw new ConvexError("The price must be a whole number of cents above 0.");
+    }
+    const changes = diff(
+      { name: product.name, sku: product.sku, suggestedPrice: product.suggestedPrice ?? null, currency: "USD" },
+      { name: product.name, sku: product.sku, suggestedPrice: price, currency: "USD" },
+    );
+    if (!changes) return;
+    await ctx.db.patch("products", productId, {
+      suggestedPrice: price ?? undefined,
+      suggestedPriceCurrency: price === null ? undefined : "USD",
+    });
+    await ctx.audit({
+      action: "update",
+      entityTable: "products",
+      entityId: productId,
+      businessUnitId: product.businessUnitId,
+      before: { name: product.name, sku: product.sku, ...changes.before },
+      after: { name: product.name, sku: product.sku, ...changes.after },
     });
   },
 });

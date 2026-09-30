@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
+import { MoneyInput } from "@/components/ui/money-input";
 import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
@@ -51,7 +52,9 @@ function formFrom(product?: Doc<"products">): Form {
 /**
  * Create (no `product`) or edit a product. Lengths and colours come from
  * the service's product settings; the product's current value stays
- * selectable even if it has since been deactivated. No prices here.
+ * selectable even if it has since been deactivated. Purchase prices live on
+ * stock lots; products.set_price holders also see the optional suggested
+ * selling price (saved through products.setSuggestedPrice).
  */
 export function ProductFormDialog({
   service,
@@ -71,6 +74,7 @@ export function ProductFormDialog({
   const tCategories = useTranslations("ProductCategories");
   const tUnits = useTranslations("ProductUnits");
   const canConfirm = useCan("products.confirm");
+  const canSetPrice = useCan("products.set_price");
   const lengths = useQuery(
     api.productOptions.listLengths,
     open ? { businessUnitKey: service, includeInactive: true } : "skip",
@@ -81,8 +85,10 @@ export function ProductFormDialog({
   );
   const create = useMutation(api.products.create);
   const update = useMutation(api.products.update);
+  const setSuggestedPrice = useMutation(api.products.setSuggestedPrice);
 
   const [form, setForm] = useState<Form>(() => formFrom(product));
+  const [price, setPrice] = useState<number | null>(product?.suggestedPrice ?? null);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -93,6 +99,7 @@ export function ProductFormDialog({
     setLoadedFor(openKey);
     if (openKey) {
       setForm(formFrom(product));
+      setPrice(product?.suggestedPrice ?? null);
       setError(false);
     }
   }
@@ -123,11 +130,16 @@ export function ProductFormDialog({
       ...(form.colourId ? { colourId: form.colourId } : {}),
     };
     try {
+      let productId: Id<"products">;
       if (product) {
-        await update({ productId: product._id, ...fields });
+        productId = product._id;
+        await update({ productId, ...fields });
       } else {
-        const productId = await create({ businessUnitKey: service, ...fields });
+        productId = await create({ businessUnitKey: service, ...fields });
         onCreated?.(productId);
+      }
+      if (canSetPrice && price !== (product?.suggestedPrice ?? null)) {
+        await setSuggestedPrice({ productId, price });
       }
       onOpenChange(false);
     } catch {
@@ -252,6 +264,13 @@ export function ProductFormDialog({
                 />
               </div>
             </div>
+            {canSetPrice ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="product-price">{t("suggestedPriceLabel")}</Label>
+                <MoneyInput id="product-price" currency="USD" valueMinor={price} onCommit={setPrice} className="sm:max-w-48" />
+                <p className="text-xs text-muted-foreground">{t("suggestedPriceHint")}</p>
+              </div>
+            ) : null}
             {lengths?.length === 0 || colours?.length === 0 ? (
               <p className="text-xs text-muted-foreground">{t("noSettingsHint")}</p>
             ) : null}

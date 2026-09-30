@@ -8,7 +8,8 @@ import {
   expenseCategoryValidator,
   stockBatchStatusValidator,
 } from "./lib/stockBatches";
-import { usdValidator } from "./lib/money";
+import { currencyValidator, usdValidator } from "./lib/money";
+import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -126,6 +127,11 @@ export default defineSchema({
     // One of the business unit's productLengths.
     lengthInches: v.optional(v.number()),
     colourId: v.optional(v.id("productColours")),
+    // Optional suggested selling price (cents) and its currency, set or
+    // cleared together (products.set_price). A sale at another price
+    // needs a discount reason.
+    suggestedPrice: v.optional(v.number()),
+    suggestedPriceCurrency: v.optional(usdValidator),
     status: productStatusValidator,
     createdBy: v.id("users"),
     // Set when a pending product is confirmed (or at creation by a confirmer).
@@ -355,6 +361,54 @@ export default defineSchema({
   })
     .index("by_distributionId", ["distributionId"])
     .index("by_inventoryBatchId", ["inventoryBatchId"]),
+
+  // Sales (convex/lib/sales.ts): stock leaves a location through
+  // applyMovement ("sale") in the same mutation. USD only for now.
+  sales: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // e.g. SALE-00001, per business unit (numberSequences).
+    number: v.string(),
+    locationId: v.id("locations"),
+    soldBy: v.id("users"),
+    // Required for credit sales.
+    customerName: v.optional(v.string()),
+    paymentMethod: paymentMethodValidator,
+    currency: currencyValidator,
+    // Cents.
+    totalAmount: v.number(),
+    totalCost: v.number(),
+    status: saleStatusValidator,
+    // UTC ms of when the sale happened: the business day the seller picked
+    // (up to 7 days back, for sales recorded late), at the recording's
+    // clock time. Lists and date filters use this.
+    createdAt: v.number(),
+    // UTC ms of when it was actually entered. Missing on the first sales,
+    // recorded before sales could be backdated.
+    recordedAt: v.optional(v.number()),
+  })
+    .index("by_businessUnitId_and_createdAt", ["businessUnitId", "createdAt"])
+    .index("by_locationId_and_createdAt", ["locationId", "createdAt"]),
+
+  saleItems: defineTable({
+    saleId: v.id("sales"),
+    productId: v.id("products"),
+    // The lot the seller chose (lots were bought at different prices).
+    inventoryBatchId: v.id("inventoryBatches"),
+    qty: v.number(),
+    // Cents; editable per line for discounts/offers.
+    unitPrice: v.number(),
+    // The lot's unit cost at sale time - never recomputed, so margins in
+    // the history don't change.
+    unitCostSnapshot: v.number(),
+    // The product's suggested price at sale time, if it had one.
+    suggestedPriceSnapshot: v.optional(v.number()),
+    currency: currencyValidator,
+    // Required when unitPrice differs from the suggested price.
+    discountReason: v.optional(v.string()),
+  })
+    .index("by_saleId", ["saleId"])
+    .index("by_inventoryBatchId", ["inventoryBatchId"])
+    .index("by_productId", ["productId"]),
 
   numberSequences: defineTable({
     businessUnitId: v.id("businessUnits"),

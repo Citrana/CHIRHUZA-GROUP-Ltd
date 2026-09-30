@@ -50,6 +50,8 @@ Shared server-side helpers, not routable Convex functions themselves.
   `findHolder`, `holderName`), `applyMovement` (THE only writer of
   `stockLevels` / `inventoryMovements`; never goes below zero) and
   `groupStock` (the overview's by product / lot / holder views).
+- `sales.ts` — payment methods and sale statuses, `saleLineProblems` (quantity,
+  price, discount reason vs the suggested price) and `lineMargin`.
 - `distributions.ts` — distribution statuses and the `distribution`
   approval (moves the stock) + rejection handlers.
 - `stock.test.utils.ts` — test-only stock setup shared by the stock tests
