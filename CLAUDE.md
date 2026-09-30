@@ -161,6 +161,27 @@ this repo, now and later — do not relax them for convenience.
   approval — if stock ran out meanwhile it throws and the approval stays
   pending.
 
+## Sales
+
+- A sale takes stock out of **one location** through `applyMovement`
+  (type `"sale"`) in the same mutation that records it (`convex/sales.ts`):
+  if the location doesn't hold enough, nothing is written. Convex
+  serializes concurrent mutations, so two sellers can't sell the last unit.
+- The location lock is the **scope** of `sales.create`: `own_location` =
+  only the seller's own location (forced server-side); `all_locations` =
+  anywhere (Chief Sales Admin, Super Admin). To let another role sell
+  anywhere, grant it `sales.create` with "All locations" in Manage roles.
+- Each line stores the lot's cost at sale time (`unitCostSnapshot`) and the
+  product's suggested price (`suggestedPriceSnapshot`); margins are always
+  computed from the snapshot, never from current costs. A price other than
+  the suggested one needs a `discountReason`. Only `products.set_price`
+  holders set suggested prices. Sales are USD only for now.
+- A sale may be dated up to `MAX_BACKDATE_DAYS` (7) business days back,
+  never in the future (`saleTimestamp`, `convex/lib/sales.ts`):
+  `sales.createdAt` is when it happened (lists/filters use it),
+  `recordedAt` when it was entered; backdated sales are flagged in the list
+  and the audit. Stock still moves at recording time.
+
 ## Append-only tables
 
 - Append-only tables — the audit log, inventory movements, and similar
@@ -296,8 +317,11 @@ kept aside (never spread into product costs) and addable at any time by the
 buyer or the receiving team, approval, shipped/arrived), Goma receiving
 (counting good/damaged/missing units into sellable lots), distributions to
 locations/people with Chief Admin approval (`/[service]/stock/distributions`),
-and the inventory core with the stock overview by product, lot and holder
-(`/[service]/stock`). Sales come next.
+the inventory core with the stock overview by product, lot and holder
+(`/[service]/stock`), and sales (`/[service]/sales`, the phone sale form at
+`/[service]/sales/new`; suggested selling prices set on the price list at
+`/[service]/products/prices`, next to each lot's purchase cost). Sale edits
+and refunds come next.
 Other business modules come in later steps, built on top
 of the rules above.
 

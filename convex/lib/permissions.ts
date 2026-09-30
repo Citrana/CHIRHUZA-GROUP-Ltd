@@ -33,6 +33,7 @@ export const PERMISSIONS = [
   { key: "products.manage", module: "products", description: "Create and edit products" },
   { key: "products.confirm", module: "products", description: "Confirm products created pending confirmation" },
   { key: "products.settings", module: "products", description: "Manage product settings (lengths, colours)" },
+  { key: "products.set_price", module: "products", description: "Set suggested selling prices" },
 
   { key: "requisition.view", module: "requisition", description: "View requisitions" },
   { key: "requisition.create", module: "requisition", description: "Create requisitions" },
@@ -124,6 +125,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.confirm",
       "products.settings",
+      "products.set_price",
     ]),
   },
   {
@@ -153,6 +155,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "requisition.create",
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.confirm",
+      "products.set_price",
     ]),
   },
   {
@@ -174,6 +177,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
     name: "Sales Agent",
     description: "Records sales and requests edits at their own location.",
     permissions: [
+      ["sales.view", "own_location"],
       ["sales.create", "own_location"],
       ["sales.edit.request", "own_location"],
       ...PRODUCTS_AND_WITHDRAWALS.map((k) => [k, "own_location"] as const),
@@ -238,6 +242,16 @@ export const SEED_STEPS: readonly SeedStep[] = [
       ["chief_sales_admin", "stock.view", "all_locations"],
       ["chief_sales_admin", "stock.receive", "all_locations"],
       ["chief_sales_admin", "stock.distribute", "all_locations"],
+    ],
+  },
+  {
+    // Sales: chiefs set suggested selling prices; Sales Agents see the
+    // sales of their own location.
+    key: "2026-09-sales",
+    grants: [
+      ["chief_admin", "products.set_price", "all_locations"],
+      ["chief_sales_admin", "products.set_price", "all_locations"],
+      ["sales_agent", "sales.view", "own_location"],
     ],
   },
 ];
