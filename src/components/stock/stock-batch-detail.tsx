@@ -3,7 +3,6 @@
 import { useState } from "react";
 import {
   ArrowLeft,
-  CheckCheck,
   Lock,
   PackageCheck,
   Paperclip,
@@ -49,6 +48,7 @@ import {
   type BatchItem,
 } from "@/components/stock/batch-item-editor";
 import { ExpenseDialog } from "@/components/stock/expense-dialog";
+import { ReceivingSection } from "@/components/stock/receiving-section";
 import { StockBatchStatusBadge } from "@/components/stock/stock-batch-status-badge";
 import { RequisitionStatusBadge } from "@/components/requisitions/requisition-status-badge";
 import { TEXTAREA_CLASS } from "@/components/requisitions/new-requisition-dialog";
@@ -132,7 +132,6 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
   const requestReopen = useMutation(api.stockBatches.requestReopen);
   const markShipped = useMutation(api.stockBatches.markShipped);
   const markArrived = useMutation(api.stockBatches.markArrived);
-  const markReceived = useMutation(api.stockBatches.markReceived);
   const removeExpense = useMutation(api.stockBatches.removeExpense);
 
   const [linesOpen, setLinesOpen] = useState(false);
@@ -147,7 +146,7 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
 
   const back = (
     <Link
-      href={`/${service}/stock`}
+      href={`/${service}/stock/batches`}
       className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
     >
       <ArrowLeft className="size-4" aria-hidden />
@@ -386,12 +385,6 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
               {t("markArrived")}
             </Button>
           ) : null}
-          {batch.canMarkReceived ? (
-            <Button disabled={busy} onClick={() => run(() => markReceived({ batchId: batch._id }))}>
-              <CheckCheck aria-hidden />
-              {t("markReceived")}
-            </Button>
-          ) : null}
         </div>
       </div>
 
@@ -503,6 +496,7 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
               emptyMessage={t("noneNotPurchased")}
             />
           </section>
+          <ReceivingSection service={service} batch={batch} />
         </>
       )}
 

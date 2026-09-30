@@ -25,6 +25,7 @@ export const PERMISSIONS = [
   { key: "stock.view", module: "stock", description: "View stock" },
   { key: "stock.create", module: "stock", description: "Create purchase batches" },
   { key: "stock.set_price", module: "stock", description: "Set prices on purchase" },
+  { key: "stock.receive", module: "stock", description: "Receive purchase batches" },
   { key: "stock.distribute", module: "stock", description: "Distribute stock to locations" },
   { key: "stock.approve", module: "stock", description: "Approve stock movements" },
 
@@ -128,8 +129,9 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
   {
     key: "manager_admin",
     name: "Manager Admin",
-    description: "Distributes stock, with basic viewing.",
+    description: "Receives and distributes stock, with basic viewing.",
     permissions: all([
+      "stock.receive",
       "stock.distribute",
       "stock.view",
       "sales.view",
@@ -140,8 +142,11 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
   {
     key: "chief_sales_admin",
     name: "Chief Sales Admin",
-    description: "Records sales, approves sale edits and raises requisitions.",
+    description: "Records sales, approves sale edits, raises requisitions, and receives and distributes stock.",
     permissions: all([
+      "stock.view",
+      "stock.receive",
+      "stock.distribute",
       "sales.view",
       "sales.create",
       "sales.edit.approve",
@@ -223,5 +228,16 @@ export const SEED_STEPS: readonly SeedStep[] = [
     // them all (even before approval) to discuss them early.
     key: "2026-09-requisition-view-inventory",
     grants: [["chief_inventory_admin", "requisition.view", "all_locations"]],
+  },
+  {
+    // Goma receiving and distribution: Manager Admin and Chief Sales Admin
+    // count what arrived and submit distributions.
+    key: "2026-09-stock-receive-distribute",
+    grants: [
+      ["manager_admin", "stock.receive", "all_locations"],
+      ["chief_sales_admin", "stock.view", "all_locations"],
+      ["chief_sales_admin", "stock.receive", "all_locations"],
+      ["chief_sales_admin", "stock.distribute", "all_locations"],
+    ],
   },
 ];

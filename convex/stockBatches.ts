@@ -15,12 +15,15 @@ import {
   requireBusinessUnit,
 } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
+import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
 import {
   batchItemStatusValidator,
   batchItems,
   expenseCategoryValidator,
   lineProblems,
   linkedRequisitionIds,
+  missingQty,
+  receiveProblems,
   receiptProblem,
   resolutionFor,
   stockBatchStatusValidator,
@@ -32,7 +35,8 @@ import {
  * Stock batches (see convex/lib/stockBatches.ts). stock.view to see;
  * stock.create to build and move a batch along (its creator, or the Super
  * Admin); stock.set_price to set unit costs; stock.approve decides the
- * approval; stock.distribute or stock.approve marks arrival/receipt.
+ * approval; stock.receive marks arrival and receives the batch in Goma
+ * (counting what arrived, which creates the sellable lots).
  */
 
 const MAX_QTY = 1_000_000;
@@ -146,13 +150,16 @@ function batchTotals(
 /**
  * Who may add, edit or remove a batch's expenses: its buyer (holds
  * stock.create and created it, or the Super Admin) at any status, and —
- * once it's no longer a draft — whoever receives batches (stock.distribute
- * or stock.approve), since transport and other costs are paid along the
- * way. Open even after "received", for late invoices.
+ * once it's no longer a draft — the Goma side (stock.receive,
+ * stock.distribute or stock.approve), since transport and other costs are
+ * paid along the way. Open even after "received", for late invoices.
  */
 function mayEditExpenses(ctx: AuthedQueryCtx, batch: Doc<"stockBatches">) {
   if (isOwner(ctx, batch) && ctx.can("stock.create")) return true;
-  return batch.status !== "draft" && (ctx.can("stock.distribute") || ctx.can("stock.approve"));
+  return (
+    batch.status !== "draft" &&
+    (ctx.can("stock.receive") || ctx.can("stock.distribute") || ctx.can("stock.approve"))
+  );
 }
 
 async function requireExpenseEditor(ctx: AuthedMutationCtx, batchId: Id<"stockBatches">) {
@@ -262,6 +269,15 @@ export const get = authedQuery({
           requisitionId: requisition?._id ?? null,
           requisitionNumber: requisition?.number ?? null,
           problems: lineProblems(item),
+          missing: item.status === "purchased" ? missingQty(item) : 0,
+          inventoryBatchId:
+            (
+              await ctx.db
+                .query("inventoryBatches")
+                .withIndex("by_sourceStockBatchItemId", (q) => q.eq("sourceStockBatchItemId", item._id))
+                .first()
+            )?._id ?? null,
+          receiveProblems: batch.status === "arrived" ? receiveProblems(item) : [],
         };
       }),
     );
@@ -294,13 +310,14 @@ export const get = authedQuery({
     const approvalKind = (approval?.payload as { kind?: string } | undefined)?.kind ?? null;
     const pendingApproval = approval?.status === "pending";
     const owner = isOwner(ctx, batch) && ctx.can("stock.create");
-    const receiver = ctx.can("stock.distribute") || ctx.can("stock.approve");
+    const receiver = ctx.can("stock.receive");
     const totals = batchTotals(batch, rawItems, rawExpenses);
 
     return {
       ...batch,
       businessUnitKey: unit?.key ?? null,
       createdByName: await userName(ctx, batch.createdBy),
+      receivedByName: batch.receivedBy ? await userName(ctx, batch.receivedBy) : null,
       items,
       expenses,
       requisitions,
@@ -322,7 +339,7 @@ export const get = authedQuery({
       canRequestReopen: owner && batch.status === "purchased" && !pendingApproval,
       canShip: owner && batch.status === "approved",
       canMarkArrived: receiver && batch.status === "shipped",
-      canMarkReceived: receiver && batch.status === "arrived",
+      canReceive: receiver && batch.status === "arrived",
     };
   },
 });
@@ -892,11 +909,9 @@ export const markShipped = authedMutation({
   },
 });
 
-/** The Goma side (stock.distribute or stock.approve) records arrival / receipt. */
+/** The Goma side (stock.receive) records arrival and receives the batch. */
 async function requireReceiver(ctx: AuthedMutationCtx, batchId: Id<"stockBatches">) {
-  if (!ctx.can("stock.distribute") && !ctx.can("stock.approve")) {
-    await ctx.requirePermission("stock.distribute");
-  }
+  await ctx.requirePermission("stock.receive");
   const batch = await ctx.db.get("stockBatches", batchId);
   if (!batch) throw new ConvexError("Batch not found.");
   return batch;
@@ -909,9 +924,135 @@ export const markArrived = authedMutation({
   },
 });
 
-export const markReceived = authedMutation({
+// ------------------------------------------------------------- receiving
+
+/**
+ * Records what actually arrived for one purchased line (autosaved while
+ * the batch is "arrived"): good units, damaged units and, when any are
+ * damaged or missing, why. Checked in full by confirmReceipt.
+ */
+export const setReceiveCount = authedMutation({
+  args: {
+    itemId: v.id("stockBatchItems"),
+    qtyReceived: v.number(),
+    qtyDamaged: v.number(),
+    reason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const item = await ctx.db.get("stockBatchItems", args.itemId);
+    if (!item) throw new ConvexError("Line not found.");
+    const batch = await requireReceiver(ctx, item.batchId);
+    if (batch.status !== "arrived") {
+      throw new ConvexError("Only an arrived batch can be counted.");
+    }
+    if (item.status !== "purchased") {
+      throw new ConvexError("Only purchased lines are received.");
+    }
+    assertQty(args.qtyReceived, 0);
+    assertQty(args.qtyDamaged, 0);
+    if (args.qtyReceived + args.qtyDamaged > item.qtyPurchased) {
+      throw new ConvexError(`Received and damaged can't exceed the ${item.qtyPurchased} purchased.`);
+    }
+    const next = {
+      qtyReceived: args.qtyReceived,
+      qtyDamaged: args.qtyDamaged,
+      receiveReason: cleanText(args.reason, 500, "Reason"),
+    };
+    const changes = diff(
+      { qtyReceived: item.qtyReceived ?? null, qtyDamaged: item.qtyDamaged ?? null, receiveReason: item.receiveReason ?? null },
+      { ...next, receiveReason: next.receiveReason ?? null },
+    );
+    if (!changes) return;
+    await ctx.db.patch("stockBatchItems", item._id, next);
+    const product = await ctx.db.get("products", item.productId);
+    await ctx.audit({
+      action: "update",
+      entityTable: "stockBatchItems",
+      entityId: item._id,
+      businessUnitId: batch.businessUnitId,
+      before: { batch: batch.number, product: product?.name ?? null, ...changes.before },
+      after: { batch: batch.number, product: product?.name ?? null, ...changes.after },
+    });
+  },
+});
+
+/**
+ * Confirms the receipt: every purchased line must be counted (with a
+ * reason for anything damaged or missing). Each line's good units become a
+ * sellable lot (inventoryBatches, at the purchase unit cost) and enter the
+ * business holder through applyMovement. The batch becomes "received".
+ */
+export const confirmReceipt = authedMutation({
   args: { batchId: v.id("stockBatches") },
   handler: async (ctx, { batchId }) => {
-    await advance(ctx, await requireReceiver(ctx, batchId), "arrived", "received");
+    const batch = await requireReceiver(ctx, batchId);
+    if (batch.status !== "arrived") {
+      throw new ConvexError("Only an arrived batch can be received.");
+    }
+    const items = await batchItems(ctx, batch._id);
+    const incomplete = items
+      .map((item) => ({ itemId: item._id, problems: receiveProblems(item) }))
+      .filter((line) => line.problems.length > 0);
+    if (incomplete.length > 0) {
+      throw new ConvexError({ code: "INCOMPLETE" as const, lines: incomplete });
+    }
+
+    const business = await getOrCreateHolder(ctx, batch.businessUnitId, businessHolderRef(batch.businessUnitId));
+    const now = Date.now();
+    let received = 0;
+    let damaged = 0;
+    let missing = 0;
+    for (const item of items) {
+      if (item.status !== "purchased") continue;
+      const qty = item.qtyReceived ?? 0;
+      received += qty;
+      damaged += item.qtyDamaged ?? 0;
+      missing += missingQty(item);
+      if (qty === 0) continue;
+      const lot = {
+        businessUnitId: batch.businessUnitId,
+        productId: item.productId,
+        sourceStockBatchItemId: item._id,
+        stockBatchId: batch._id,
+        unitCost: item.unitCost!,
+        currency: "USD" as const,
+        receivedQty: qty,
+        createdAt: now,
+      };
+      const lotId = await ctx.db.insert("inventoryBatches", lot);
+      const product = await ctx.db.get("products", item.productId);
+      await ctx.audit({
+        action: "create",
+        entityTable: "inventoryBatches",
+        entityId: lotId,
+        businessUnitId: batch.businessUnitId,
+        after: {
+          batch: batch.number,
+          product: product?.name ?? null,
+          sku: product?.sku ?? null,
+          unitCost: lot.unitCost,
+          currency: "USD",
+          receivedQty: qty,
+        },
+      });
+      await applyMovement(ctx, {
+        type: "receive",
+        inventoryBatchId: lotId,
+        toHolderId: business,
+        qty,
+        refTable: "stockBatches",
+        refId: batch._id,
+        actorId: ctx.user._id,
+      });
+    }
+    await ctx.db.patch("stockBatches", batch._id, { status: "received", receivedAt: now, receivedBy: ctx.user._id });
+    await ctx.audit({
+      action: "update",
+      entityTable: "stockBatches",
+      entityId: batch._id,
+      businessUnitId: batch.businessUnitId,
+      before: { number: batch.number, status: "arrived" },
+      after: { number: batch.number, status: "received", received, damaged, missing },
+    });
   },
 });

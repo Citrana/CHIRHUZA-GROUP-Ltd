@@ -1,5 +1,11 @@
 import { expect, test } from "vitest";
-import { formatAuditValue, formatSnapshotValue, orderSnapshotFields, summarizeAuditEntry } from "./audit-summary";
+import {
+  formatAuditValue,
+  formatSnapshotValue,
+  isLineItems,
+  orderSnapshotFields,
+  summarizeAuditEntry,
+} from "./audit-summary";
 
 test("an update summarizes its first readable change and counts the rest", () => {
   expect(
@@ -113,4 +119,20 @@ test("orderSnapshotFields: identity first, money last, grand total at the very e
     "currency",
     "amount",
   ]);
+});
+
+test("isLineItems recognises an items list (product + whole qty)", () => {
+  expect(
+    isLineItems([
+      { product: "Perique", lengthInches: 26, colour: "101", sku: "HAIR-00003", batch: "BATCH-00001", qty: 13 },
+      { product: "Perique", qty: 2 },
+    ]),
+  ).toBe(true);
+  for (const value of [[], "Perique × 13", [1, 2], [{ product: "P" }], [{ product: "P", qty: 1.5 }], null]) {
+    expect(isLineItems(value)).toBe(false);
+  }
+});
+
+test("a distribution reads: number, destination, items, total pieces", () => {
+  expect(orderSnapshotFields(["items", "number", "to", "totalQty"])).toEqual(["number", "to", "items", "totalQty"]);
 });

@@ -195,11 +195,11 @@
     },
     "manager_admin": {
       "name": "Administrateur gestionnaire",
-      "description": "Distribue le stock, avec une consultation de base."
+      "description": "Réceptionne et distribue le stock, avec une consultation de base."
     },
     "chief_sales_admin": {
       "name": "Administrateur en chef des ventes",
-      "description": "Enregistre les ventes, approuve leurs modifications et crée des réquisitions."
+      "description": "Enregistre les ventes, approuve leurs modifications, crée des réquisitions, et réceptionne et distribue le stock."
     },
     "chief_inventory_admin": {
       "name": "Administrateur en chef de l'inventaire",
@@ -245,6 +245,7 @@
       "view": "Voir le stock",
       "create": "Créer des lots d'achat",
       "set_price": "Fixer les prix à l'achat",
+      "receive": "Réceptionner les lots d'achat",
       "distribute": "Distribuer le stock aux sites",
       "approve": "Approuver les mouvements de stock"
     },
@@ -332,7 +333,22 @@
     "field": "Champ",
     "before": "Avant",
     "after": "Après",
-    "empty": "—"
+    "empty": "—",
+    "pieces": "{count, plural, one {# pièce} other {# pièces}}",
+    "fields": {
+      "number": "Numéro",
+      "title": "Titre",
+      "to": "Destination",
+      "items": "Articles",
+      "totalQty": "Total des pièces",
+      "purchasedLines": "Lignes achetées",
+      "notPurchasedLines": "Lignes non achetées",
+      "currency": "Devise",
+      "purchasedTotal": "Marchandises achetées",
+      "expensesTotal": "Dépenses",
+      "grandTotal": "Total (marchandises + dépenses)",
+      "status": "Statut"
+    }
   },
   "Approvals": {
     "title": "Approbations",
@@ -678,7 +694,6 @@
     "requestReopen": "Demander la réouverture",
     "markShipped": "Marquer expédié",
     "markArrived": "Marquer arrivé",
-    "markReceived": "Marquer réceptionné",
     "pendingReopen": "Une demande de réouverture attend une décision.",
     "pendingApproval": "En attente d'approbation avant l'expédition.",
     "viewApprovals": "Voir les approbations",
@@ -713,6 +728,113 @@
     "confirmMarkPurchased": "Marquer comme acheté",
     "requestReopenDescription": "Demandez à un administrateur en chef de remettre ce lot en brouillon pour le corriger.",
     "sendReopenRequest": "Envoyer la demande",
-    "autosaveHint": "Les modifications sont enregistrées automatiquement."
+    "autosaveHint": "Les modifications sont enregistrées automatiquement.",
+    "receivingTitle": "Réception à Goma",
+    "receivedTitle": "Réceptionné à Goma",
+    "receivingHint": "Comptez ce qui est réellement arrivé pour chaque ligne achetée : les unités en bon état entrent en stock ; les unités abîmées sont notées mais pas stockées ; le reste compte comme manquant.",
+    "waitingForCount": "Arrivé — en attente du comptage par l'équipe de Goma.",
+    "receivedHeader": "Reçu",
+    "damagedHeader": "Abîmé",
+    "missingHeader": "Manquant",
+    "receivedOf": "Reçu (sur {qty})",
+    "receiveReasonRequired": "Motif requis (abîmé/manquant)",
+    "receiveReasonLabel": "Motif des unités abîmées ou manquantes",
+    "linesToCount": "{count, plural, one {# ligne a besoin} other {# lignes ont besoin}} d'un comptage ou d'un motif (en surbrillance).",
+    "receiveIncomplete": "{count, plural, one {# ligne a encore besoin} other {# lignes ont encore besoin}} d'un comptage ou d'un motif.",
+    "confirmReceipt": "Confirmer la réception",
+    "confirmReceiptTitle": "Confirmer ce qui est arrivé ?",
+    "confirmReceiptDescription": "Les unités en bon état entrent dans le stock de l'entreprise, au coût unitaire d'achat. Le comptage ne peut plus être modifié ensuite.",
+    "receivedSummary": "{received} reçus, {damaged} abîmés, {missing} manquants sur {purchased} achetés · compté par {name}",
+    "viewStock": "Voir le stock"
+  },
+  "Inventory": {
+    "tabs": {
+      "label": "Sections du stock",
+      "overview": "Vue d'ensemble",
+      "batches": "Lots d'achat",
+      "distributions": "Distributions"
+    },
+    "title": "Stock",
+    "subtitle": "Ce qui est en stock, et qui le détient.",
+    "subtitleOwn": "Ce que votre site et vous détenez.",
+    "accessDenied": "Vous n'avez pas accès au stock.",
+    "businessHolder": "Entreprise (non attribué)",
+    "totalsLabel": "Totaux",
+    "unitsOnHand": "Unités en stock",
+    "stockValue": "Valeur du stock (coût d'achat)",
+    "viewLabel": "Affichage",
+    "views": {
+      "product": "Par produit",
+      "lot": "Par lot",
+      "holder": "Par détenteur"
+    },
+    "productHeader": "Produit",
+    "onHandHeader": "En stock",
+    "whereHeader": "Où",
+    "valueHeader": "Valeur",
+    "lotHeader": "Lot",
+    "unitCostHeader": "Coût unitaire",
+    "receivedHeader": "Reçu",
+    "holderHeader": "Détenteur",
+    "holderTypeHeader": "Type",
+    "holderTypes": {
+      "business": "Entreprise",
+      "location": "Site",
+      "user": "Personne"
+    },
+    "productsHeader": "Lots",
+    "lotCount": "{count, plural, one {# lot} other {# lots}}",
+    "receivedCount": "{count} reçus",
+    "empty": "Aucun stock pour l'instant. Le stock apparaît dès qu'un lot d'achat est réceptionné.",
+    "valueHint": "Valeur = unités en stock × coût unitaire d'achat. Les dépenses du voyage sont comptées à part."
+  },
+  "Distributions": {
+    "title": "Distributions",
+    "subtitle": "Stock envoyé de l'entreprise vers les boutiques et les personnes, après approbation de l'administrateur en chef.",
+    "accessDenied": "Vous n'avez pas accès au stock.",
+    "new": "Nouvelle distribution",
+    "newTitle": "Nouvelle distribution",
+    "newHint": "Choisissez la destination et la quantité de chaque lot. Rien ne bouge avant l'approbation de l'administrateur en chef.",
+    "destinationLabel": "Envoyer à",
+    "destinationTypes": {
+      "location": "Un site",
+      "user": "Une personne"
+    },
+    "selectLocation": "Choisir un site",
+    "selectPerson": "Choisir une personne",
+    "linesLabel": "Stock à envoyer",
+    "linesHint": "Saisissez une quantité pour chaque lot à envoyer. Disponible = en stock moins les autres distributions en attente.",
+    "searchPlaceholder": "Rechercher par nom, SKU, longueur, couleur ou lot",
+    "loading": "Chargement…",
+    "noStock": "Aucun stock dans l'entreprise. Réceptionnez d'abord un lot d'achat.",
+    "available": "{available} disponibles ({onHand} en stock)",
+    "qtyFor": "Quantité de {product}",
+    "selectedSummary": "{lines, plural, one {# lot} other {# lots}}, {units, plural, one {# pièce} other {# pièces}}",
+    "noteLabel": "Note",
+    "submit": "Soumettre pour approbation",
+    "submitting": "Envoi…",
+    "missingFields": "Choisissez une destination et au moins une quantité.",
+    "fixQuantities": "Certaines quantités dépassent ce qui est disponible.",
+    "notEnough": "Stock insuffisant : seulement {available} disponibles pour l'un des lots.",
+    "saveError": "Impossible de soumettre. Veuillez réessayer.",
+    "numberHeader": "Numéro",
+    "toHeader": "Destination",
+    "unitsHeader": "Pièces",
+    "statusHeader": "Statut",
+    "dateHeader": "Date",
+    "unitsSummary": "{units, plural, one {# pièce} other {# pièces}} · {lines, plural, one {# lot} other {# lots}}",
+    "requestedBy": "Demandée par",
+    "approvedBy": "Approuvée par",
+    "rejectedBy": "Rejetée par",
+    "pendingHint": "En attente de l'approbation de l'administrateur en chef.",
+    "viewApprovals": "Voir les approbations",
+    "empty": "Aucune distribution pour l'instant.",
+    "allStatuses": "Tous les statuts",
+    "statuses": {
+      "pending": "En attente",
+      "approved": "Approuvée",
+      "rejected": "Rejetée"
+    },
+    "pieces": "{count, plural, one {# pièce} other {# pièces}}"
   }
 }

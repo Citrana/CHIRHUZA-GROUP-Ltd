@@ -107,6 +107,29 @@ export function lineProblems(line: LineLike): LineProblem[] {
   return problems;
 }
 
+export type ReceiveProblem = "count" | "over" | "reason";
+
+/** Units neither received nor damaged: missing. */
+export function missingQty(line: Pick<Doc<"stockBatchItems">, "qtyPurchased" | "qtyReceived" | "qtyDamaged">): number {
+  return line.qtyPurchased - (line.qtyReceived ?? 0) - (line.qtyDamaged ?? 0);
+}
+
+/**
+ * Rules for a purchased line's receiving count in Goma: it must be counted,
+ * received + damaged can't exceed what was purchased, and any damaged or
+ * missing unit needs a reason. Not-purchased lines aren't received.
+ */
+export function receiveProblems(
+  line: Pick<Doc<"stockBatchItems">, "status" | "qtyPurchased" | "qtyReceived" | "qtyDamaged" | "receiveReason">,
+): ReceiveProblem[] {
+  if (line.status !== "purchased") return [];
+  if (line.qtyReceived === undefined) return ["count"];
+  const missing = missingQty(line);
+  if (missing < 0) return ["over"];
+  const hasReason = (line.receiveReason ?? "").trim().length > 0;
+  return (line.qtyDamaged ?? 0) > 0 || missing > 0 ? (hasReason ? [] : ["reason"]) : [];
+}
+
 /** How a requisition line ends up once its batch is purchased. */
 export function resolutionFor(line: LineLike): RequisitionItemResolution {
   if (line.status === "not_purchased") return "not_purchased";
