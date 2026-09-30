@@ -2,6 +2,7 @@ import { v, ConvexError, type Infer } from "convex/values";
 import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { logAudit } from "./audit";
+import { applyRollupEvent, withdrawalEvent } from "./analytics";
 
 /**
  * Withdrawals (CLAUDE.md "Payroll & withdrawals"): cash taken that serves
@@ -30,6 +31,8 @@ async function pendingWithdrawalFor(ctx: MutationCtx, approval: Doc<"approvals">
 async function decide(ctx: MutationCtx, approval: Doc<"approvals">, decider: Doc<"users">, status: "approved" | "rejected") {
   const withdrawal = await pendingWithdrawalFor(ctx, approval);
   await ctx.db.patch("withdrawals", withdrawal._id, { status, decidedAt: Date.now() });
+  // Analytics: shown apart from profit, on the day the cash was taken.
+  if (status === "approved") await applyRollupEvent(ctx, withdrawal.businessUnitId, withdrawalEvent(withdrawal));
   await logAudit(ctx, {
     actorId: decider._id,
     action: "update",

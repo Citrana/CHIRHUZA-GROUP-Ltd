@@ -2,6 +2,7 @@ import { v, ConvexError, type Infer } from "convex/values";
 import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { logAudit } from "./audit";
+import { applyRollupEvent, payrollEvent } from "./analytics";
 
 /**
  * Payroll (CLAUDE.md "Payroll & withdrawals"): salary payments, submitted
@@ -42,7 +43,10 @@ async function pendingEntryFor(ctx: MutationCtx, approval: Doc<"approvals">) {
 
 async function decide(ctx: MutationCtx, approval: Doc<"approvals">, decider: Doc<"users">, status: "approved" | "rejected") {
   const entry = await pendingEntryFor(ctx, approval);
-  await ctx.db.patch("payrollEntries", entry._id, { status, decidedAt: Date.now() });
+  const decidedAt = Date.now();
+  await ctx.db.patch("payrollEntries", entry._id, { status, decidedAt });
+  // Analytics: approved payroll counts on the day it was approved.
+  if (status === "approved") await applyRollupEvent(ctx, entry.businessUnitId, payrollEvent(entry, decidedAt));
   await logAudit(ctx, {
     actorId: decider._id,
     action: "update",

@@ -197,6 +197,27 @@ this repo, now and later — do not relax them for convenience.
   any profit/analytics figure excludes them and shows them separately, so
   owners see the real picture.
 
+## Analytics
+
+- Analytics reads **pre-aggregated rollups only** — never scan raw sales
+  for charts or totals. `dailyStats` (unit, locationKey, product, day:
+  units, revenue, cost, margin) and `dailyFinance` (unit, locationKey,
+  day: sales, saleCost, expenses, payroll, withdrawals), days in
+  Africa/Lubumbashi, USD cents (`convex/lib/analytics.ts`).
+- `applyRollupEvent(s)` is the **only** writer (a test scans the source).
+  Every feature that changes money calls it **in the same mutation**,
+  through an event builder (`saleEvents`, `expenseEvent`, `payrollEvent`,
+  `withdrawalEvent`); add a builder for new sources. Each change goes to
+  its location key (`"none"` for business-level) **and** to `"*"` (all
+  locations). Voids and approved edits apply the reversed event (sign -1)
+  then the new one.
+- `computeRollups` is the single source of the arithmetic; the backfill
+  `npx convex run analytics:rebuildRollups '{"businessUnitKey":"hair"}'`
+  recomputes from raw data, and tests assert rollups == rebuild.
+- Margin = sale price − purchase cost (`unitCostSnapshot`); net profit =
+  margin − expenses − payroll; withdrawals are shown apart, never
+  subtracted.
+
 ## Append-only tables
 
 - Append-only tables — the audit log, inventory movements, and similar
@@ -337,7 +358,9 @@ the inventory core with the stock overview by product, lot and holder
 `/[service]/sales/new`; suggested selling prices set on the price list at
 `/[service]/products/prices`, next to each lot's purchase cost). Sale edits
 and refunds come next), payroll (`/[service]/payroll`) and withdrawals
-(`/[service]/withdrawals`), both approved by the Chief Admin.
+(`/[service]/withdrawals`), both approved by the Chief Admin, and the
+analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
+expenses, payroll, net profit, withdrawals apart, top products, charts).
 Other business modules come in later steps, built on top
 of the rules above.
 

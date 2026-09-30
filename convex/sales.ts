@@ -6,6 +6,7 @@ import { authedMutation, authedQuery, type AuthedQueryCtx } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
 import { applyMovement, findHolder, getOrCreateHolder } from "./lib/inventory";
+import { applyRollupEvents, saleEvents } from "./lib/analytics";
 import { businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./lib/time";
 import {
   MAX_BACKDATE_DAYS,
@@ -247,6 +248,21 @@ export const create = authedMutation({
         throw e;
       }
     }
+
+    // Analytics rollups, in the same mutation (never scan raw sales).
+    await applyRollupEvents(
+      ctx,
+      unit._id,
+      saleEvents(
+        { locationId: location._id, createdAt },
+        lines.map(({ line, lot }) => ({
+          productId: lot.productId,
+          qty: line.qty,
+          unitPrice: line.unitPrice,
+          unitCostSnapshot: lot.unitCost,
+        })),
+      ),
+    );
 
     await ctx.audit({
       action: "create",

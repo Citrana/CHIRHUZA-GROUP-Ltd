@@ -52,6 +52,10 @@ Shared server-side helpers, not routable Convex functions themselves.
   `groupStock` (the overview's by product / lot / holder views).
 - `sales.ts` — payment methods and sale statuses, `saleLineProblems` (quantity,
   price, discount reason vs the suggested price) and `lineMargin`.
+- `analytics.ts` — the analytics rollups (`dailyStats`, `dailyFinance`):
+  event builders, `applyRollupEvent(s)` (the only writer), `computeRollups`
+  and `rebuildRollups` (backfill), and range helpers (`resolveRange`,
+  `bucketsBetween`, Monday weeks).
 - `payroll.ts` — payroll statuses, `isPeriod` / `addMonths` (a period is a
   month) and the `payroll` approval + rejection handlers.
 - `withdrawals.ts` — withdrawal statuses and the `withdrawal` approval +

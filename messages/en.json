@@ -1064,5 +1064,50 @@
     "reasonHeader": "Reason",
     "requestedBy": "Requested by",
     "empty": "No withdrawals match these filters."
+  },
+  "Analytics": {
+    "title": "Analytics",
+    "subtitle": "Sales, margin, costs and profit.",
+    "accessDenied": "You don't have access to analytics.",
+    "periodLabel": "Period",
+    "periods": {
+      "today": "Day",
+      "week": "Week",
+      "month": "Month",
+      "custom": "Custom"
+    },
+    "fromLabel": "From",
+    "toLabel": "To",
+    "locationLabel": "Location",
+    "allLocations": "All locations",
+    "lockedLocation": "Showing {name}",
+    "invalidRange": "Pick a start date before the end date, not in the future, at most 366 days.",
+    "totalsLabel": "Totals",
+    "cards": {
+      "sales": "Total sales",
+      "margin": "Margin",
+      "expenses": "Expenses",
+      "payroll": "Payroll",
+      "netProfit": "Net profit",
+      "withdrawals": "Withdrawals"
+    },
+    "marginPct": "{pct}% of sales",
+    "expensesHint": "Purchase-trip expenses",
+    "netProfitHint": "Margin − expenses − payroll",
+    "withdrawalsHint": "Not part of profit — shown apart",
+    "lists": {
+      "mostSold": "Most sold",
+      "leastSold": "Least sold",
+      "bestMargin": "Best margin"
+    },
+    "pieces": "{count, plural, one {# piece} other {# pieces}}",
+    "noSales": "No sales in this period.",
+    "noData": "Nothing in this period.",
+    "charts": {
+      "sales": "Sales over time",
+      "expenses": "Expenses over time",
+      "payroll": "Payroll over time"
+    },
+    "footnote": "Margin = sale price − purchase cost of the lot (trip expenses aren't spread into product costs). Dates are in Lubumbashi time (UTC+2); weeks start on Monday. USD."
   }
 }
