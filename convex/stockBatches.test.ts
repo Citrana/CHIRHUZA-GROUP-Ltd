@@ -1,155 +1,21 @@
-import { convexTest } from "convex-test";
 import { expect, test } from "vitest";
 import { api } from "./_generated/api";
-import type { Id } from "./_generated/dataModel";
-import schema from "./schema";
 import { MAX_RECEIPT_BYTES, receiptProblem } from "./lib/stockBatches";
 import {
-  getBusinessUnitId,
-  getRoleId,
-  insertLocation,
-  insertUserWithRole,
-  seedReferenceDataForTest,
-} from "./lib/test.utils";
+  PAGE,
+  arrivedMixedBatch,
+  batchItemFor,
+  buildMixedBatch,
+  getBatch,
+  getLine,
+  getRequisition,
+  receiveAll,
+  setupStock,
+} from "./lib/stock.test.utils";
+import { getRoleId } from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
-const PAGE = { numItems: 50, cursor: null };
-
-async function setup() {
-  const t = convexTest(schema, modules);
-  await seedReferenceDataForTest(t);
-  const hairId = await getBusinessUnitId(t, "hair");
-  const shop = await insertLocation(t, { name: "Goma Shop" });
-  const sales = await insertUserWithRole(t, "chief_sales_admin", { email: "sales@x.com", name: "Sales" });
-  const chief = await insertUserWithRole(t, "chief_admin", { email: "chief@x.com", name: "Chief" });
-  const inventory = await insertUserWithRole(t, "chief_inventory_admin", { email: "inv@x.com", name: "Buyer" });
-  const manager = await insertUserWithRole(t, "manager_admin", { email: "mgr@x.com", name: "Goma" });
-  const superAdmin = await insertUserWithRole(t, "super_admin", { email: "sa@x.com", name: "Super" });
-  const agent = await insertUserWithRole(t, "sales_agent", { email: "agent@x.com", locationId: shop });
-  const as = (user: Id<"users">) => t.withIdentity({ subject: user });
-
-  const product = (name: string) =>
-    t.run((ctx) =>
-      ctx.db.insert("products", {
-        businessUnitId: hairId,
-        name,
-        sku: `HAIR-${name}`,
-        category: "wigs",
-        unit: "piece",
-        status: "active",
-        createdBy: chief,
-        searchText: name.toLowerCase(),
-      }),
-    );
-  const [p1, p2, p3, p4] = [await product("P1"), await product("P2"), await product("P3"), await product("P4")];
-
-  /** An approved requisition with the given lines. Returns its line ids in order. */
-  async function approvedRequisition(lines: Array<[Id<"products">, number]>) {
-    const requisitionId = await as(sales).mutation(api.requisitions.create, { businessUnitKey: "hair", locationId: shop });
-    const lineIds: Id<"requisitionItems">[] = [];
-    for (const [productId, qtyRequested] of lines) {
-      lineIds.push(await as(sales).mutation(api.requisitions.addItem, { requisitionId, productId, qtyRequested }));
-    }
-    const approvalId = await as(sales).mutation(api.requisitions.submit, { requisitionId });
-    await as(chief).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
-    return { requisitionId, lineIds };
-  }
-
-  return { t, hairId, shop, sales, chief, inventory, manager, superAdmin, agent, as, p1, p2, p3, p4, approvedRequisition };
-}
-
-type Setup = Awaited<ReturnType<typeof setup>>;
-
-const getBatch = (s: Setup, id: Id<"stockBatches">) => s.t.run((ctx) => ctx.db.get("stockBatches", id));
-const getLine = (s: Setup, id: Id<"requisitionItems">) => s.t.run((ctx) => ctx.db.get("requisitionItems", id));
-const getRequisition = (s: Setup, id: Id<"requisitions">) => s.t.run((ctx) => ctx.db.get("requisitions", id));
-
-async function batchItemFor(s: Setup, lineId: Id<"requisitionItems">) {
-  return (await s.t.run((ctx) =>
-    ctx.db
-      .query("stockBatchItems")
-      .withIndex("by_requisitionItemId", (q) => q.eq("requisitionItemId", lineId))
-      .unique(),
-  ))!;
-}
-
-/**
- * The spec's mixed batch: requisition A (L1 fully bought, L2 partial),
- * requisition B (L3 not bought; L4 left out for another batch), an extra
- * pending product, a freight expense (with receipt) and a meal expense. Returns everything, marked purchased.
- */
-async function buildMixedBatch(s: Setup, buyer: Id<"users"> = s.inventory) {
-  const asBuyer = s.as(buyer);
-  const reqA = await s.approvedRequisition([[s.p1, 10], [s.p2, 5]]);
-  const reqB = await s.approvedRequisition([[s.p3, 4], [s.p4, 2]]);
-  const [l1, l2] = reqA.lineIds;
-  const [l3, l4] = reqB.lineIds;
-
-  const batchId = await asBuyer.mutation(api.stockBatches.create, { businessUnitKey: "hair", title: "Guangzhou trip" });
-  await asBuyer.mutation(api.stockBatches.addRequisitionLines, { batchId, requisitionItemIds: [l1, l2, l3] });
-
-  // Inline new product while purchasing: pending confirmation for the buyer.
-  const extraProduct = await asBuyer.mutation(api.products.create, {
-    businessUnitKey: "hair",
-    name: "New closure",
-    category: "closures",
-    unit: "piece",
-  });
-  const extraId = await asBuyer.mutation(api.stockBatches.addExtraItem, {
-    batchId,
-    productId: extraProduct,
-    qtyPurchased: 3,
-    unitCost: 500,
-  });
-
-  const i1 = await batchItemFor(s, l1);
-  const i2 = await batchItemFor(s, l2);
-  const i3 = await batchItemFor(s, l3);
-  await asBuyer.mutation(api.stockBatches.updateItem, { itemId: i1._id, status: "purchased", qtyPurchased: 10, unitCost: 200 });
-  await asBuyer.mutation(api.stockBatches.updateItem, { itemId: i2._id, status: "purchased", qtyPurchased: 3, unitCost: 1000 });
-
-  // Incomplete: L2 bought fewer without a reason; L3 has no cost and no decision.
-  const incomplete = await asBuyer
-    .mutation(api.stockBatches.markPurchased, { batchId })
-    .then(() => null, (e) => e);
-  expect(incomplete.data).toMatchObject({ code: "INCOMPLETE" });
-  const problems = Object.fromEntries(
-    (incomplete.data.lines as Array<{ itemId: string; problems: string[] }>).map((l) => [l.itemId, l.problems]),
-  );
-  expect(problems).toEqual({ [i2._id]: ["reason"], [i3._id]: ["unitCost"] });
-
-  await asBuyer.mutation(api.stockBatches.updateItem, {
-    itemId: i2._id,
-    status: "purchased",
-    qtyPurchased: 3,
-    unitCost: 1000,
-    reason: "Supplier only had 3",
-  });
-  await asBuyer.mutation(api.stockBatches.updateItem, {
-    itemId: i3._id,
-    status: "not_purchased",
-    qtyPurchased: 4,
-    unitCost: null,
-    reason: "Discontinued",
-  });
-
-  const receipt = await s.t.run((ctx) => ctx.storage.store(new Blob(["%PDF"], { type: "application/pdf" })));
-  await asBuyer.mutation(api.stockBatches.addExpense, {
-    batchId,
-    category: "freight",
-    amount: 800,
-    receiptFileId: receipt,
-  });
-  await asBuyer.mutation(api.stockBatches.addExpense, {
-    batchId,
-    category: "meals",
-    amount: 300,
-    note: "Team lunch",
-  });
-
-  await asBuyer.mutation(api.stockBatches.markPurchased, { batchId });
-  return { batchId, reqA, reqB, l1, l2, l3, l4, i1, i2, i3, extraId, extraProduct };
-}
+const setup = () => setupStock(modules);
 
 test("the full mixed flow: resolutions, totals, requisitions", async () => {
   const s = await setup();
@@ -233,15 +99,96 @@ test("approval, then shipped / arrived / received with the right people", async 
   await s.as(s.inventory).mutation(api.stockBatches.markShipped, { batchId: b.batchId });
   await expect(
     s.as(s.inventory).mutation(api.stockBatches.markArrived, { batchId: b.batchId }),
-  ).rejects.toThrow(/stock\.distribute/);
+  ).rejects.toThrow(/stock\.receive/);
   await s.as(s.manager).mutation(api.stockBatches.markArrived, { batchId: b.batchId });
-  await s.as(s.chief).mutation(api.stockBatches.markReceived, { batchId: b.batchId });
+  // The Chief Sales Admin receives it (counting what arrived).
+  await receiveAll(s, b.batchId, s.sales);
 
   const batch = await getBatch(s, b.batchId);
   expect(batch).toMatchObject({ status: "received" });
   for (const stamp of ["purchasedAt", "approvedAt", "shippedAt", "arrivedAt", "receivedAt"] as const) {
     expect(batch![stamp]).toBeTypeOf("number");
   }
+});
+
+test("receiving: Goma counts purchased lines; good units become lots at the business", async () => {
+  const s = await setup();
+  const b = await arrivedMixedBatch(s);
+  const count = (who: typeof s.manager, itemId: typeof b.i1._id, qtyReceived: number, qtyDamaged = 0, reason?: string) =>
+    s.as(who).mutation(api.stockBatches.setReceiveCount, {
+      itemId,
+      qtyReceived,
+      qtyDamaged,
+      ...(reason ? { reason } : {}),
+    });
+
+  // Needs stock.receive (the buyer and the chief don't have it).
+  await expect(count(s.inventory, b.i1._id, 10)).rejects.toThrow(/stock\.receive/);
+  await expect(count(s.chief, b.i1._id, 10)).rejects.toThrow(/stock\.receive/);
+  // Only purchased lines; never more than purchased; whole numbers.
+  await expect(count(s.manager, b.i3._id, 1)).rejects.toThrow(/Only purchased lines/);
+  await expect(count(s.manager, b.i1._id, 9, 2)).rejects.toThrow(/can't exceed the 10 purchased/);
+  await expect(count(s.manager, b.i1._id, 1.5)).rejects.toThrow(/whole number/);
+
+  // L1: 8 good + 1 damaged (1 missing); L2: all 3; the extra: not counted yet.
+  await count(s.manager, b.i1._id, 8, 1);
+  await count(s.sales, b.i2._id, 3);
+  const incomplete = await s
+    .as(s.manager)
+    .mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId })
+    .then(() => null, (e) => e);
+  expect(incomplete.data).toMatchObject({ code: "INCOMPLETE" });
+  const problems = Object.fromEntries(
+    (incomplete.data.lines as Array<{ itemId: string; problems: string[] }>).map((l) => [l.itemId, l.problems]),
+  );
+  expect(problems).toEqual({ [b.i1._id]: ["reason"], [b.extraId]: ["count"] });
+
+  await count(s.manager, b.i1._id, 8, 1, "One torn in transit, one missing from the box");
+  await count(s.manager, b.extraId, 3);
+  const detail = await s.as(s.manager).query(api.stockBatches.get, { batchId: b.batchId });
+  expect(detail!.canReceive).toBe(true);
+  expect(detail!.items.find((i) => i._id === b.i1._id)).toMatchObject({ missing: 1, receiveProblems: [] });
+
+  await s.as(s.manager).mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId });
+  const batch = await getBatch(s, b.batchId);
+  expect(batch).toMatchObject({ status: "received", receivedBy: s.manager });
+
+  // Lots: good units only, at the purchase unit cost; nothing for L3.
+  const lots = await s.t.run((ctx) =>
+    ctx.db.query("inventoryBatches").withIndex("by_stockBatchId", (q) => q.eq("stockBatchId", b.batchId)).collect(),
+  );
+  const bySource = new Map(lots.map((l) => [l.sourceStockBatchItemId, l]));
+  expect(lots).toHaveLength(3);
+  expect(bySource.get(b.i1._id)).toMatchObject({ receivedQty: 8, unitCost: 200, currency: "USD" });
+  expect(bySource.get(b.i2._id)).toMatchObject({ receivedQty: 3, unitCost: 1000 });
+  expect(bySource.get(b.extraId)).toMatchObject({ receivedQty: 3, unitCost: 500 });
+
+  // All of it sits with the business, through "receive" movements.
+  const overview = await s.as(s.chief).query(api.inventory.overview, { businessUnitKey: "hair" });
+  expect(overview.byHolder.map((h) => [h.holder.type, h.qty])).toEqual([["business", 14]]);
+  const movements = await s.t.run((ctx) => ctx.db.query("inventoryMovements").collect());
+  expect(movements.map((m) => [m.type, m.qty, m.fromHolderId ?? null])).toEqual([
+    ["receive", 8, null],
+    ["receive", 3, null],
+    ["receive", 3, null],
+  ]);
+
+  // Once only; counts are locked afterwards.
+  await expect(
+    s.as(s.manager).mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId }),
+  ).rejects.toThrow(/Only an arrived batch/);
+  await expect(count(s.manager, b.i1._id, 10)).rejects.toThrow(/Only an arrived batch/);
+});
+
+test("a batch can't be counted or received before it arrives", async () => {
+  const s = await setup();
+  const b = await buildMixedBatch(s);
+  await expect(
+    s.as(s.manager).mutation(api.stockBatches.setReceiveCount, { itemId: b.i1._id, qtyReceived: 10, qtyDamaged: 0 }),
+  ).rejects.toThrow(/Only an arrived batch/);
+  await expect(
+    s.as(s.manager).mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId }),
+  ).rejects.toThrow(/Only an arrived batch/);
 });
 
 test("expenses stay open after purchase: the buyer and the Goma team add them along the way", async () => {
@@ -287,7 +234,7 @@ test("expenses stay open after purchase: the buyer and the Goma team add them al
 
   // Even after it's received, for late invoices (the chief holds stock.approve).
   await s.as(s.manager).mutation(api.stockBatches.markArrived, { batchId: b.batchId });
-  await s.as(s.chief).mutation(api.stockBatches.markReceived, { batchId: b.batchId });
+  await receiveAll(s, b.batchId);
   await s.as(s.chief).mutation(api.stockBatches.addExpense, { batchId: b.batchId, category: "customs", amount: 900 });
   expect(await totals()).toEqual({ purchasedTotal: 6500, expensesTotal: 4000, grandTotal: 10_500 });
   expect(await unitCosts()).toEqual(costsBefore);
@@ -302,7 +249,7 @@ test("expenses stay open after purchase: the buyer and the Goma team add them al
 
   // Someone without stock access can't.
   await expect(
-    s.as(s.sales).mutation(api.stockBatches.addExpense, { batchId: b.batchId, category: "other", amount: 100 }),
+    s.as(s.agent).mutation(api.stockBatches.addExpense, { batchId: b.batchId, category: "other", amount: 100 }),
   ).rejects.toThrow(/stock\.view/);
 });
 
@@ -477,7 +424,7 @@ test("only the buyer (or the Super Admin) edits a batch; the Super Admin can do 
   await s.as(s.superAdmin).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
   await s.as(s.superAdmin).mutation(api.stockBatches.markShipped, { batchId: own });
   await s.as(s.superAdmin).mutation(api.stockBatches.markArrived, { batchId: own });
-  await s.as(s.superAdmin).mutation(api.stockBatches.markReceived, { batchId: own });
+  await receiveAll(s, own, s.superAdmin);
   expect((await getBatch(s, own))!.status).toBe("received");
 
   const decision = await s.t.run(async (ctx) =>

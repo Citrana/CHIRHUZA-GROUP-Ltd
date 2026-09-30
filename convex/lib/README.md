@@ -43,8 +43,17 @@ Shared server-side helpers, not routable Convex functions themselves.
 - `money.ts` — `currencyValidator` / `usdValidator`, `parseMoneyToMinor`,
   `minorToInput`, `formatMoney` (shared with the UI's `MoneyInput`).
 - `stockBatches.ts` — batch/line/expense validators, `lineProblems`,
-  `resolutionFor`, `receiptProblem`, requisition status/link syncing, and
-  the `stock_batch` approval + rejection handlers.
+  `resolutionFor`, `receiptProblem`, receiving rules (`receiveProblems`,
+  `missingQty`), requisition status/link syncing, and the `stock_batch`
+  approval + rejection handlers.
+- `inventory.ts` — the inventory core: holders (`getOrCreateHolder`,
+  `findHolder`, `holderName`), `applyMovement` (THE only writer of
+  `stockLevels` / `inventoryMovements`; never goes below zero) and
+  `groupStock` (the overview's by product / lot / holder views).
+- `distributions.ts` — distribution statuses and the `distribution`
+  approval (moves the stock) + rejection handlers.
+- `stock.test.utils.ts` — test-only stock setup shared by the stock tests
+  (`setupStock`, `buildMixedBatch`, `arrivedMixedBatch`, `receiveAll`).
 - `requisitions.ts` — requisition statuses/resolutions, `isEditable`,
   `nextSequenceNumber` (per-unit document numbers like `REQ-00001`), and
   the requisition approval + rejection handlers.

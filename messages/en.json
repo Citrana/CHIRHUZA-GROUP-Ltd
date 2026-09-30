@@ -195,11 +195,11 @@
     },
     "manager_admin": {
       "name": "Manager Admin",
-      "description": "Distributes stock, with basic viewing."
+      "description": "Receives and distributes stock, with basic viewing."
     },
     "chief_sales_admin": {
       "name": "Chief Sales Admin",
-      "description": "Records sales, approves sale edits and raises requisitions."
+      "description": "Records sales, approves sale edits, raises requisitions, and receives and distributes stock."
     },
     "chief_inventory_admin": {
       "name": "Chief Inventory Admin",
@@ -245,6 +245,7 @@
       "view": "View stock",
       "create": "Create purchase batches",
       "set_price": "Set prices on purchase",
+      "receive": "Receive purchase batches",
       "distribute": "Distribute stock to locations",
       "approve": "Approve stock movements"
     },
@@ -332,7 +333,22 @@
     "field": "Field",
     "before": "Before",
     "after": "After",
-    "empty": "—"
+    "empty": "—",
+    "pieces": "{count, plural, one {# piece} other {# pieces}}",
+    "fields": {
+      "number": "Number",
+      "title": "Title",
+      "to": "To",
+      "items": "Items",
+      "totalQty": "Total pieces",
+      "purchasedLines": "Lines purchased",
+      "notPurchasedLines": "Lines not purchased",
+      "currency": "Currency",
+      "purchasedTotal": "Goods purchased",
+      "expensesTotal": "Expenses",
+      "grandTotal": "Total (goods + expenses)",
+      "status": "Status"
+    }
   },
   "Approvals": {
     "title": "Approvals",
@@ -678,7 +694,6 @@
     "requestReopen": "Request reopen",
     "markShipped": "Mark shipped",
     "markArrived": "Mark arrived",
-    "markReceived": "Mark received",
     "pendingReopen": "A reopen request is waiting for a decision.",
     "pendingApproval": "Waiting for approval before it can be shipped.",
     "viewApprovals": "View approvals",
@@ -713,6 +728,113 @@
     "confirmMarkPurchased": "Mark as purchased",
     "requestReopenDescription": "Ask a Chief Admin to unlock this batch back to draft so you can fix it.",
     "sendReopenRequest": "Send request",
-    "autosaveHint": "Changes save automatically."
+    "autosaveHint": "Changes save automatically.",
+    "receivingTitle": "Receiving in Goma",
+    "receivedTitle": "Received in Goma",
+    "receivingHint": "Count what actually arrived for each purchased line: good units become stock; damaged units are recorded but not stocked; the rest counts as missing.",
+    "waitingForCount": "Arrived — waiting to be counted by the Goma team.",
+    "receivedHeader": "Received",
+    "damagedHeader": "Damaged",
+    "missingHeader": "Missing",
+    "receivedOf": "Received (of {qty})",
+    "receiveReasonRequired": "Reason required (damaged/missing)",
+    "receiveReasonLabel": "Reason for damaged or missing units",
+    "linesToCount": "{count, plural, one {# line needs} other {# lines need}} a count or a reason (highlighted).",
+    "receiveIncomplete": "{count, plural, one {# line still needs} other {# lines still need}} a count or a reason.",
+    "confirmReceipt": "Confirm receipt",
+    "confirmReceiptTitle": "Confirm what arrived?",
+    "confirmReceiptDescription": "Good units become stock held by the business, at the purchase unit cost. The count can't be changed afterwards.",
+    "receivedSummary": "{received} received, {damaged} damaged, {missing} missing of {purchased} purchased · counted by {name}",
+    "viewStock": "View stock"
+  },
+  "Inventory": {
+    "tabs": {
+      "label": "Stock sections",
+      "overview": "Overview",
+      "batches": "Purchase batches",
+      "distributions": "Distributions"
+    },
+    "title": "Stock",
+    "subtitle": "What's on hand, and who holds it.",
+    "subtitleOwn": "What your location and you hold.",
+    "accessDenied": "You don't have access to stock.",
+    "businessHolder": "Business (unassigned)",
+    "totalsLabel": "Totals",
+    "unitsOnHand": "Units on hand",
+    "stockValue": "Stock value (purchase cost)",
+    "viewLabel": "View",
+    "views": {
+      "product": "By product",
+      "lot": "By lot",
+      "holder": "By holder"
+    },
+    "productHeader": "Product",
+    "onHandHeader": "On hand",
+    "whereHeader": "Where",
+    "valueHeader": "Value",
+    "lotHeader": "Lot",
+    "unitCostHeader": "Unit cost",
+    "receivedHeader": "Received",
+    "holderHeader": "Holder",
+    "holderTypeHeader": "Type",
+    "holderTypes": {
+      "business": "Business",
+      "location": "Location",
+      "user": "Person"
+    },
+    "productsHeader": "Lots",
+    "lotCount": "{count, plural, one {# lot} other {# lots}}",
+    "receivedCount": "{count} received",
+    "empty": "No stock on hand yet. Stock appears once a purchase batch is received.",
+    "valueHint": "Value is units on hand × the purchase unit cost. Trip expenses are kept separately."
+  },
+  "Distributions": {
+    "title": "Distributions",
+    "subtitle": "Stock sent from the business to shops and people, once the Chief Admin approves.",
+    "accessDenied": "You don't have access to stock.",
+    "new": "New distribution",
+    "newTitle": "New distribution",
+    "newHint": "Choose where the stock goes and how much of each lot. Nothing moves until the Chief Admin approves.",
+    "destinationLabel": "Send to",
+    "destinationTypes": {
+      "location": "A location",
+      "user": "A person"
+    },
+    "selectLocation": "Choose a location",
+    "selectPerson": "Choose a person",
+    "linesLabel": "Stock to send",
+    "linesHint": "Enter a quantity for each lot to send. Available = on hand minus other pending distributions.",
+    "searchPlaceholder": "Search by name, SKU, length, colour or batch",
+    "loading": "Loading…",
+    "noStock": "No stock with the business. Receive a purchase batch first.",
+    "available": "{available} available ({onHand} on hand)",
+    "qtyFor": "Quantity of {product}",
+    "selectedSummary": "{lines, plural, one {# lot} other {# lots}}, {units, plural, one {# piece} other {# pieces}}",
+    "noteLabel": "Note",
+    "submit": "Submit for approval",
+    "submitting": "Submitting…",
+    "missingFields": "Choose a destination and at least one quantity.",
+    "fixQuantities": "Some quantities are more than what's available.",
+    "notEnough": "Not enough stock: only {available} available for one of the lots.",
+    "saveError": "Could not submit. Please try again.",
+    "numberHeader": "Number",
+    "toHeader": "To",
+    "unitsHeader": "Pieces",
+    "statusHeader": "Status",
+    "dateHeader": "Date",
+    "unitsSummary": "{units, plural, one {# piece} other {# pieces}} · {lines, plural, one {# lot} other {# lots}}",
+    "requestedBy": "Requested by",
+    "approvedBy": "Approved by",
+    "rejectedBy": "Rejected by",
+    "pendingHint": "Waiting for the Chief Admin's approval.",
+    "viewApprovals": "View approvals",
+    "empty": "No distributions yet.",
+    "allStatuses": "All statuses",
+    "statuses": {
+      "pending": "Pending",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "pieces": "{count, plural, one {# piece} other {# pieces}}"
   }
 }

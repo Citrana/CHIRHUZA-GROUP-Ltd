@@ -72,10 +72,41 @@ export function formatAuditValue(value: unknown, empty: string): string {
 }
 
 /**
+ * One line of an `items` list in a snapshot or approval payload (e.g. a
+ * distribution): what product, and how many pieces. The Approvals and
+ * Audit pages list these instead of printing raw JSON.
+ */
+export type LineItem = {
+  product: string;
+  qty: number;
+  lengthInches?: number | null;
+  colour?: string | null;
+  sku?: string | null;
+  batch?: string | null;
+};
+
+export function isLineItems(value: unknown): value is LineItem[] {
+  return (
+    Array.isArray(value) &&
+    value.length > 0 &&
+    value.every(
+      (item) =>
+        typeof item === "object" &&
+        item !== null &&
+        typeof (item as LineItem).product === "string" &&
+        Number.isSafeInteger((item as LineItem).qty),
+    )
+  );
+}
+
+/**
  * Fields in reading order within their group (see below); `grandTotal`
  * (the sum) always comes last.
  */
 const FIELD_ORDER = [
+  "to",
+  "items",
+  "totalQty",
   "purchasedLines",
   "notPurchasedLines",
   "amount",

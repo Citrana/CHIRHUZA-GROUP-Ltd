@@ -144,6 +144,23 @@ this repo, now and later — do not relax them for convenience.
   Money inside it follows the Money rule (integer minor units + currency).
   Never put secrets in a payload.
 
+## Inventory
+
+- Stock is held by **holders** (`holders`: the business unit itself, a
+  location, or a person). Sellable lots (`inventoryBatches`) are created
+  **only** by receiving a purchase batch; their `unitCost` is the purchase
+  unit cost (trip expenses are never spread into it).
+- **Every quantity change goes through `applyMovement`**
+  (`convex/lib/inventory.ts`): it takes from one holder, gives to the other,
+  appends an `inventoryMovements` row and audits it, in the caller's
+  mutation. It refuses to take a holder below zero — stock never goes
+  negative. Nothing else inserts, patches or deletes `stockLevels` or
+  `inventoryMovements` (a test scans the source for it).
+- A change that needs approval (e.g. a distribution) checks availability
+  when requested, and its handler moves stock through `applyMovement` on
+  approval — if stock ran out meanwhile it throws and the approval stays
+  pending.
+
 ## Append-only tables
 
 - Append-only tables — the audit log, inventory movements, and similar
@@ -274,10 +291,13 @@ pages), the append-only audit log (`/admin/audit`), the generic approval
 engine (`/[service]/approvals`), the Hair product catalogue
 (`/[service]/products`, with lengths/colours in `/[service]/settings`), and
 requisitions (`/[service]/requisitions`: draft -> submit -> approve), and
-stock batches (`/[service]/stock`: purchasing abroad, trip expenses kept
-aside (never spread into product costs) and addable at any time by the buyer
-or the receiving team, approval, shipped/arrived/received; receiving into
-warehouse stock comes next).
+stock batches (`/[service]/stock/batches`: purchasing abroad, trip expenses
+kept aside (never spread into product costs) and addable at any time by the
+buyer or the receiving team, approval, shipped/arrived), Goma receiving
+(counting good/damaged/missing units into sellable lots), distributions to
+locations/people with Chief Admin approval (`/[service]/stock/distributions`),
+and the inventory core with the stock overview by product, lot and holder
+(`/[service]/stock`). Sales come next.
 Other business modules come in later steps, built on top
 of the rules above.
 

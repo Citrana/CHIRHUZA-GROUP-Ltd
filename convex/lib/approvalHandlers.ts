@@ -4,6 +4,10 @@ import type { Doc } from "../_generated/dataModel";
 import type { ApprovalType } from "./approvalTypes";
 import { deleteApprovedProduct } from "./products";
 import {
+  applyDistributionApproval,
+  applyDistributionRejection,
+} from "./distributions";
+import {
   applyRequisitionApproval,
   applyRequisitionRejection,
 } from "./requisitions";
@@ -67,7 +71,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   payroll: notImplementedYet,
   requisition: applyRequisitionApproval,
   stock_batch: applyStockBatchApproval,
-  distribution: notImplementedYet,
+  distribution: applyDistributionApproval,
   withdrawal: notImplementedYet,
 };
 
@@ -80,4 +84,5 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
 export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalHandler>> = {
   requisition: applyRequisitionRejection,
   stock_batch: applyStockBatchRejection,
+  distribution: applyDistributionRejection,
 };

@@ -10,6 +10,12 @@ import {
 } from "./lib/stockBatches";
 import { usdValidator } from "./lib/money";
 import {
+  holderRefValidator,
+  holderTypeValidator,
+  movementTypeValidator,
+} from "./lib/inventory";
+import { distributionStatusValidator } from "./lib/distributions";
+import {
   requisitionItemResolutionValidator,
   requisitionStatusValidator,
 } from "./lib/requisitions";
@@ -213,6 +219,8 @@ export default defineSchema({
     shippedAt: v.optional(v.number()),
     arrivedAt: v.optional(v.number()),
     receivedAt: v.optional(v.number()),
+    // Who confirmed the receipt in Goma.
+    receivedBy: v.optional(v.id("users")),
     // Goods total, fixed when marked purchased (cents). Expenses stay open
     // (and aside from product costs), so their totals are always computed.
     purchasedTotal: v.optional(v.number()),
@@ -242,6 +250,12 @@ export default defineSchema({
     currency: usdValidator,
     // Required when not purchased, or fewer than requested were bought.
     reason: v.optional(v.string()),
+    // Receiving count in Goma (purchased lines only). Good units become
+    // stock; damaged ones are recorded, not stocked; missing = purchased -
+    // received - damaged. The reason explains any damaged/missing units.
+    qtyReceived: v.optional(v.number()),
+    qtyDamaged: v.optional(v.number()),
+    receiveReason: v.optional(v.string()),
   })
     .index("by_batchId", ["batchId"])
     .index("by_requisitionItemId", ["requisitionItemId"])
@@ -258,6 +272,90 @@ export default defineSchema({
   }).index("by_batchId", ["batchId"]),
 
   // Per-business-unit document number sequences (e.g. key "requisition").
+  // Inventory core (convex/lib/inventory.ts). Quantities change ONLY
+  // through applyMovement; nothing else writes stockLevels.
+
+  // Who can hold stock: the business unit itself, a location or a person.
+  holders: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    type: holderTypeValidator,
+    refId: holderRefValidator,
+  }).index("by_businessUnitId_and_type_and_refId", ["businessUnitId", "type", "refId"]),
+
+  // Sellable lots, created only by receiving a purchase batch line.
+  inventoryBatches: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    productId: v.id("products"),
+    sourceStockBatchItemId: v.id("stockBatchItems"),
+    stockBatchId: v.id("stockBatches"),
+    // Purchase unit cost (cents); trip expenses are never spread into it.
+    unitCost: v.number(),
+    currency: usdValidator,
+    receivedQty: v.number(),
+    // UTC ms.
+    createdAt: v.number(),
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_productId", ["productId"])
+    .index("by_sourceStockBatchItemId", ["sourceStockBatchItemId"])
+    .index("by_stockBatchId", ["stockBatchId"]),
+
+  // How many units of a lot a holder has. Written only by applyMovement.
+  stockLevels: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    inventoryBatchId: v.id("inventoryBatches"),
+    // Copied from the lot, for per-product views.
+    productId: v.id("products"),
+    holderId: v.id("holders"),
+    qtyOnHand: v.number(),
+  })
+    .index("by_inventoryBatchId_and_holderId", ["inventoryBatchId", "holderId"])
+    .index("by_holderId", ["holderId"])
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_productId", ["productId"]),
+
+  // Append-only: every quantity change, never patched or deleted.
+  inventoryMovements: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    type: movementTypeValidator,
+    inventoryBatchId: v.id("inventoryBatches"),
+    fromHolderId: v.optional(v.id("holders")),
+    toHolderId: v.optional(v.id("holders")),
+    qty: v.number(),
+    refTable: v.string(),
+    refId: v.string(),
+    actorId: v.id("users"),
+    // UTC ms.
+    timestamp: v.number(),
+  })
+    .index("by_inventoryBatchId", ["inventoryBatchId"])
+    .index("by_refTable_and_refId", ["refTable", "refId"]),
+
+  // Stock sent from the business to a location or a person, once the
+  // Chief Admin approves (approval type "distribution").
+  distributions: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // e.g. DIST-00001, per business unit (numberSequences).
+    number: v.string(),
+    toHolderId: v.id("holders"),
+    status: distributionStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    createdBy: v.id("users"),
+    note: v.optional(v.string()),
+    // UTC ms.
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"]),
+
+  distributionItems: defineTable({
+    distributionId: v.id("distributions"),
+    inventoryBatchId: v.id("inventoryBatches"),
+    qty: v.number(),
+  })
+    .index("by_distributionId", ["distributionId"])
+    .index("by_inventoryBatchId", ["inventoryBatchId"]),
+
   numberSequences: defineTable({
     businessUnitId: v.id("businessUnits"),
     key: v.string(),
