@@ -1064,5 +1064,50 @@
     "reasonHeader": "Motif",
     "requestedBy": "Demandé par",
     "empty": "Aucun retrait ne correspond à ces filtres."
+  },
+  "Analytics": {
+    "title": "Analyses",
+    "subtitle": "Ventes, marge, coûts et bénéfice.",
+    "accessDenied": "Vous n'avez pas accès aux analyses.",
+    "periodLabel": "Période",
+    "periods": {
+      "today": "Jour",
+      "week": "Semaine",
+      "month": "Mois",
+      "custom": "Personnalisé"
+    },
+    "fromLabel": "Du",
+    "toLabel": "Au",
+    "locationLabel": "Site",
+    "allLocations": "Tous les sites",
+    "lockedLocation": "Affichage : {name}",
+    "invalidRange": "Choisissez une date de début avant la date de fin, pas dans le futur, 366 jours au plus.",
+    "totalsLabel": "Totaux",
+    "cards": {
+      "sales": "Ventes totales",
+      "margin": "Marge",
+      "expenses": "Dépenses",
+      "payroll": "Paie",
+      "netProfit": "Bénéfice net",
+      "withdrawals": "Retraits"
+    },
+    "marginPct": "{pct} % des ventes",
+    "expensesHint": "Dépenses des voyages d'achat",
+    "netProfitHint": "Marge − dépenses − paie",
+    "withdrawalsHint": "Hors bénéfice — affichés à part",
+    "lists": {
+      "mostSold": "Les plus vendus",
+      "leastSold": "Les moins vendus",
+      "bestMargin": "Meilleure marge"
+    },
+    "pieces": "{count, plural, one {# pièce} other {# pièces}}",
+    "noSales": "Aucune vente sur cette période.",
+    "noData": "Rien sur cette période.",
+    "charts": {
+      "sales": "Ventes dans le temps",
+      "expenses": "Dépenses dans le temps",
+      "payroll": "Paie dans le temps"
+    },
+    "footnote": "Marge = prix de vente − coût d'achat du lot (les dépenses de voyage ne sont pas réparties sur les produits). Dates à l'heure de Lubumbashi (UTC+2) ; les semaines commencent le lundi. USD."
   }
 }

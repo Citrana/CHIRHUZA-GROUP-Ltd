@@ -461,6 +461,35 @@ export default defineSchema({
     .index("by_locationId_and_date", ["locationId", "date"])
     .index("by_requestedBy", ["requestedBy"]),
 
+  // Analytics rollups (convex/lib/analytics.ts): written ONLY by
+  // applyRollupEvent in the same mutation as the source change; rebuilt by
+  // analytics:rebuildRollups. locationKey = a location id, "none"
+  // (business-level) or "*" (all locations). day = YYYY-MM-DD, Lubumbashi.
+  // Money in USD cents.
+  dailyStats: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    locationKey: v.string(),
+    productId: v.id("products"),
+    day: v.string(),
+    unitsSold: v.number(),
+    revenue: v.number(),
+    cost: v.number(),
+    margin: v.number(),
+  })
+    .index("by_key", ["businessUnitId", "locationKey", "productId", "day"])
+    .index("by_unit_location_day", ["businessUnitId", "locationKey", "day"]),
+
+  dailyFinance: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    locationKey: v.string(),
+    day: v.string(),
+    sales: v.number(),
+    saleCost: v.number(),
+    expenses: v.number(),
+    payroll: v.number(),
+    withdrawals: v.number(),
+  }).index("by_key", ["businessUnitId", "locationKey", "day"]),
+
   numberSequences: defineTable({
     businessUnitId: v.id("businessUnits"),
     key: v.string(),

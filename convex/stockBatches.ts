@@ -16,6 +16,7 @@ import {
 } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
 import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
+import { applyRollupEvent, expenseEvent } from "./lib/analytics";
 import {
   batchItemStatusValidator,
   batchItems,
@@ -691,6 +692,9 @@ export const addExpense = authedMutation({
       ...(args.receiptFileId ? { receiptFileId: args.receiptFileId } : {}),
     };
     const expenseId = await ctx.db.insert("stockBatchExpenses", { batchId, ...expense });
+    // Analytics: trip expenses count on the day they're recorded.
+    const inserted = (await ctx.db.get("stockBatchExpenses", expenseId))!;
+    await applyRollupEvent(ctx, batch.businessUnitId, expenseEvent(inserted, expense.amount));
     await ctx.audit({
       action: "create",
       entityTable: "stockBatchExpenses",
@@ -723,6 +727,9 @@ export const updateExpense = authedMutation({
     const changes = diff(describeExpense(batch, expense), describeExpense(batch, next));
     if (!changes) return;
     await ctx.db.patch("stockBatchExpenses", expenseId, next);
+    if (next.amount !== expense.amount) {
+      await applyRollupEvent(ctx, batch.businessUnitId, expenseEvent(expense, next.amount - expense.amount));
+    }
     // A replaced or removed receipt file is no longer referenced.
     if (expense.receiptFileId && expense.receiptFileId !== args.receiptFileId) {
       await ctx.storage.delete(expense.receiptFileId);
@@ -744,6 +751,7 @@ export const removeExpense = authedMutation({
     if (!expense) throw new ConvexError("Expense not found.");
     const batch = await requireExpenseEditor(ctx, expense.batchId);
     await ctx.db.delete("stockBatchExpenses", expenseId);
+    await applyRollupEvent(ctx, batch.businessUnitId, expenseEvent(expense, -expense.amount));
     if (expense.receiptFileId) await ctx.storage.delete(expense.receiptFileId);
     await ctx.audit({
       action: "delete",
