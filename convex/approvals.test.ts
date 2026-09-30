@@ -25,9 +25,16 @@ async function setup() {
   const hairId = await getBusinessUnitId(t, "hair");
   const shopA = await insertLocation(t, { name: "Shop A" });
   const shopB = await insertLocation(t, { name: "Shop B" });
-  // Sales Agents can request; they hold withdrawals.approve at own_location only.
+  // Sales Agents can request. For the engine's scope rules, they're given
+  // sales.edit.approve at own_location here (a type with no handler yet,
+  // so these tests don't depend on any feature's handler).
   const agentA = await insertUserWithRole(t, "sales_agent", { email: "a@x.com", name: "Agent A", locationId: shopA });
   const agentB = await insertUserWithRole(t, "sales_agent", { email: "b@x.com", name: "Agent B", locationId: shopB });
+  await t.run(async (ctx) => {
+    const roleId = (await ctx.db.get("users", agentA))!.roleId!;
+    const permission = (await ctx.db.query("permissions").collect()).find((p) => p.key === "sales.edit.approve")!;
+    await ctx.db.insert("rolePermissions", { roleId, permissionId: permission._id, scope: "own_location" });
+  });
   // Chief Admin: expenses.approve + approvals.view_all.
   const chief = await insertUserWithRole(t, "chief_admin", { email: "c@x.com", name: "Chief" });
   // Manager Admin: no expenses.approve, no view_all.
@@ -170,9 +177,9 @@ test("a decider without the required permission is rejected", async () => {
 
 test("an own_location decider can only decide approvals at their location", async () => {
   const s = await setup();
-  // withdrawals.approve is own_location for Sales Agents.
-  const atShopB = await request(s, s.chief, { type: "withdrawal", locationId: s.shopB });
-  const atShopA = await request(s, s.chief, { type: "withdrawal", locationId: s.shopA });
+  // sales.edit.approve is own_location for Sales Agents (see setup).
+  const atShopB = await request(s, s.chief, { type: "sale_edit", locationId: s.shopB });
+  const atShopA = await request(s, s.chief, { type: "sale_edit", locationId: s.shopA });
   const asAgentA = s.t.withIdentity({ subject: s.agentA });
 
   await expect(
@@ -211,8 +218,8 @@ test("list: view_all sees everything; others see their own requests and what the
   const s = await setup();
   const mine = await request(s, s.agentA, { reason: "mine" });
   const othersExpense = await request(s, s.agentB, { reason: "b expense" });
-  const withdrawalA = await request(s, s.chief, { type: "withdrawal", locationId: s.shopA });
-  const withdrawalB = await request(s, s.chief, { type: "withdrawal", locationId: s.shopB });
+  const saleEditA = await request(s, s.chief, { type: "sale_edit", locationId: s.shopA });
+  const saleEditB = await request(s, s.chief, { type: "sale_edit", locationId: s.shopB });
 
   const ids = async (who: Id<"users">, extra: Record<string, unknown> = {}) =>
     (
@@ -224,12 +231,12 @@ test("list: view_all sees everything; others see their own requests and what the
     ).page.map((a) => a._id);
 
   expect((await ids(s.chief)).sort()).toEqual(
-    [mine, othersExpense, withdrawalA, withdrawalB].sort(),
+    [mine, othersExpense, saleEditA, saleEditB].sort(),
   );
-  // Agent A: own request + the withdrawal at their own shop.
-  expect((await ids(s.agentA)).sort()).toEqual([mine, withdrawalA].sort());
+  // Agent A: own request + the sale edit at their own shop.
+  expect((await ids(s.agentA)).sort()).toEqual([mine, saleEditA].sort());
   expect(await ids(s.agentA, { requestedByMe: true })).toEqual([mine]);
-  expect(await ids(s.chief, { type: "withdrawal" })).toEqual([withdrawalB, withdrawalA]);
+  expect(await ids(s.chief, { type: "sale_edit" })).toEqual([saleEditB, saleEditA]);
 
   const page = (
     await s.t.withIdentity({ subject: s.agentA }).query(api.approvals.list, {
@@ -239,7 +246,7 @@ test("list: view_all sees everything; others see their own requests and what the
   ).page;
   const byId = new Map(page.map((a) => [a._id, a]));
   expect(byId.get(mine)).toMatchObject({ canDecide: false, requesterName: "Agent A" });
-  expect(byId.get(withdrawalA)?.canDecide).toBe(true);
+  expect(byId.get(saleEditA)?.canDecide).toBe(true);
 });
 
 test("list filters by status and date range", async () => {

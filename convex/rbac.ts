@@ -48,7 +48,7 @@ async function ensureRolePermission(
  *   existing role's permissions are left alone (Super Admin edits survive),
  *   except Super Admin, which is locked and always re-synced to everything.
  * - SEED_STEPS not yet recorded in `appliedSeedSteps` are applied once
- *   (grants that must also reach roles that already existed).
+ *   (grants that must also reach roles that already existed, and revokes).
  * - Pre-RBAC users flagged `isSuperAdmin` are moved onto the Super Admin role.
  * System bootstrap with no acting user, so it writes no audit entries.
  */
@@ -122,6 +122,19 @@ export const seedRbac = internalMutation({
             scope,
           );
         }
+      }
+      for (const [roleKey, permissionKey] of step.revokes ?? []) {
+        const roleId = roleIds.get(roleKey);
+        const permissionId = permissionIds.get(permissionKey)!;
+        const link = roleId
+          ? await ctx.db
+              .query("rolePermissions")
+              .withIndex("by_roleId_and_permissionId", (q) =>
+                q.eq("roleId", roleId).eq("permissionId", permissionId),
+              )
+              .unique()
+          : null;
+        if (link) await ctx.db.delete("rolePermissions", link._id);
       }
       await ctx.db.insert("appliedSeedSteps", { key: step.key });
     }

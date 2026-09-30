@@ -52,6 +52,12 @@ Shared server-side helpers, not routable Convex functions themselves.
   `groupStock` (the overview's by product / lot / holder views).
 - `sales.ts` — payment methods and sale statuses, `saleLineProblems` (quantity,
   price, discount reason vs the suggested price) and `lineMargin`.
+- `payroll.ts` — payroll statuses, `isPeriod` / `addMonths` (a period is a
+  month) and the `payroll` approval + rejection handlers.
+- `withdrawals.ts` — withdrawal statuses and the `withdrawal` approval +
+  rejection handlers (withdrawals are never a business cost).
+- `locationScope.ts` — the location lock for location-bound records
+  (`pickableLocations`, `locationFor`) and `activePeople`.
 - `distributions.ts` — distribution statuses and the `distribution`
   approval (moves the stock) + rejection handlers.
 - `stock.test.utils.ts` — test-only stock setup shared by the stock tests

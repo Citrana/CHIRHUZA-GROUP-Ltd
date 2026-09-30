@@ -30,7 +30,8 @@ this repo, now and later — do not relax them for convenience.
   seed:seedReferenceData` (idempotent; never overwrites an edited role's
   grants). Role defaults only apply when a role is first created — to give
   a new key to roles that already exist, add a one-shot entry to
-  `SEED_STEPS` (applied once, recorded in `appliedSeedSteps`).
+  `SEED_STEPS` (applied once, recorded in `appliedSeedSteps`); a step can
+  also `revokes` grants from existing roles.
 - The Super Admin role is locked: it always holds every permission and
   can't be edited, and the last active Super Admin can't be demoted or
   blocked.
@@ -182,6 +183,20 @@ this repo, now and later — do not relax them for convenience.
   `recordedAt` when it was entered; backdated sales are flagged in the list
   and the audit. Stock still moves at recording time.
 
+## Payroll & withdrawals
+
+- Payroll entries (`convex/payroll.ts`) and withdrawals
+  (`convex/withdrawals.ts`) are created `pending` and decided only through
+  the approval engine (types `payroll` / `withdrawal`); the Chief Admin
+  approves, never their own (Super Admin self-approval flagged). The scope
+  of `payroll.create` / `withdrawals.request` locks the location, like
+  sales (`convex/lib/locationScope.ts`).
+- Salaries are private: without `payroll.view`, a submitter sees only the
+  entries they submitted.
+- **Withdrawals are never a business cost.** They live in their own table;
+  any profit/analytics figure excludes them and shows them separately, so
+  owners see the real picture.
+
 ## Append-only tables
 
 - Append-only tables — the audit log, inventory movements, and similar
@@ -321,7 +336,8 @@ the inventory core with the stock overview by product, lot and holder
 (`/[service]/stock`), and sales (`/[service]/sales`, the phone sale form at
 `/[service]/sales/new`; suggested selling prices set on the price list at
 `/[service]/products/prices`, next to each lot's purchase cost). Sale edits
-and refunds come next.
+and refunds come next), payroll (`/[service]/payroll`) and withdrawals
+(`/[service]/withdrawals`), both approved by the Chief Admin.
 Other business modules come in later steps, built on top
 of the rules above.
 
