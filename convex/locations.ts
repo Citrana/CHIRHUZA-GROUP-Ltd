@@ -22,44 +22,34 @@ export const getByIdInternal = internalQuery({
   },
 });
 
-/** Locations of one business unit, including inactive ones, by name. */
+/**
+ * Every location, including inactive ones, by name. Locations are global:
+ * each one serves every service (data there stays per service).
+ */
 export const list = authedQuery({
-  args: { businessUnitId: v.id("businessUnits") },
-  handler: async (ctx, { businessUnitId }) => {
+  args: {},
+  handler: async (ctx) => {
     await ctx.requirePermission("locations.manage");
-    const locations = await ctx.db
-      .query("locations")
-      .withIndex("by_businessUnitId", (q) =>
-        q.eq("businessUnitId", businessUnitId),
-      )
-      .take(500);
+    const locations = await ctx.db.query("locations").take(500);
     return locations.sort((a, b) => a.name.localeCompare(b.name));
   },
 });
 
-/** Active locations across all business units, for user location pickers. */
+/** Active locations, for user location pickers. */
 export const listOptions = authedQuery({
   args: {},
   handler: async (ctx) => {
     await ctx.requirePermission("users.manage");
-    const units = await ctx.db.query("businessUnits").take(20);
-    const unitKeys = new Map(units.map((u) => [u._id, u.key]));
     const locations = await ctx.db.query("locations").take(1000);
     return locations
       .filter((l) => l.active)
       .sort((a, b) => a.name.localeCompare(b.name))
-      .map((l) => ({
-        _id: l._id,
-        name: l.name,
-        type: l.type,
-        businessUnitKey: unitKeys.get(l.businessUnitId) ?? null,
-      }));
+      .map((l) => ({ _id: l._id, name: l.name, type: l.type }));
   },
 });
 
 export const create = authedMutation({
   args: {
-    businessUnitId: v.id("businessUnits"),
     name: v.string(),
     type: locationTypeValidator,
     address: v.string(),
@@ -67,12 +57,7 @@ export const create = authedMutation({
   },
   handler: async (ctx, args) => {
     await ctx.requirePermission("locations.manage");
-    const unit = await ctx.db.get("businessUnits", args.businessUnitId);
-    if (!unit) {
-      throw new ConvexError("Business unit not found.");
-    }
     const location = {
-      businessUnitId: args.businessUnitId,
       name: cleanName(args.name),
       type: args.type,
       address: args.address.trim(),
@@ -83,8 +68,7 @@ export const create = authedMutation({
       action: "create",
       entityTable: "locations",
       entityId: locationId,
-      businessUnitId: location.businessUnitId,
-      after: { ...snapshot(location), businessUnit: unit.key },
+      after: snapshot(location),
     });
     return locationId;
   },
@@ -120,7 +104,6 @@ export const update = authedMutation({
       action: "update",
       entityTable: "locations",
       entityId: locationId,
-      businessUnitId: existing.businessUnitId,
       ...changes,
     });
   },

@@ -4,7 +4,7 @@ import { useState, type FormEvent, type ReactElement } from "react";
 import { useMutation } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
-import type { Doc, Id } from "../../../convex/_generated/dataModel";
+import type { Doc } from "../../../convex/_generated/dataModel";
 import type { LocationType } from "../../../convex/lib/businessUnits";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,15 +21,13 @@ import {
 } from "@/components/ui/dialog";
 
 /**
- * Create (no `location`) or edit a location. Locations are never deleted;
- * untick "Active" to retire one.
+ * Create (no `location`) or edit a location. Locations are shared by every
+ * service and never deleted; untick "Active" to retire one.
  */
 export function LocationFormDialog({
-  businessUnitId,
   location,
   trigger,
 }: {
-  businessUnitId: Id<"businessUnits">;
   location?: Doc<"locations">;
   trigger: ReactElement;
 }) {
@@ -63,7 +61,7 @@ export function LocationFormDialog({
       if (location) {
         await update({ locationId: location._id, ...fields });
       } else {
-        await create({ businessUnitId, ...fields });
+        await create(fields);
       }
       setOpen(false);
     } catch {

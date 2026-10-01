@@ -7,6 +7,7 @@ import { requestApproval } from "./lib/approvals";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
 import { distributionStatusValidator } from "./lib/distributions";
+import { activeLocations } from "./lib/locationScope";
 import {
   businessHolderRef,
   findHolder,
@@ -14,6 +15,7 @@ import {
   holderName,
   stockLevelOf,
 } from "./lib/inventory";
+import { productDetails } from "./lib/products";
 
 /**
  * Distributions (convex/lib/distributions.ts): stock.distribute submits
@@ -40,12 +42,13 @@ async function pendingQty(ctx: QueryCtx, inventoryBatchId: Id<"inventoryBatches"
 
 async function describeProduct(ctx: QueryCtx, productId: Id<"products">) {
   const product = await ctx.db.get("products", productId);
-  const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+  const details = await productDetails(ctx, product);
   return {
     productName: product?.name ?? null,
     sku: product?.sku ?? null,
     lengthInches: product?.lengthInches ?? null,
-    colourName: colour?.name ?? null,
+    colourName: details.colourName,
+    sizeName: details.sizeName,
   };
 }
 
@@ -84,15 +87,7 @@ export const options = authedQuery({
     }
     lots.sort((a, b) => (a.productName ?? "").localeCompare(b.productName ?? ""));
 
-    const locations = (
-      await ctx.db
-        .query("locations")
-        .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unit._id))
-        .take(500)
-    )
-      .filter((l) => l.active)
-      .map((l) => ({ _id: l._id, name: l.name, type: l.type }))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    const locations = (await activeLocations(ctx)).map((l) => ({ _id: l._id, name: l.name, type: l.type }));
     const people = (await ctx.db.query("users").take(1000))
       .filter((u) => u.status === "active" && u.roleId !== null)
       .map((u) => ({ _id: u._id, name: u.name, email: u.email }))
@@ -118,8 +113,8 @@ export const create = authedMutation({
     let destination: string;
     if (args.to.type === "location") {
       const location = await ctx.db.get("locations", args.to.id);
-      if (!location || location.businessUnitId !== unit._id || !location.active) {
-        throw new ConvexError("Choose an active location of this service.");
+      if (!location || !location.active) {
+        throw new ConvexError("Choose an active location.");
       }
       destination = location.name;
     } else {
@@ -162,6 +157,7 @@ export const create = authedMutation({
       described.push({
         product: product.productName ?? "—",
         lengthInches: product.lengthInches,
+        size: product.sizeName,
         colour: product.colourName,
         sku: product.sku,
         batch: batch?.number ?? null,
@@ -227,7 +223,7 @@ async function describeDistribution(ctx: AuthedQueryCtx, distribution: Doc<"dist
         qty: item.qty,
         inventoryBatchId: item.inventoryBatchId,
         batchNumber: batch?.number ?? null,
-        ...(lot ? await describeProduct(ctx, lot.productId) : { productName: null, sku: null, lengthInches: null, colourName: null }),
+        ...(lot ? await describeProduct(ctx, lot.productId) : { productName: null, sku: null, lengthInches: null, sizeName: null, colourName: null }),
       };
     }),
   );

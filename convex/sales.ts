@@ -2,10 +2,11 @@ import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import type { QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
-import { authedMutation, authedQuery, type AuthedQueryCtx } from "./lib/rbac";
+import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
 import { applyMovement, findHolder, getOrCreateHolder } from "./lib/inventory";
+import { filterableLocations, pickableLocations } from "./lib/locationScope";
 import { applyRollupEvents, saleEvents } from "./lib/analytics";
 import { businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./lib/time";
 import {
@@ -16,6 +17,7 @@ import {
   saleLineProblems,
   saleTimestamp,
 } from "./lib/sales";
+import { productDetails } from "./lib/products";
 
 /**
  * Sales (convex/lib/sales.ts). sales.create records a sale; its scope is
@@ -26,30 +28,16 @@ import {
 
 async function describeProduct(ctx: QueryCtx, productId: Id<"products">) {
   const product = await ctx.db.get("products", productId);
-  const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+  const details = await productDetails(ctx, product);
   return {
     productName: product?.name ?? null,
     sku: product?.sku ?? null,
     lengthInches: product?.lengthInches ?? null,
-    colourName: colour?.name ?? null,
+    colourName: details.colourName,
+    sizeName: details.sizeName,
   };
 }
 
-/** The locations this caller may sell at (own_location: just their own). */
-async function sellableLocations(ctx: AuthedQueryCtx, unitId: Id<"businessUnits">, scope: "own_location" | "all_locations") {
-  if (scope === "own_location") {
-    const own = ctx.user.locationId ? await ctx.db.get("locations", ctx.user.locationId) : null;
-    return own && own.businessUnitId === unitId && own.active ? [own] : [];
-  }
-  return (
-    await ctx.db
-      .query("locations")
-      .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unitId))
-      .take(500)
-  )
-    .filter((l) => l.active)
-    .sort((a, b) => a.name.localeCompare(b.name));
-}
 
 /**
  * What the sale form needs: where the caller may sell (locked to their own
@@ -62,7 +50,8 @@ export const options = authedQuery({
   handler: async (ctx, args) => {
     const { scope } = await ctx.requirePermission("sales.create");
     const unit = await requireBusinessUnit(ctx, args.businessUnitKey);
-    const locations = await sellableLocations(ctx, unit._id, scope);
+    // Locations are shared by every service; own_location: just theirs.
+    const { locations } = await pickableLocations(ctx, scope);
     const location =
       scope === "own_location"
         ? (locations[0] ?? null)
@@ -137,8 +126,8 @@ export const create = authedMutation({
       if (!args.locationId) throw new ConvexError("Choose the location of the sale.");
       location = await ctx.db.get("locations", args.locationId);
     }
-    if (!location || location.businessUnitId !== unit._id || !location.active) {
-      throw new ConvexError("Choose an active location of this service.");
+    if (!location || !location.active) {
+      throw new ConvexError("Choose an active location.");
     }
 
     // When: today, or an earlier day for a sale recorded late.
@@ -279,6 +268,7 @@ export const create = authedMutation({
         items: lines.map(({ line, described, batchNumber, discountReason }) => ({
           product: described.productName ?? "—",
           lengthInches: described.lengthInches,
+          size: described.sizeName,
           colour: described.colourName,
           sku: described.sku,
           batch: batchNumber,
@@ -328,7 +318,7 @@ export const list = authedQuery({
     }
     if (locationId) {
       const location = await ctx.db.get("locations", locationId);
-      if (!location || location.businessUnitId !== unit._id) {
+      if (!location) {
         return { page: [], isDone: true, continueCursor: "" };
       }
     }
@@ -397,18 +387,7 @@ export const filterLocations = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator },
   handler: async (ctx, { businessUnitKey }) => {
     const { scope } = await ctx.requirePermission("sales.view");
-    const unit = await requireBusinessUnit(ctx, businessUnitKey);
-    if (scope === "own_location") {
-      const own = ctx.user.locationId ? await ctx.db.get("locations", ctx.user.locationId) : null;
-      return { locked: true, locations: own && own.businessUnitId === unit._id ? [{ _id: own._id, name: own.name }] : [] };
-    }
-    const locations = await ctx.db
-      .query("locations")
-      .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unit._id))
-      .take(500);
-    return {
-      locked: false,
-      locations: locations.map((l) => ({ _id: l._id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name)),
-    };
+    await requireBusinessUnit(ctx, businessUnitKey);
+    return await filterableLocations(ctx, scope);
   },
 });

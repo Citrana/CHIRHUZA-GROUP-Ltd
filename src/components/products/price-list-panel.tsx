@@ -105,7 +105,7 @@ export function PriceListPanel({ service }: { service: BusinessUnitKey }) {
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const date = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
   const productLine = (row: PriceRow) =>
-    [row.name, row.lengthInches !== null ? tProducts("inches", { inches: row.lengthInches }) : null, row.colourName]
+    [row.name, row.lengthInches !== null ? tProducts("inches", { inches: row.lengthInches }) : null, row.sizeName, row.colourName]
       .filter(Boolean)
       .join(" · ");
   const boughtAt = (row: PriceRow) =>

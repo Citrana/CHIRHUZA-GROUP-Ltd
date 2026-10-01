@@ -3,6 +3,7 @@ import { internalMutation } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { authedQuery, type AuthedQueryCtx } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
+import { filterableLocations } from "./lib/locationScope";
 import {
   ALL,
   bucketOf,
@@ -10,6 +11,7 @@ import {
   rebuildRollups as rebuild,
   resolveRange,
 } from "./lib/analytics";
+import { productDetails } from "./lib/products";
 
 /**
  * Analytics queries (analytics.view). They read ONLY the rollups in
@@ -39,7 +41,7 @@ async function scopeOf(
   }
   if (locationId) {
     const location = await ctx.db.get("locations", locationId);
-    if (!location || location.businessUnitId !== unit._id) throw new ConvexError("Location not found.");
+    if (!location) throw new ConvexError("Location not found.");
   }
   return { unitId: unit._id, locationKey: locationId ?? ALL, from, to };
 }
@@ -129,13 +131,14 @@ export const getTopProducts = authedQuery({
     const products = await Promise.all(
       ranked.map(async ([productId, totals]) => {
         const product = await ctx.db.get("products", productId);
-        const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+        const details = await productDetails(ctx, product);
         return {
           productId,
           name: product?.name ?? null,
           sku: product?.sku ?? null,
           lengthInches: product?.lengthInches ?? null,
-          colourName: colour?.name ?? null,
+          colourName: details.colourName,
+          sizeName: details.sizeName,
           ...totals,
         };
       }),
@@ -174,19 +177,8 @@ export const filterLocations = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator },
   handler: async (ctx, { businessUnitKey }) => {
     const { scope } = await ctx.requirePermission("analytics.view");
-    const unit = await requireBusinessUnit(ctx, businessUnitKey);
-    if (scope === "own_location") {
-      const own = ctx.user.locationId ? await ctx.db.get("locations", ctx.user.locationId) : null;
-      return { locked: true, locations: own && own.businessUnitId === unit._id ? [{ _id: own._id, name: own.name }] : [] };
-    }
-    const locations = await ctx.db
-      .query("locations")
-      .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unit._id))
-      .take(500);
-    return {
-      locked: false,
-      locations: locations.map((l) => ({ _id: l._id, name: l.name })).sort((a, b) => a.name.localeCompare(b.name)),
-    };
+    await requireBusinessUnit(ctx, businessUnitKey);
+    return await filterableLocations(ctx, scope);
   },
 });
 

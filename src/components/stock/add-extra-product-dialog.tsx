@@ -144,7 +144,7 @@ export function AddExtraProductDialog({
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{p.name}</span>
                             <span className={cn("block text-xs", isSelected ? "opacity-80" : "text-muted-foreground")}>
-                              {[p.sku, p.lengthInches !== undefined ? tProducts("inches", { inches: p.lengthInches }) : null, p.colourName]
+                              {[p.sku, p.lengthInches !== undefined ? tProducts("inches", { inches: p.lengthInches }) : null, p.sizeName, p.colourName]
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>

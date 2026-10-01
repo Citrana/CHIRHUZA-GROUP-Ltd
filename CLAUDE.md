@@ -68,9 +68,22 @@ this repo, now and later — do not relax them for convenience.
   reference/config data). Default to scoping by business unit; only omit it
   with a clear reason.
 - Business units are seeded reference data (`convex/lib/businessUnits.ts`,
-  `businessUnits` table); only Hair is enabled today. Locations (`locations`
-  table: shop | warehouse) belong to one business unit and are never deleted
-  — retire one with `active: false`.
+  `businessUnits` table); Hair and Mode (fashion) are enabled today. Switch a
+  service on with `npx convex run businessUnits:setEnabled
+  '{"key":"<key>","enabled":true}'` (the seed never changes the flag).
+  Locations (`locations` table: shop | warehouse) are **global — every
+  location serves every service** (`convex/lib/locationScope.ts`:
+  `activeLocations`, `pickableLocations`, `locationFor`). Data at a location
+  stays per service through the records' own `businessUnitId` (stock
+  holders, sales, payroll, withdrawals, analytics rows). Locations are never
+  deleted — retire one with `active: false`. (`locations.businessUnitId` is
+  deprecated: never read or written.)
+- Every feature works per service; only products differ. A service's
+  products follow its `PRODUCT_PROFILES` entry (`convex/lib/products.ts`):
+  categories, units and attributes (hair: length + colour + texture;
+  fashion: size + colour), enforced server-side and driving the forms and
+  settings. Display product details via `productDetails` (server) so
+  length, size and colour show everywhere.
 - A user's own location is `users.locationId`. It is required for any user
   whose role has at least one `own_location` permission (enforced in
   `convex/users.ts`); that is what `own_location` scope checks compare
@@ -361,6 +374,9 @@ and refunds come next), payroll (`/[service]/payroll`) and withdrawals
 (`/[service]/withdrawals`), both approved by the Chief Admin, and the
 analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts).
+Mode (fashion) is live on the same modules, with clothes told apart by
+name, size (managed, ordered list in Product settings) and colour. Locations are
+shared by every service.
 Other business modules come in later steps, built on top
 of the rules above.
 

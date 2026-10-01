@@ -228,6 +228,7 @@ export type StockRow = {
     name: string | null;
     sku: string | null;
     lengthInches: number | null;
+    sizeName: string | null;
     colourName: string | null;
   };
 };

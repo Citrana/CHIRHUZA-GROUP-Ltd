@@ -21,7 +21,6 @@ async function setup() {
   const shop = await insertLocation(t, { name: "Kenya Shop" });
   const otherShop = await insertLocation(t, { name: "Other Shop" });
   const closedShop = await insertLocation(t, { name: "Closed", active: false });
-  const fashionShop = await insertLocation(t, { name: "Fashion Shop", businessUnit: "fashion" });
 
   const sales = await insertUserWithRole(t, "chief_sales_admin", { email: "sales@x.com", name: "Sales" });
   const chief = await insertUserWithRole(t, "chief_admin", { email: "chief@x.com", name: "Chief" });
@@ -49,7 +48,7 @@ async function setup() {
   const pending = await product("Pending", { status: "pending_confirmation" });
 
   return {
-    t, hairId, shop, otherShop, closedShop, fashionShop,
+    t, hairId, shop, otherShop, closedShop,
     sales, chief, inventory, superAdmin, agent,
     wig, closure, archived, pending,
     as: (user: Id<"users">) => t.withIdentity({ subject: user }),
@@ -80,7 +79,7 @@ test("a Chief Sales Admin creates numbered drafts for an active location of the 
   expect(await getReq(s, first)).toMatchObject({ number: "REQ-00001", status: "draft", createdBy: s.sales, note: "For the weekend" });
   expect((await getReq(s, second))!.number).toBe("REQ-00002");
 
-  for (const locationId of [s.closedShop, s.fashionShop]) {
+  for (const locationId of [s.closedShop]) {
     await expect(
       s.as(s.sales).mutation(api.requisitions.create, { businessUnitKey: "hair", locationId }),
     ).rejects.toThrow(/active location/);

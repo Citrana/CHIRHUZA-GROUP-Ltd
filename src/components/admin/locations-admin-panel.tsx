@@ -1,35 +1,22 @@
 "use client";
 
-import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
-import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { DataTable } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { NativeSelect } from "@/components/ui/native-select";
 import { LocationFormDialog } from "@/components/admin/location-form-dialog";
-import { useLastService } from "@/lib/service-store";
 import { useCan } from "@/lib/use-can";
 
 export function LocationsAdminPanel() {
   const t = useTranslations("Admin.locations");
-  const tUnits = useTranslations("BusinessUnits");
   const canManage = useCan("locations.manage");
-  const lastService = useLastService();
-  const units = useQuery(api.businessUnits.list, canManage ? {} : "skip");
-  const [selected, setSelected] = useState<BusinessUnitKey | null>(null);
-  const unitKey = selected ?? lastService ?? "hair";
-  const unit = units?.find((u) => u.key === unitKey);
-  const locations = useQuery(
-    api.locations.list,
-    canManage && unit ? { businessUnitId: unit._id } : "skip",
-  );
+  // Locations are global: every one serves every service.
+  const locations = useQuery(api.locations.list, canManage ? {} : "skip");
 
   if (canManage === undefined) {
     return null;
@@ -38,19 +25,17 @@ export function LocationsAdminPanel() {
     return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
   }
 
-  const editButton = (location: Doc<"locations">) =>
-    unit ? (
-      <LocationFormDialog
-        businessUnitId={unit._id}
-        location={location}
-        trigger={
-          <Button variant="outline" size="sm">
-            <Pencil aria-hidden />
-            {t("edit")}
-          </Button>
-        }
-      />
-    ) : null;
+  const editButton = (location: Doc<"locations">) => (
+    <LocationFormDialog
+      location={location}
+      trigger={
+        <Button variant="outline" size="sm">
+          <Pencil aria-hidden />
+          {t("edit")}
+        </Button>
+      }
+    />
+  );
 
   const typeLabel = (location: Doc<"locations">) =>
     location.type === "shop" ? t("typeShop") : t("typeWarehouse");
@@ -99,20 +84,20 @@ export function LocationsAdminPanel() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="font-heading text-2xl font-bold text-primary">
-          {t("title")}
-        </h1>
-        {unit ? (
-          <LocationFormDialog
-            businessUnitId={unit._id}
-            trigger={
-              <Button>
-                <Plus aria-hidden />
-                {t("add")}
-              </Button>
-            }
-          />
-        ) : null}
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-primary">
+            {t("title")}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{t("sharedHint")}</p>
+        </div>
+        <LocationFormDialog
+          trigger={
+            <Button>
+              <Plus aria-hidden />
+              {t("add")}
+            </Button>
+          }
+        />
       </div>
 
       <DataTable
@@ -122,25 +107,6 @@ export function LocationsAdminPanel() {
         emptyMessage={t("empty")}
         search={{ placeholder: t("searchPlaceholder") }}
         initialSorting={[{ id: "name", desc: false }]}
-        toolbar={
-          <div className="flex flex-col gap-1.5 sm:w-56">
-            <Label htmlFor="locations-unit">{t("businessUnitLabel")}</Label>
-            <NativeSelect
-              id="locations-unit"
-              className="h-10 sm:h-8"
-              value={unitKey}
-              onChange={(event) =>
-                setSelected(event.target.value as BusinessUnitKey)
-              }
-            >
-              {units?.map((u) => (
-                <option key={u.key} value={u.key}>
-                  {tUnits(u.key)}
-                </option>
-              ))}
-            </NativeSelect>
-          </div>
-        }
         renderCard={(location) => (
           <div className="flex flex-col gap-2">
             <div className="flex items-start justify-between gap-2">

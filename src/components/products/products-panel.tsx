@@ -9,7 +9,7 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
 import {
-  PRODUCT_CATEGORIES,
+  PRODUCT_PROFILES,
   PRODUCT_STATUSES,
   type ProductCategory,
   type ProductStatus,
@@ -60,6 +60,7 @@ export function ProductsPanel({ service }: { service: BusinessUnitKey }) {
   const details = (p: ProductRow) =>
     [
       p.lengthInches !== undefined ? t("inches", { inches: p.lengthInches }) : null,
+      p.sizeName,
       p.colourName,
     ]
       .filter(Boolean)
@@ -151,7 +152,7 @@ export function ProductsPanel({ service }: { service: BusinessUnitKey }) {
               onChange={(e) => setCategory(e.target.value as ProductCategory | "")}
             >
               <option value="">{t("allCategories")}</option>
-              {PRODUCT_CATEGORIES.map((c) => (
+              {PRODUCT_PROFILES[service].categories.map((c) => (
                 <option key={c} value={c}>
                   {tCategories(c)}
                 </option>

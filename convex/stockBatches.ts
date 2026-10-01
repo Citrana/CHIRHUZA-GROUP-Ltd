@@ -31,6 +31,7 @@ import {
   syncBatchRequisitionLink,
   syncRequisitionStatus,
 } from "./lib/stockBatches";
+import { productDetails } from "./lib/products";
 
 /**
  * Stock batches (see convex/lib/stockBatches.ts). stock.view to see;
@@ -257,7 +258,7 @@ export const get = authedQuery({
     const items = await Promise.all(
       rawItems.map(async (item) => {
         const product = await ctx.db.get("products", item.productId);
-        const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+        const details = await productDetails(ctx, product);
         const line = item.requisitionItemId ? await ctx.db.get("requisitionItems", item.requisitionItemId) : null;
         const requisition = line ? await ctx.db.get("requisitions", line.requisitionId) : null;
         return {
@@ -266,7 +267,8 @@ export const get = authedQuery({
           sku: product?.sku ?? null,
           productStatus: product?.status ?? null,
           lengthInches: product?.lengthInches ?? null,
-          colourName: colour?.name ?? null,
+          colourName: details.colourName,
+          sizeName: details.sizeName,
           requisitionId: requisition?._id ?? null,
           requisitionNumber: requisition?.number ?? null,
           problems: lineProblems(item),
@@ -383,13 +385,14 @@ export const requisitionOptions = authedQuery({
             .first();
           if (taken) continue;
           const product = await ctx.db.get("products", line.productId);
-          const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+          const details = await productDetails(ctx, product);
           available.push({
             _id: line._id,
             productName: product?.name ?? null,
             sku: product?.sku ?? null,
             lengthInches: product?.lengthInches ?? null,
-            colourName: colour?.name ?? null,
+            colourName: details.colourName,
+            sizeName: details.sizeName,
             qtyRequested: line.qtyRequested,
             note: line.note ?? null,
           });

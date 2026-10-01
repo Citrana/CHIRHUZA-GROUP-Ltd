@@ -1,14 +1,14 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { Pencil, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, Plus, Trash2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
-import { normalizeColourName } from "../../../convex/lib/products";
+import { PRODUCT_PROFILES, normalizeColourName } from "../../../convex/lib/products";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { Badge } from "@/components/ui/badge";
@@ -26,13 +26,15 @@ import {
 import { useCan } from "@/lib/use-can";
 
 /**
- * The service's allowed product lengths (inches) and colours, shown inside
- * the service shell (/[service]/settings). Values are deactivated, never
+ * The service's product settings, shown inside the service shell
+ * (/[service]/settings): lengths (inches) for hair, sizes for fashion (per
+ * PRODUCT_PROFILES), and colours. Values in use are deactivated, never
  * deleted, so products using them keep them.
  */
 export function ProductSettingsPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("ProductSettings");
   const canManage = useCan("products.settings");
+  const profile = PRODUCT_PROFILES[service];
 
   if (canManage === undefined) return null;
   if (!canManage) {
@@ -43,9 +45,12 @@ export function ProductSettingsPanel({ service }: { service: BusinessUnitKey }) 
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {profile.attributes.size ? t("subtitleSizes") : t("subtitle")}
+        </p>
       </div>
-      <LengthsSection service={service} />
+      {profile.attributes.length ? <LengthsSection service={service} /> : null}
+      {profile.attributes.size ? <SizesSection service={service} /> : null}
       <ColoursSection service={service} />
     </div>
   );
@@ -70,6 +75,7 @@ function isDuplicateError(error: unknown): boolean {
   );
 }
 type ColourRow = Doc<"productColours"> & { productCount: number };
+type SizeRow = Doc<"productSizes"> & { productCount: number };
 
 /**
  * Delete for a setting value. Only possible when no product uses it (the
@@ -444,6 +450,187 @@ function ColoursSection({ service }: { service: BusinessUnitKey }) {
             </div>
             <DialogFooter>
               <Button type="submit" disabled={renameTaken}>{t("save")}</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
+
+/** Fashion sizes: add, rename, reorder (the order pickers show), deactivate, delete when unused. */
+function SizesSection({ service }: { service: BusinessUnitKey }) {
+  const t = useTranslations("ProductSettings");
+  const sizes = useQuery(api.productOptions.listSizes, { businessUnitKey: service, includeInactive: true });
+  const addSize = useMutation(api.productOptions.addSize);
+  const renameSize = useMutation(api.productOptions.renameSize);
+  const moveSize = useMutation(api.productOptions.moveSize);
+  const setActive = useMutation(api.productOptions.setSizeActive);
+  const deleteSize = useMutation(api.productOptions.deleteSize);
+  const [name, setName] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<Doc<"productSizes"> | null>(null);
+  const [newName, setNewName] = useState("");
+  const [renameError, setRenameError] = useState<string | null>(null);
+
+  // Same uniqueness rule as the server (case/space-insensitive, incl. inactive).
+  const sizeTaken = (value: string, exceptId?: Doc<"productSizes">["_id"]) =>
+    value.trim() !== "" &&
+    (sizes ?? []).some((z) => z._id !== exceptId && normalizeColourName(z.name) === normalizeColourName(value));
+  const takenMessage = (value: string) => t("sizeExists", { value: value.trim().replace(/\s+/g, " ") });
+  const addTaken = sizeTaken(name);
+  const renameTaken = renaming !== null && sizeTaken(newName, renaming._id);
+
+  async function handleAdd(event: FormEvent) {
+    event.preventDefault();
+    if (addTaken) return;
+    setError(null);
+    try {
+      await addSize({ businessUnitKey: service, name });
+      setName("");
+    } catch (e) {
+      setError(isDuplicateError(e) ? takenMessage(name) : t("sizeError"));
+    }
+  }
+
+  async function handleRename(event: FormEvent) {
+    event.preventDefault();
+    if (!renaming || renameTaken) return;
+    setRenameError(null);
+    try {
+      await renameSize({ sizeId: renaming._id, name: newName });
+      setRenaming(null);
+    } catch (e) {
+      setRenameError(isDuplicateError(e) ? takenMessage(newName) : t("sizeError"));
+    }
+  }
+
+  const count = sizes?.length ?? 0;
+  const columns: DataTableColumn<SizeRow>[] = [
+    { accessorKey: "name", header: t("sizeHeader"), meta: { className: "font-medium" } },
+    { id: "status", header: t("statusHeader"), cell: ({ row }) => <ActiveBadge active={row.original.active} /> },
+    {
+      id: "products",
+      header: t("productsHeader"),
+      cell: ({ row }) => <ProductCount count={row.original.productCount} />,
+      meta: { hideBelow: "sm", className: "whitespace-nowrap" },
+    },
+    {
+      id: "actions",
+      header: () => <span className="sr-only">{t("actionsHeader")}</span>,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("moveUp")}
+            disabled={row.index === 0}
+            onClick={() => moveSize({ sizeId: row.original._id, direction: "up" })}
+          >
+            <ArrowUp aria-hidden />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={t("moveDown")}
+            disabled={row.index === count - 1}
+            onClick={() => moveSize({ sizeId: row.original._id, direction: "down" })}
+          >
+            <ArrowDown aria-hidden />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setRenaming(row.original);
+              setNewName(row.original.name);
+              setRenameError(null);
+            }}
+          >
+            <Pencil aria-hidden />
+            {t("rename")}
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => setActive({ sizeId: row.original._id, active: !row.original.active })}>
+            {row.original.active ? t("deactivate") : t("reactivate")}
+          </Button>
+          <DeleteSettingButton
+            label={row.original.name}
+            productCount={row.original.productCount}
+            onDelete={() => deleteSize({ sizeId: row.original._id })}
+          />
+        </div>
+      ),
+      meta: { className: "text-right" },
+    },
+  ];
+
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="font-heading text-lg font-semibold">{t("sizesTitle")}</h2>
+      <p className="-mt-2 text-xs text-muted-foreground">{t("sizesHint")}</p>
+      <form onSubmit={handleAdd} className="flex flex-wrap items-end gap-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="new-size" required>
+            {t("sizeNameLabel")}
+          </Label>
+          <Input
+            id="new-size"
+            value={name}
+            onChange={(e) => {
+              setName(e.target.value);
+              setError(null);
+            }}
+            placeholder={t("sizePlaceholder")}
+            maxLength={20}
+            className="h-10 w-40 sm:h-8"
+            aria-invalid={addTaken || undefined}
+            aria-describedby={addTaken || error ? "new-size-error" : undefined}
+            required
+          />
+        </div>
+        <Button type="submit" className="h-10 sm:h-8" disabled={addTaken}>
+          <Plus aria-hidden />
+          {t("addSize")}
+        </Button>
+      </form>
+      {addTaken || error ? (
+        <p id="new-size-error" className="text-sm text-destructive" role="alert">
+          {addTaken ? takenMessage(name) : error}
+        </p>
+      ) : null}
+      <DataTable columns={columns} data={sizes} getRowId={(z) => z._id} emptyMessage={t("noSizes")} pagination={false} />
+
+      <Dialog open={renaming !== null} onOpenChange={(open) => !open && setRenaming(null)}>
+        <DialogContent>
+          <form onSubmit={handleRename}>
+            <DialogHeader>
+              <DialogTitle>{t("renameSizeTitle")}</DialogTitle>
+            </DialogHeader>
+            <div className="flex flex-col gap-2 py-4">
+              <Label htmlFor="rename-size" required>
+                {t("sizeNameLabel")}
+              </Label>
+              <Input
+                id="rename-size"
+                value={newName}
+                onChange={(e) => {
+                  setNewName(e.target.value);
+                  setRenameError(null);
+                }}
+                maxLength={20}
+                aria-invalid={renameTaken || undefined}
+                required
+              />
+              {renameTaken || renameError ? (
+                <p className="text-sm text-destructive" role="alert">
+                  {renameTaken ? takenMessage(newName) : renameError}
+                </p>
+              ) : null}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={renameTaken}>
+                {t("save")}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

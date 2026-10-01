@@ -123,8 +123,8 @@ export const options = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator },
   handler: async (ctx, { businessUnitKey }) => {
     const { scope } = await ctx.requirePermission("payroll.create");
-    const unit = await requireBusinessUnit(ctx, businessUnitKey);
-    const { locked, locations } = await pickableLocations(ctx, unit._id, scope);
+    await requireBusinessUnit(ctx, businessUnitKey);
+    const { locked, locations } = await pickableLocations(ctx, scope);
     return {
       locked,
       locations: locations.map((l) => ({ _id: l._id, name: l.name })),
@@ -146,7 +146,7 @@ export const create = authedMutation({
   handler: async (ctx, args) => {
     const { scope } = await ctx.requirePermission("payroll.create");
     const unit = await requireBusinessUnit(ctx, args.businessUnitKey);
-    const location = await locationFor(ctx, unit._id, scope, args.locationId);
+    const location = await locationFor(ctx, scope, args.locationId);
 
     let workerName = args.workerName?.trim();
     if (args.userId) {

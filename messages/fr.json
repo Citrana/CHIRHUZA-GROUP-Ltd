@@ -158,10 +158,9 @@
     "locations": {
       "title": "Sites",
       "accessDenied": "Vous n'avez pas accès à cette page.",
-      "businessUnitLabel": "Service",
       "add": "Ajouter un site",
       "edit": "Modifier",
-      "empty": "Aucun site pour ce service.",
+      "empty": "Aucun site pour l'instant.",
       "createTitle": "Ajouter un site",
       "editTitle": "Modifier le site",
       "nameLabel": "Nom",
@@ -181,7 +180,8 @@
       "save": "Enregistrer",
       "saving": "Enregistrement…",
       "saveError": "Impossible d'enregistrer le site. Vérifiez le nom et réessayez.",
-      "searchPlaceholder": "Rechercher des sites…"
+      "searchPlaceholder": "Rechercher des sites…",
+      "sharedHint": "Les sites sont partagés par tous les services : une boutique sert la Coiffure comme la Mode, avec un stock et des ventes séparés pour chacun."
     }
   },
   "Roles": {
@@ -356,7 +356,8 @@
       "takenBy": "Pris par",
       "date": "Date",
       "location": "Site",
-      "note": "Note"
+      "note": "Note",
+      "size": "Taille"
     }
   },
   "Approvals": {
@@ -423,6 +424,14 @@
     "frontals": "Frontales",
     "extensions": "Extensions",
     "hair_care": "Soins capillaires",
+    "dresses": "Robes",
+    "tops": "Hauts & chemises",
+    "trousers": "Pantalons & jeans",
+    "skirts": "Jupes",
+    "suits_sets": "Costumes & ensembles",
+    "jackets_coats": "Vestes & manteaux",
+    "shoes": "Chaussures",
+    "bags": "Sacs",
     "accessories": "Accessoires"
   },
   "ProductUnits": {
@@ -430,7 +439,8 @@
     "bundle": "Paquet (tissage)",
     "pack": "Lot",
     "set": "Ensemble",
-    "bottle": "Flacon"
+    "bottle": "Flacon",
+    "pair": "Paire"
   },
   "Products": {
     "title": "Produits",
@@ -497,7 +507,9 @@
       "label": "Sections des produits",
       "catalogue": "Catalogue",
       "prices": "Prix"
-    }
+    },
+    "sizeLabel": "Taille",
+    "noSettingsHintSizes": "Les tailles et couleurs se choisissent dans les paramètres produits. Demandez à un administrateur d'en ajouter."
   },
   "ProductSettings": {
     "title": "Paramètres produits",
@@ -534,7 +546,20 @@
     "inUse": "{count, plural, one {Utilisée par # produit} other {Utilisée par # produits}} — désactivez-la plutôt.",
     "deleteError": "Suppression impossible. Veuillez actualiser et réessayer.",
     "lengthExists": "{value} existe déjà (elle est peut-être désactivée — réactivez-la plutôt).",
-    "colourExists": "« {value} » existe déjà (elle est peut-être désactivée — réactivez-la plutôt)."
+    "colourExists": "« {value} » existe déjà (elle est peut-être désactivée — réactivez-la plutôt).",
+    "subtitleSizes": "Les tailles et couleurs que les produits peuvent utiliser. Désactivez celles que vous ne vendez plus ; les produits les gardent.",
+    "sizesTitle": "Tailles",
+    "sizesHint": "Les listes affichent les tailles dans cet ordre — utilisez les flèches pour les réordonner (ex. XS, S, M, L, XL).",
+    "sizeHeader": "Taille",
+    "sizeNameLabel": "Taille",
+    "sizePlaceholder": "ex. M ou 42",
+    "addSize": "Ajouter une taille",
+    "noSizes": "Aucune taille pour l'instant.",
+    "sizeExists": "La taille « {value} » existe déjà (elle est peut-être désactivée).",
+    "sizeError": "Impossible d'enregistrer la taille. Veuillez réessayer.",
+    "renameSizeTitle": "Renommer la taille",
+    "moveUp": "Monter",
+    "moveDown": "Descendre"
   },
   "Requisitions": {
     "title": "Réquisitions",
