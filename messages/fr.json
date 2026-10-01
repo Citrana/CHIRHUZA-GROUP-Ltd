@@ -358,7 +358,8 @@
       "location": "Site",
       "note": "Note",
       "size": "Taille",
-      "photo": "Photo"
+      "photo": "Photo",
+      "lowStockThreshold": "Stock bas à"
     }
   },
   "Approvals": {
@@ -842,7 +843,62 @@
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
     "receivedCount": "{count} reçus",
     "empty": "Aucun stock pour l'instant. Le stock apparaît dès qu'un lot d'achat est réceptionné.",
-    "valueHint": "Valeur = unités en stock × coût unitaire d'achat. Les dépenses du voyage sont comptées à part."
+    "valueHint": "Valeur = unités en stock × coût unitaire d'achat. Les dépenses du voyage sont comptées à part.",
+    "report": {
+      "all": "Tous",
+      "statuses": {
+        "in_stock": "En stock",
+        "low": "Stock bas",
+        "out": "Épuisé",
+        "never": "Jamais en stock"
+      },
+      "since": "depuis le {date}",
+      "download": "Télécharger (CSV)",
+      "searchPlaceholder": "Rechercher par nom, SKU, longueur, taille ou couleur",
+      "empty": "Aucun produit ne correspond.",
+      "productHeader": "Produit",
+      "statusHeader": "Statut",
+      "onHandHeader": "En stock",
+      "soldHeader": "Vendus",
+      "receivedHeader": "Reçus",
+      "lastSoldHeader": "Dernière vente",
+      "soldCount": "{count} vendus",
+      "loading": "Chargement…",
+      "whereNow": "Où il se trouve",
+      "noneLeft": "Plus aucun nulle part.",
+      "history": "Historique",
+      "noHistory": "Aucun mouvement pour l'instant.",
+      "balance": "{count} détenus",
+      "movements": {
+        "receive": "Reçu",
+        "distribute": "Envoyé à une boutique ou une personne",
+        "sale": "Vendu",
+        "adjustment": "Ajusté",
+        "transfer": "Transféré",
+        "return": "Retourné"
+      },
+      "thresholdLabel": "Stock bas à",
+      "thresholdPlaceholder": "ex. 5",
+      "thresholdHint": "Marqué « Stock bas » quand il en reste ce nombre ou moins. Laisser vide pour aucun.",
+      "thresholdError": "Saisissez un nombre entier à partir de 0.",
+      "save": "Enregistrer",
+      "csv": {
+        "product": "Produit",
+        "sku": "SKU",
+        "details": "Détails",
+        "status": "Statut",
+        "onHand": "En stock",
+        "received": "Reçus",
+        "sold": "Vendus",
+        "lastReceived": "Dernière réception",
+        "lastSold": "Dernière vente",
+        "outSince": "Épuisé depuis",
+        "threshold": "Stock bas à"
+      }
+    },
+    "lowOutLabel": "Stock bas / épuisé",
+    "lowCount": "{count} bas",
+    "outCount": "{count} épuisés"
   },
   "Distributions": {
     "title": "Distributions",

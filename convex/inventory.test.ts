@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { api } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { appendOnlyGuardedDb } from "./lib/rbac";
 import {
@@ -7,7 +7,9 @@ import {
   businessHolderRef,
   getOrCreateHolder,
   groupStock,
+  nextProductStock,
   stockLevelOf,
+  stockStatus,
 } from "./lib/inventory";
 import { arrivedMixedBatch, receiveAll, setupStock, type Setup } from "./lib/stock.test.utils";
 
@@ -98,7 +100,7 @@ test("movements are append-only at runtime", async () => {
   await expect(s.t.run((ctx) => appendOnlyGuardedDb(ctx).delete("inventoryMovements", movement._id))).rejects.toThrow();
 });
 
-test("only convex/lib/inventory.ts writes stock levels or movements", () => {
+test("only convex/lib/inventory.ts writes stock levels, movements or product stock summaries", () => {
   const sources = import.meta.glob("./**/*.ts", { query: "?raw", import: "default", eager: true });
   const writes = (table: string, ops: string) => new RegExp(`\\.(${ops})\\(\\s*["'\`]${table}["'\`]`);
   const offenders = Object.entries(sources)
@@ -106,7 +108,8 @@ test("only convex/lib/inventory.ts writes stock levels or movements", () => {
     .filter(
       ([, source]) =>
         writes("stockLevels", "insert|patch|replace|delete").test(source as string) ||
-        writes("inventoryMovements", "insert|patch|replace|delete").test(source as string),
+        writes("inventoryMovements", "insert|patch|replace|delete").test(source as string) ||
+        writes("productStock", "insert|patch|replace|delete").test(source as string),
     )
     .map(([path]) => path);
   expect(Object.keys(sources).length).toBeGreaterThan(5);
@@ -137,4 +140,115 @@ test("groupStock ignores empty levels", () => {
   });
   expect(groupStock([row(0)])).toEqual({ byProduct: [], byLot: [], byHolder: [] });
   expect(groupStock([row(5)]).byProduct[0]).toMatchObject({ qty: 5, value: 500 });
+});
+
+
+const PAGE = { numItems: 50, cursor: null };
+
+test("product stock report: finished products stay listed, with totals, status and history", async () => {
+  const { s, lot, business, shop } = await received();
+  const summary = async (productName: string) => {
+    const rows = (await s.as(s.chief).query(api.inventory.productReport, { businessUnitKey: "hair", paginationOpts: PAGE })).page;
+    return rows.find((r) => r.name === productName)!;
+  };
+  // Received: P1 has 10 with the business.
+  expect(await summary("P1")).toMatchObject({ status: "in_stock", received: 10, sold: 0, onHand: 10, outOfStockSince: null });
+  expect((await summary("P1")).lastReceivedAt).toBeTypeOf("number");
+  // Never stocked products are listed too.
+  expect(await summary("P4")).toMatchObject({ status: "never", onHand: 0, received: 0 });
+
+  // To the shop (on hand unchanged), then sold out by the shop's agent.
+  await move(s, { type: "distribute", inventoryBatchId: lot._id, fromHolderId: business, toHolderId: shop, qty: 10 });
+  expect(await summary("P1")).toMatchObject({ onHand: 10, status: "in_stock" });
+  await s.as(s.agent).mutation(api.sales.create, {
+    businessUnitKey: "hair",
+    paymentMethod: "cash",
+    lines: [{ inventoryBatchId: lot._id, qty: 10, unitPrice: 500 }],
+  });
+  const p1 = await summary("P1");
+  expect(p1).toMatchObject({ status: "out", received: 10, sold: 10, onHand: 0 });
+  expect(p1.outOfStockSince).toBeTypeOf("number");
+  expect(p1.lastSoldAt).toBeTypeOf("number");
+
+  // Filters and counts.
+  const byStatus = async (status: "in_stock" | "low" | "out" | "never") =>
+    (await s.as(s.chief).query(api.inventory.productReport, { businessUnitKey: "hair", status, paginationOpts: PAGE })).page.map(
+      (r) => r.name,
+    );
+  expect(await byStatus("out")).toEqual(["P1"]);
+  expect((await byStatus("never")).sort()).toEqual(["P3", "P4"]);
+  expect(await s.as(s.chief).query(api.inventory.statusCounts, { businessUnitKey: "hair" })).toEqual({
+    in_stock: 2, // P2 and the new closure
+    low: 0,
+    out: 1,
+    never: 2,
+  });
+  const searched = await s.as(s.chief).query(api.inventory.productReport, { businessUnitKey: "hair", search: "P1", paginationOpts: PAGE });
+  expect(searched.page.map((r) => r.name)).toEqual(["P1"]);
+
+  // Low-stock threshold (products.set_price): P2 has 3 -> low at 3.
+  const p2 = (await summary("P2")).productId;
+  await expect(s.as(s.agent).mutation(api.products.setLowStockThreshold, { productId: p2, threshold: 3 })).rejects.toThrow(
+    /products\.set_price/,
+  );
+  await s.as(s.sales).mutation(api.products.setLowStockThreshold, { productId: p2, threshold: 3 });
+  expect(await summary("P2")).toMatchObject({ status: "low", lowStockThreshold: 3 });
+  expect(await byStatus("low")).toEqual(["P2"]);
+  await s.as(s.sales).mutation(api.products.setLowStockThreshold, { productId: p2, threshold: null });
+  expect((await summary("P2")).status).toBe("in_stock");
+
+  // History: received, sent to the shop, sold - newest first, with references and running totals.
+  const detail = await s.as(s.chief).query(api.inventory.productStockDetail, { productId: p1.productId });
+  expect(detail!.holders).toEqual([]);
+  expect(detail!.history.map((h) => [h.type, h.qty, h.balance, h.to?.name ?? null])).toEqual([
+    ["sale", 10, 0, null],
+    ["distribute", 10, 10, "Goma Shop"],
+    ["receive", 10, 10, "business"],
+  ]);
+  expect(detail!.history[0].reference).toBe("SALE-00001");
+  expect(detail!.history[2].reference).toBe("BATCH-00001");
+
+  // Restocking clears "out of stock since".
+  const p2Lot = (await s.t.run((ctx) => ctx.db.query("inventoryBatches").collect())).find((l) => l.productId === p2)!;
+  await move(s, { type: "distribute", inventoryBatchId: p2Lot._id, fromHolderId: business, toHolderId: shop, qty: 1 });
+  expect(await s.as(s.chief).query(api.inventory.productReportExport, { businessUnitKey: "hair", status: "out" })).toHaveLength(1);
+});
+
+test("product stock summaries equal a rebuild from the movements", async () => {
+  const { s, lot, business, shop } = await received();
+  await move(s, { type: "distribute", inventoryBatchId: lot._id, fromHolderId: business, toHolderId: shop, qty: 6 });
+  await s.as(s.agent).mutation(api.sales.create, {
+    businessUnitKey: "hair",
+    paymentMethod: "cash",
+    lines: [{ inventoryBatchId: lot._id, qty: 6, unitPrice: 500 }],
+  });
+  const snapshot = () =>
+    s.t.run(async (ctx) =>
+      (await ctx.db.query("productStock").collect())
+        .map(({ _id, _creationTime, ...rest }) => {
+          void _id;
+          void _creationTime;
+          return JSON.stringify(rest);
+        })
+        .sort(),
+    );
+  const incremental = await snapshot();
+  expect(incremental.length).toBe(3);
+  const result = await s.t.mutation(internal.inventory.rebuildProductStock, { businessUnitKey: "hair" });
+  expect(result).toEqual({ products: 3 });
+  expect(await snapshot()).toEqual(incremental);
+});
+
+test("nextProductStock: totals, status and out-of-stock dates", () => {
+  let state = nextProductStock(null, { type: "receive", qty: 5, hasFrom: false, hasTo: true }, 100);
+  expect(state).toEqual({ received: 5, sold: 0, onHand: 5, lastReceivedAt: 100 });
+  state = nextProductStock(state, { type: "distribute", qty: 5, hasFrom: true, hasTo: true }, 200);
+  expect(state.onHand).toBe(5);
+  state = nextProductStock(state, { type: "sale", qty: 5, hasFrom: true, hasTo: false }, 300);
+  expect(state).toMatchObject({ sold: 5, onHand: 0, lastSoldAt: 300, outOfStockSince: 300 });
+  state = nextProductStock(state, { type: "receive", qty: 2, hasFrom: false, hasTo: true }, 400);
+  expect(state.outOfStockSince).toBeUndefined();
+  expect(stockStatus(0, undefined)).toBe("out");
+  expect(stockStatus(3, 3)).toBe("low");
+  expect(stockStatus(4, 3)).toBe("in_stock");
 });

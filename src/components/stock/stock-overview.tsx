@@ -11,6 +11,7 @@ import type { HolderType } from "../../../convex/lib/inventory";
 import { formatMoney } from "../../../convex/lib/money";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
+import { ProductStockReport } from "@/components/stock/product-stock-report";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -85,6 +86,7 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const holderLabel = useHolderLabel();
   const canView = useCan("stock.view");
   const [view, setView] = useState<View>("product");
+  const counts = useQuery(api.inventory.statusCounts, canView ? { businessUnitKey: service } : "skip");
   const overview = useQuery(api.inventory.overview, canView ? { businessUnitKey: service } : "skip");
 
   if (canView === undefined) return null;
@@ -171,7 +173,7 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
       </div>
 
       {overview ? (
-        <section className="grid grid-cols-2 gap-3 sm:max-w-md" aria-label={t("totalsLabel")}>
+        <section className="grid grid-cols-2 gap-3 sm:max-w-xl" aria-label={t("totalsLabel")}>
           <div className="rounded-lg border border-border p-3">
             <p className="text-xs text-muted-foreground">{t("unitsOnHand")}</p>
             <p className="text-lg font-semibold tabular-nums">{totalQty}</p>
@@ -180,6 +182,20 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
             <p className="text-xs text-muted-foreground">{t("stockValue")}</p>
             <p className="text-lg font-semibold tabular-nums">{money(totalValue)}</p>
           </div>
+          {counts ? (
+            <button
+              type="button"
+              onClick={() => setView("product")}
+              className="col-span-2 rounded-lg border border-border p-3 text-left hover:bg-muted/50"
+            >
+              <p className="text-xs text-muted-foreground">{t("lowOutLabel")}</p>
+              <p className="text-lg font-semibold tabular-nums">
+                <span className={counts.low > 0 ? "text-amber-600" : undefined}>{t("lowCount", { count: counts.low })}</span>
+                {" · "}
+                <span className={counts.out > 0 ? "text-destructive" : undefined}>{t("outCount", { count: counts.out })}</span>
+              </p>
+            </button>
+          ) : null}
         </section>
       ) : null}
 
@@ -201,7 +217,10 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
         ))}
       </div>
 
-      {view === "product" ? (
+      {view === "product" && overview && overview.scope !== "own_location" ? (
+        // The full report: every product, finished and never-stocked too.
+        <ProductStockReport service={service} />
+      ) : view === "product" ? (
         <DataTable
           columns={productColumns}
           data={overview?.byProduct}

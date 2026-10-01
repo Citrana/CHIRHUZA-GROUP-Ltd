@@ -16,6 +16,7 @@ import {
   holderRefValidator,
   holderTypeValidator,
   movementTypeValidator,
+  productStockStatusValidator,
 } from "./lib/inventory";
 import { distributionStatusValidator } from "./lib/distributions";
 import {
@@ -138,6 +139,8 @@ export default defineSchema({
     sizeId: v.optional(v.id("productSizes")),
     // One optional photo (fashion), in Convex file storage.
     photoFileId: v.optional(v.id("_storage")),
+    // "Low stock" when the units on hand fall to this or below (optional).
+    lowStockThreshold: v.optional(v.number()),
     // Optional suggested selling price (cents) and its currency, set or
     // cleared together (products.set_price). A sale at another price
     // needs a discount reason.
@@ -344,6 +347,25 @@ export default defineSchema({
     .index("by_holderId", ["holderId"])
     .index("by_businessUnitId", ["businessUnitId"])
     .index("by_productId", ["productId"]),
+
+  // One row per product that has ever had stock: totals and status for the
+  // stock report. Written ONLY by applyMovement (convex/lib/inventory.ts);
+  // rebuilt by inventory:rebuildProductStock. No row = never stocked.
+  productStock: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    productId: v.id("products"),
+    received: v.number(),
+    sold: v.number(),
+    // Units held anywhere (business, locations, people).
+    onHand: v.number(),
+    // UTC ms.
+    lastReceivedAt: v.optional(v.number()),
+    lastSoldAt: v.optional(v.number()),
+    outOfStockSince: v.optional(v.number()),
+    status: productStockStatusValidator,
+  })
+    .index("by_productId", ["productId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"]),
 
   // Append-only: every quantity change, never patched or deleted.
   inventoryMovements: defineTable({

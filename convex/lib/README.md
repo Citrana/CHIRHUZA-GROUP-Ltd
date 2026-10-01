@@ -51,7 +51,9 @@ Shared server-side helpers, not routable Convex functions themselves.
   approval + rejection handlers.
 - `inventory.ts` — the inventory core: holders (`getOrCreateHolder`,
   `findHolder`, `holderName`), `applyMovement` (THE only writer of
-  `stockLevels` / `inventoryMovements`; never goes below zero) and
+  `stockLevels` / `inventoryMovements` / `productStock`; never goes below
+  zero), `nextProductStock` / `stockStatus` / `rebuildProductStock` (the
+  per-product stock report) and
   `groupStock` (the overview's by product / lot / holder views).
 - `sales.ts` — payment methods and sale statuses, `saleLineProblems` (quantity,
   price, discount reason vs the suggested price) and `lineMargin`.
