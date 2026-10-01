@@ -621,7 +621,7 @@
     "actionError": "L'opération a échoué. Veuillez actualiser et réessayer.",
     "itemsTitle": "Produits",
     "addProduct": "Ajouter un produit",
-    "noItemsEditable": "Aucun produit pour l'instant. Ajoutez les produits nécessaires.",
+    "noItemsEditable": "Aucun produit pour l'instant. Ajoutez les produits nécessaires — ou laissez-la vide et précisez le besoin dans la note ; l'acheteur choisira les produits.",
     "noItems": "Aucun produit.",
     "submitTitle": "Soumettre {number} pour approbation ?",
     "submitDescription": "Un administrateur en chef l'examinera. Vous ne pourrez pas la modifier pendant l'attente ; si elle est rejetée, vous pourrez la corriger et la soumettre à nouveau.",
@@ -640,7 +640,10 @@
       "purchased": "Achetée",
       "partial": "Partielle",
       "not_purchased": "Non achetée"
-    }
+    },
+    "emptyForBuyer": "Vide — l'acheteur choisira les produits (voir la note).",
+    "addedByBuyer": "Ajouté par l'acheteur",
+    "submitEmptyDescription": "Cette réquisition n'a pas de produits : une fois approuvée, l'acheteur les choisit d'après votre note. Un administrateur en chef l'examinera d'abord."
   },
   "StockBatches": {
     "title": "Lots d'achat",
@@ -792,7 +795,13 @@
     "confirmReceiptTitle": "Confirmer ce qui est arrivé ?",
     "confirmReceiptDescription": "Les unités en bon état entrent dans le stock de l'entreprise, au coût unitaire d'achat. Le comptage ne peut plus être modifié ensuite.",
     "receivedSummary": "{received} reçus, {damaged} abîmés, {missing} manquants sur {purchased} achetés · compté par {name}",
-    "viewStock": "Voir le stock"
+    "viewStock": "Voir le stock",
+    "forRequisitionLabel": "Pour la réquisition",
+    "noRequisition": "Aucune (achat supplémentaire)",
+    "emptyRequisition": "vide",
+    "forRequisitionHint": "Le produit est ajouté à cette réquisition comme « ajouté par l'acheteur » et suit l'achat comme ses autres lignes.",
+    "emptyRequisitionHint": "Réquisition vide — choisissez ses produits d'après la note :",
+    "addProductsForRequisition": "Ajouter des produits"
   },
   "Inventory": {
     "tabs": {

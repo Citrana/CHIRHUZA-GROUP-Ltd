@@ -450,3 +450,118 @@ test("a product in a batch can only be archived, not deleted; every step is audi
   );
   expect(audited).toEqual(["stockBatches:create", "stockBatchItems:create"]);
 });
+
+test("an empty requisition (with a note) is filled in by the buyer while purchasing", async () => {
+  const s = await setup();
+  // The shop submits an empty requisition: a note is required.
+  const requisitionId = await s.as(s.sales).mutation(api.requisitions.create, { businessUnitKey: "hair", locationId: s.shop });
+  await expect(s.as(s.sales).mutation(api.requisitions.submit, { requisitionId })).rejects.toThrow(/in the note/);
+  await s.as(s.sales).mutation(api.requisitions.update, {
+    requisitionId,
+    locationId: s.shop,
+    note: "New stock for the shop, about $500",
+  });
+  const approvalId = await s.as(s.sales).mutation(api.requisitions.submit, { requisitionId });
+  await s.as(s.chief).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
+
+  // The buyer sees it as open, and can target it.
+  const batchId = await s.as(s.inventory).mutation(api.stockBatches.create, { businessUnitKey: "hair", title: "Trip" });
+  const options = await s.as(s.inventory).query(api.stockBatches.requisitionOptions, { businessUnitKey: "hair" });
+  expect(options.find((r) => r._id === requisitionId)).toMatchObject({ isOpen: true, lines: [], note: "New stock for the shop, about $500" });
+  const targets = await s.as(s.inventory).query(api.stockBatches.targetRequisitions, { businessUnitKey: "hair" });
+  expect(targets.map((r) => [r._id, r.lineCount])).toContainEqual([requisitionId, 0]);
+
+  // An existing product and a new one (pending confirmation) for that requisition.
+  const p1Item = await s.as(s.inventory).mutation(api.stockBatches.addExtraItem, {
+    batchId,
+    productId: s.p1,
+    qtyPurchased: 4,
+    unitCost: 300,
+    requisitionId,
+  });
+  const newProduct = await s.as(s.inventory).mutation(api.products.create, {
+    businessUnitKey: "hair",
+    name: "New frontal",
+    category: "frontals",
+    unit: "piece",
+  });
+  await s.as(s.inventory).mutation(api.stockBatches.addExtraItem, {
+    batchId,
+    productId: newProduct,
+    qtyPurchased: 2,
+    unitCost: 900,
+    requisitionId,
+  });
+  const lines = await s.t.run((ctx) =>
+    ctx.db
+      .query("requisitionItems")
+      .withIndex("by_requisitionId_and_productId", (q) => q.eq("requisitionId", requisitionId))
+      .collect(),
+  );
+  expect(lines.map((l) => [l.qtyRequested, l.addedByBuyer, l.resolution]).sort()).toEqual([
+    [2, true, "pending"],
+    [4, true, "pending"],
+  ]);
+  expect((await getRequisition(s, requisitionId))!.status).toBe("purchasing");
+  // The same product can't be added twice to that requisition.
+  await expect(
+    s.as(s.inventory).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p1, qtyPurchased: 1, requisitionId }),
+  ).rejects.toThrow(/already requested/);
+
+  // Removing a buyer-added line removes it from the requisition too.
+  const p2Item = await s.as(s.inventory).mutation(api.stockBatches.addExtraItem, {
+    batchId,
+    productId: s.p2,
+    qtyPurchased: 1,
+    requisitionId,
+  });
+  await s.as(s.inventory).mutation(api.stockBatches.removeItem, { itemId: p2Item });
+  const afterRemove = await s.t.run((ctx) =>
+    ctx.db
+      .query("requisitionItems")
+      .withIndex("by_requisitionId_and_productId", (q) => q.eq("requisitionId", requisitionId))
+      .collect(),
+  );
+  expect(afterRemove).toHaveLength(2);
+
+  // Purchased: the buyer-added lines resolve and the requisition closes.
+  await s.as(s.inventory).mutation(api.stockBatches.markPurchased, { batchId });
+  const detail = await s.as(s.sales).query(api.requisitions.get, { requisitionId });
+  expect(detail!.status).toBe("closed");
+  expect(detail!.items.map((i) => [i.addedByBuyer, i.resolution])).toEqual([
+    [true, "purchased"],
+    [true, "purchased"],
+  ]);
+  const batchItem = await s.t.run((ctx) => ctx.db.get("stockBatchItems", p1Item));
+  expect(batchItem).toMatchObject({ qtyRequested: 4, qtyPurchased: 4 });
+});
+
+test("the buyer can add to a requisition with lines; only approved requisitions take products", async () => {
+  const s = await setup();
+  const { requisitionId, lineIds } = await s.approvedRequisition([[s.p1, 5]]);
+  const batchId = await s.as(s.inventory).mutation(api.stockBatches.create, { businessUnitKey: "hair", title: "Trip" });
+  await s.as(s.inventory).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p3, qtyPurchased: 2, requisitionId });
+  const lines = await s.t.run((ctx) =>
+    ctx.db
+      .query("requisitionItems")
+      .withIndex("by_requisitionId_and_productId", (q) => q.eq("requisitionId", requisitionId))
+      .collect(),
+  );
+  // The original line is untouched; the new one is flagged.
+  expect(lines.find((l) => l._id === lineIds[0])).toMatchObject({ qtyRequested: 5, resolution: "pending" });
+  expect(lines.find((l) => l.addedByBuyer)).toMatchObject({ qtyRequested: 2 });
+  // Already requested on that requisition (pending): add it from the requisition instead.
+  await expect(
+    s.as(s.inventory).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p1, qtyPurchased: 1, requisitionId }),
+  ).rejects.toThrow(/already requested/);
+
+  // A draft requisition can't receive products.
+  const draftId = await s.as(s.sales).mutation(api.requisitions.create, { businessUnitKey: "hair", locationId: s.shop });
+  await expect(
+    s.as(s.inventory).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p2, qtyPurchased: 1, requisitionId: draftId }),
+  ).rejects.toThrow(/Only approved requisitions/);
+  // Only the batch's buyer (stock.create) adds lines.
+  await expect(
+    s.as(s.manager).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p2, qtyPurchased: 1, requisitionId }),
+  ).rejects.toThrow(/stock\.create/);
+});

@@ -166,11 +166,14 @@ test("only the creator (or the Super Admin) edits, and only while draft or rejec
   ).rejects.toThrow(/waiting for approval/);
 });
 
-test("submitting needs a line, creates a requisition approval and locks the draft", async () => {
+test("submitting needs a line or a note, creates a requisition approval and locks the draft", async () => {
   const s = await setup();
-  const id = await draft(s);
   const asSales = s.as(s.sales);
-  await expect(asSales.mutation(api.requisitions.submit, { requisitionId: id })).rejects.toThrow(/at least one product/);
+  // Empty and without a note: refused (an empty one with a note is fine -
+  // the buyer then chooses the products; see stockBatches.test.ts).
+  const empty = await asSales.mutation(api.requisitions.create, { businessUnitKey: "hair", locationId: s.shop });
+  await expect(asSales.mutation(api.requisitions.submit, { requisitionId: empty })).rejects.toThrow(/in the note, or add products/);
+  const id = await draft(s);
 
   await asSales.mutation(api.requisitions.addItem, { requisitionId: id, productId: s.wig, qtyRequested: 3 });
   await asSales.mutation(api.requisitions.submit, { requisitionId: id });
@@ -187,7 +190,7 @@ test("submitting needs a line, creates a requisition approval and locks the draf
     locationId: s.shop,
     status: "pending",
     reason: "For the weekend",
-    payload: { after: { number: "REQ-00001", location: "Kenya Shop", itemCount: 1, items: "Wig (HAIR-Wig) × 3" } },
+    payload: { after: { number: "REQ-00002", location: "Kenya Shop", itemCount: 1, items: "Wig (HAIR-Wig) × 3" } },
   });
 
   await expect(

@@ -405,11 +405,13 @@ export const requisitionOptions = authedQuery({
           locationName: location?.name ?? null,
           note: requisition.note ?? null,
           lines: available.sort((a, b) => (a.productName ?? "").localeCompare(b.productName ?? "")),
+          // No lines at all: the buyer chooses the products (note says what).
+          isOpen: lines.length === 0,
         };
       }),
     );
     return options
-      .filter((r) => r.lines.length > 0)
+      .filter((r) => r.lines.length > 0 || r.isOpen)
       .sort((a, b) => a.number.localeCompare(b.number));
   },
 });
@@ -535,13 +537,58 @@ export const addRequisitionLines = authedMutation({
   },
 });
 
-/** Adds a product that wasn't requested (active or pending confirmation). */
+/**
+ * Approved (or purchasing) requisitions the buyer can add products to, for
+ * the "for which requisition?" choice: number, location, note, line count.
+ */
+export const targetRequisitions = authedQuery({
+  args: { businessUnitKey: businessUnitKeyValidator },
+  handler: async (ctx, { businessUnitKey }) => {
+    await ctx.requirePermission("stock.create");
+    const unit = await requireBusinessUnit(ctx, businessUnitKey);
+    const requisitions = [];
+    for (const status of ["approved", "purchasing"] as const) {
+      requisitions.push(
+        ...(await ctx.db
+          .query("requisitions")
+          .withIndex("by_businessUnitId_and_status", (q) => q.eq("businessUnitId", unit._id).eq("status", status))
+          .take(200)),
+      );
+    }
+    const rows = await Promise.all(
+      requisitions.map(async (requisition) => {
+        const location = await ctx.db.get("locations", requisition.locationId);
+        const lines = await ctx.db
+          .query("requisitionItems")
+          .withIndex("by_requisitionId_and_productId", (q) => q.eq("requisitionId", requisition._id))
+          .take(500);
+        return {
+          _id: requisition._id,
+          number: requisition.number,
+          locationName: location?.name ?? null,
+          note: requisition.note ?? null,
+          lineCount: lines.length,
+        };
+      }),
+    );
+    return rows.sort((a, b) => a.number.localeCompare(b.number));
+  },
+});
+
+/**
+ * Adds a product (active or pending confirmation) the buyer chose. Without
+ * `requisitionId` it's an extra purchase. With one (an approved requisition
+ * - e.g. an empty one that only says what's needed) it also becomes a line
+ * of that requisition, flagged addedByBuyer, so the requisition follows the
+ * purchase like any other line (no extra approval).
+ */
 export const addExtraItem = authedMutation({
   args: {
     batchId: v.id("stockBatches"),
     productId: v.id("products"),
     qtyPurchased: v.number(),
     unitCost: v.optional(v.number()),
+    requisitionId: v.optional(v.id("requisitions")),
   },
   handler: async (ctx, args) => {
     const batch = await requireOwnBatch(ctx, args.batchId, { draft: true });
@@ -558,11 +605,57 @@ export const addExtraItem = authedMutation({
       await ctx.requirePermission("stock.set_price");
       assertCents(args.unitCost, 0, "Unit cost");
     }
+    // For a requisition: the buyer's choice becomes one of its lines.
+    let requisition: Doc<"requisitions"> | null = null;
+    let requisitionItemId: Id<"requisitionItems"> | undefined;
+    if (args.requisitionId) {
+      requisition = await ctx.db.get("requisitions", args.requisitionId);
+      if (
+        !requisition ||
+        requisition.businessUnitId !== batch.businessUnitId ||
+        (requisition.status !== "approved" && requisition.status !== "purchasing")
+      ) {
+        throw new ConvexError("Only approved requisitions of this service can receive products.");
+      }
+      const existing = await ctx.db
+        .query("requisitionItems")
+        .withIndex("by_requisitionId_and_productId", (q) =>
+          q.eq("requisitionId", requisition!._id).eq("productId", args.productId),
+        )
+        .take(50);
+      if (existing.some((l) => l.resolution === "pending")) {
+        throw new ConvexError("This product is already requested on that requisition - add that line from the requisition instead.");
+      }
+      const line = {
+        requisitionId: requisition._id,
+        productId: args.productId,
+        qtyRequested: args.qtyPurchased,
+        resolution: "pending" as const,
+        addedByBuyer: true,
+      };
+      requisitionItemId = await ctx.db.insert("requisitionItems", line);
+      await ctx.audit({
+        action: "create",
+        entityTable: "requisitionItems",
+        entityId: requisitionItemId,
+        businessUnitId: batch.businessUnitId,
+        after: {
+          requisition: requisition.number,
+          product: product.name,
+          sku: product.sku,
+          qtyRequested: line.qtyRequested,
+          addedByBuyer: true,
+          batch: batch.number,
+        },
+      });
+    }
+
     const item = {
       batchId: batch._id,
       productId: args.productId,
+      ...(requisitionItemId ? { requisitionItemId } : {}),
       status: "purchased" as const,
-      qtyRequested: 0,
+      qtyRequested: requisitionItemId ? args.qtyPurchased : 0,
       qtyPurchased: args.qtyPurchased,
       ...(args.unitCost !== undefined ? { unitCost: args.unitCost } : {}),
       currency: "USD" as const,
@@ -573,8 +666,15 @@ export const addExtraItem = authedMutation({
       entityTable: "stockBatchItems",
       entityId: itemId,
       businessUnitId: batch.businessUnitId,
-      after: await describeItem(ctx, batch, item),
+      after: {
+        ...(await describeItem(ctx, batch, item)),
+        ...(requisition ? { requisition: requisition.number, addedByBuyer: true } : {}),
+      },
     });
+    if (requisition) {
+      await syncBatchRequisitionLink(ctx, batch, requisition._id, ctx.user._id);
+      await syncRequisitionStatus(ctx, requisition._id, ctx.user._id);
+    }
     return itemId;
   },
 });
@@ -637,6 +737,24 @@ export const removeItem = authedMutation({
       before,
     });
     if (line) {
+      // A line the buyer added only existed for this purchase: remove it,
+      // so the requisition is back to how it was approved.
+      if (line.addedByBuyer) {
+        await ctx.db.delete("requisitionItems", line._id);
+        const requisition = await ctx.db.get("requisitions", line.requisitionId);
+        await ctx.audit({
+          action: "delete",
+          entityTable: "requisitionItems",
+          entityId: line._id,
+          businessUnitId: batch.businessUnitId,
+          before: {
+            requisition: requisition?.number ?? null,
+            product: before.product,
+            qtyRequested: line.qtyRequested,
+            addedByBuyer: true,
+          },
+        });
+      }
       await syncBatchRequisitionLink(ctx, batch, line.requisitionId, ctx.user._id);
       await syncRequisitionStatus(ctx, line.requisitionId, ctx.user._id);
     }

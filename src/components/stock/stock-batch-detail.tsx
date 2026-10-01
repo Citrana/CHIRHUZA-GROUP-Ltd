@@ -17,7 +17,7 @@ import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
-import type { Doc } from "../../../convex/_generated/dataModel";
+import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
 import { BUSINESS_TIME_ZONE } from "../../../convex/lib/time";
@@ -136,6 +136,8 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
 
   const [linesOpen, setLinesOpen] = useState(false);
   const [extraOpen, setExtraOpen] = useState(false);
+  // Opening "Add product" for a given requisition (e.g. an empty one).
+  const [extraFor, setExtraFor] = useState<Id<"requisitions"> | null>(null);
   const [expenseOpen, setExpenseOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<Doc<"stockBatchExpenses"> | undefined>();
   const [purchaseOpen, setPurchaseOpen] = useState(false);
@@ -427,7 +429,13 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
                   <Plus aria-hidden />
                   {t("addFromRequisitions")}
                 </Button>
-                <Button variant="outline" onClick={() => setExtraOpen(true)}>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setExtraFor(null);
+                    setExtraOpen(true);
+                  }}
+                >
                   <Plus aria-hidden />
                   {t("addExtra")}
                 </Button>
@@ -560,11 +568,22 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
 
       {editing ? (
         <>
-          <AddRequisitionLinesDialog service={service} batchId={batch._id} open={linesOpen} onOpenChange={setLinesOpen} />
+          <AddRequisitionLinesDialog
+            service={service}
+            batchId={batch._id}
+            open={linesOpen}
+            onOpenChange={setLinesOpen}
+            onAddProducts={(requisitionId) => {
+              setLinesOpen(false);
+              setExtraFor(requisitionId);
+              setExtraOpen(true);
+            }}
+          />
           <AddExtraProductDialog
             service={service}
             batchId={batch._id}
             canSetPrice={batch.canSetPrice}
+            requisitionId={extraFor}
             open={extraOpen}
             onOpenChange={setExtraOpen}
           />
