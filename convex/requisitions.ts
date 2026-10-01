@@ -209,7 +209,9 @@ export const get = authedQuery({
           }
         : null,
       canEdit,
-      canSubmit: canEdit && items.length > 0,
+      // Empty is fine with a note: the buyer then chooses the products.
+      canSubmit: canEdit && (items.length > 0 || Boolean(requisition.note?.trim())),
+      isOpen: items.length === 0,
     };
   },
 });
@@ -411,8 +413,10 @@ export const submit = authedMutation({
   handler: async (ctx, { requisitionId }) => {
     const { requisition } = await requireEditable(ctx, requisitionId);
     const items = await itemsOf(ctx, requisition._id);
-    if (items.length === 0) {
-      throw new ConvexError("Add at least one product before submitting.");
+    // An empty requisition is fine: the buyer chooses the products while
+    // purchasing - but it must say what's needed.
+    if (items.length === 0 && !requisition.note?.trim()) {
+      throw new ConvexError("Say what's needed in the note, or add products, before submitting.");
     }
     const location = await ctx.db.get("locations", requisition.locationId);
     const lines = await Promise.all(

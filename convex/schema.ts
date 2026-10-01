@@ -221,6 +221,9 @@ export default defineSchema({
     note: v.optional(v.string()),
     // Set by purchasing; "pending" until then.
     resolution: requisitionItemResolutionValidator,
+    // Added by the buyer while purchasing (e.g. for an empty requisition);
+    // qtyRequested is then the quantity bought.
+    addedByBuyer: v.optional(v.boolean()),
   })
     .index("by_requisitionId_and_productId", ["requisitionId", "productId"])
     .index("by_productId", ["productId"]),

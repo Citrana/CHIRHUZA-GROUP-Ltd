@@ -363,7 +363,9 @@ service picker + mobile-first app shell (`/hair` with placeholder module
 pages), the append-only audit log (`/admin/audit`), the generic approval
 engine (`/[service]/approvals`), the Hair product catalogue
 (`/[service]/products`, with lengths/colours in `/[service]/settings`), and
-requisitions (`/[service]/requisitions`: draft -> submit -> approve), and
+requisitions (`/[service]/requisitions`: draft -> submit -> approve; an
+empty requisition with a note lets the buyer choose the products while
+purchasing — buyer-added lines are flagged `addedByBuyer`), and
 stock batches (`/[service]/stock/batches`: purchasing abroad, trip expenses
 kept aside (never spread into product costs) and addable at any time by the
 buyer or the receiving team, approval, shipped/arrived), Goma receiving

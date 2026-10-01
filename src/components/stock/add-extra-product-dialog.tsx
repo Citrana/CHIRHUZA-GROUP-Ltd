@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
+import { NativeSelect } from "@/components/ui/native-select";
 import {
   Dialog,
   DialogContent,
@@ -35,12 +36,15 @@ export function AddExtraProductDialog({
   service,
   batchId,
   canSetPrice,
+  requisitionId = null,
   open,
   onOpenChange,
 }: {
   service: BusinessUnitKey;
   batchId: Id<"stockBatches">;
   canSetPrice: boolean;
+  /** Pre-selects the requisition the products are for (e.g. an empty one). */
+  requisitionId?: Id<"requisitions"> | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
@@ -53,6 +57,15 @@ export function AddExtraProductDialog({
   const [qty, setQty] = useState("1");
   const [unitCost, setUnitCost] = useState<number | null>(null);
   const [newProductOpen, setNewProductOpen] = useState(false);
+  // "" = an extra purchase; otherwise the requisition it's for.
+  const [forRequisition, setForRequisition] = useState<string>(requisitionId ?? "");
+  const [loadedFor, setLoadedFor] = useState<string | null>(null);
+  const openKey = open ? (requisitionId ?? "") : null;
+  if (openKey !== loadedFor) {
+    setLoadedFor(openKey);
+    if (openKey !== null) setForRequisition(openKey);
+  }
+  const targets = useQuery(api.stockBatches.targetRequisitions, open ? { businessUnitKey: service } : "skip");
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const addExtra = useMutation(api.stockBatches.addExtraItem);
@@ -87,6 +100,7 @@ export function AddExtraProductDialog({
         productId: selected,
         qtyPurchased: Number(qty),
         ...(unitCost !== null ? { unitCost } : {}),
+        ...(forRequisition ? { requisitionId: forRequisition as Id<"requisitions"> } : {}),
       });
       reset();
       onOpenChange(false);
@@ -113,6 +127,24 @@ export function AddExtraProductDialog({
               <DialogDescription>{t("addExtraHint")}</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-3 py-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="extra-requisition">{t("forRequisitionLabel")}</Label>
+                <NativeSelect
+                  id="extra-requisition"
+                  value={forRequisition}
+                  onChange={(e) => setForRequisition(e.target.value)}
+                >
+                  <option value="">{t("noRequisition")}</option>
+                  {(targets ?? []).map((r) => (
+                    <option key={r._id} value={r._id}>
+                      {[r.number, r.locationName, r.lineCount === 0 ? t("emptyRequisition") : null, r.note]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </option>
+                  ))}
+                </NativeSelect>
+                {forRequisition ? <p className="text-xs text-muted-foreground">{t("forRequisitionHint")}</p> : null}
+              </div>
               <div className="flex gap-2">
                 <DataTableSearch
                   value={search}

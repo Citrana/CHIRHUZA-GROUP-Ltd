@@ -621,7 +621,7 @@
     "actionError": "That didn't work. Please refresh and try again.",
     "itemsTitle": "Products",
     "addProduct": "Add product",
-    "noItemsEditable": "No products yet. Add the products you need.",
+    "noItemsEditable": "No products yet. Add the products you need — or leave it empty and say what's needed in the note; the buyer will choose the products.",
     "noItems": "No products.",
     "submitTitle": "Submit {number} for approval?",
     "submitDescription": "A Chief Admin will review it. You can't change it while it waits; if it's rejected you can revise and resubmit.",
@@ -640,7 +640,10 @@
       "purchased": "Purchased",
       "partial": "Partial",
       "not_purchased": "Not purchased"
-    }
+    },
+    "emptyForBuyer": "Empty — the buyer will choose the products (see the note).",
+    "addedByBuyer": "Added by buyer",
+    "submitEmptyDescription": "This requisition has no products: once approved, the buyer chooses them based on your note. A Chief Admin will review it first."
   },
   "StockBatches": {
     "title": "Purchase batches",
@@ -792,7 +795,13 @@
     "confirmReceiptTitle": "Confirm what arrived?",
     "confirmReceiptDescription": "Good units become stock held by the business, at the purchase unit cost. The count can't be changed afterwards.",
     "receivedSummary": "{received} received, {damaged} damaged, {missing} missing of {purchased} purchased · counted by {name}",
-    "viewStock": "View stock"
+    "viewStock": "View stock",
+    "forRequisitionLabel": "For requisition",
+    "noRequisition": "None (extra purchase)",
+    "emptyRequisition": "empty",
+    "forRequisitionHint": "The product is added to that requisition as \"added by buyer\" and follows the purchase like its other lines.",
+    "emptyRequisitionHint": "Empty requisition — choose its products from the note:",
+    "addProductsForRequisition": "Add products"
   },
   "Inventory": {
     "tabs": {

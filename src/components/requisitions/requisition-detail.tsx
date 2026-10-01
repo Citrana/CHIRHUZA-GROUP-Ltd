@@ -172,7 +172,10 @@ export function RequisitionDetail({
       header: t("productHeader"),
       cell: ({ row }) => (
         <div className="min-w-40">
-          <p className="font-medium">{row.original.productName ?? "—"}</p>
+          <p className="flex flex-wrap items-center gap-2 font-medium">
+            {row.original.productName ?? "—"}
+            {row.original.addedByBuyer ? <Badge variant="secondary">{t("addedByBuyer")}</Badge> : null}
+          </p>
           <p className="text-xs text-muted-foreground">
             {[
               row.original.sku,
@@ -316,7 +319,7 @@ export function RequisitionDetail({
           columns={columns}
           data={requisition.items}
           getRowId={(item) => item._id}
-          emptyMessage={canEdit ? t("noItemsEditable") : t("noItems")}
+          emptyMessage={canEdit ? t("noItemsEditable") : requisition.note ? t("emptyForBuyer") : t("noItems")}
         />
       </section>
 
@@ -334,7 +337,9 @@ export function RequisitionDetail({
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{t("submitTitle", { number: requisition.number })}</DialogTitle>
-            <DialogDescription>{t("submitDescription")}</DialogDescription>
+            <DialogDescription>
+              {requisition.isOpen ? t("submitEmptyDescription") : t("submitDescription")}
+            </DialogDescription>
           </DialogHeader>
           {error ? <p className="text-sm text-destructive">{t("actionError")}</p> : null}
           <DialogFooter>

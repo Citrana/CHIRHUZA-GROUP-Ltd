@@ -25,11 +25,14 @@ export function AddRequisitionLinesDialog({
   batchId,
   open,
   onOpenChange,
+  onAddProducts,
 }: {
   service: BusinessUnitKey;
   batchId: Id<"stockBatches">;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  /** An empty requisition: the buyer chooses its products (opens "Add product" for it). */
+  onAddProducts: (requisitionId: Id<"requisitions">) => void;
 }) {
   const t = useTranslations("StockBatches");
   const tProducts = useTranslations("Products");
@@ -86,6 +89,20 @@ export function AddRequisitionLinesDialog({
             <p className="text-sm text-muted-foreground">{t("noRequisitionLines")}</p>
           ) : (
             options.map((requisition) => {
+              if (requisition.isOpen) {
+                return (
+                  <div key={requisition._id} className="flex flex-col gap-2 rounded-lg border border-dashed border-border p-3">
+                    <p className="font-medium">
+                      {requisition.number} · {requisition.locationName ?? "—"}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t("emptyRequisitionHint")}</p>
+                    {requisition.note ? <p className="whitespace-pre-wrap text-sm">{requisition.note}</p> : null}
+                    <Button type="button" variant="outline" className="min-h-11 self-start" onClick={() => onAddProducts(requisition._id)}>
+                      {t("addProductsForRequisition")}
+                    </Button>
+                  </div>
+                );
+              }
               const ids = requisition.lines.map((l) => l._id);
               const allOn = ids.every((id) => selected.has(id));
               return (
