@@ -24,6 +24,7 @@ import {
   computeSearchText,
   refreshProductSearchText,
 } from "./lib/products";
+import { refreshProductStockStatus } from "./lib/inventory";
 
 /**
  * The product catalogue. Purchase prices live on stock lots; a product may
@@ -439,6 +440,33 @@ export const update = authedMutation({
       entityId: productId,
       businessUnitId: product.businessUnitId,
       ...changes,
+    });
+  },
+});
+
+/**
+ * Sets (or, with null, clears) the product's low-stock threshold: the
+ * stock report marks it "low" when units on hand fall to it or below.
+ * products.set_price - the people who manage selling prices.
+ */
+export const setLowStockThreshold = authedMutation({
+  args: { productId: v.id("products"), threshold: v.union(v.number(), v.null()) },
+  handler: async (ctx, { productId, threshold }) => {
+    await ctx.requirePermission("products.set_price");
+    const product = await requireProduct(ctx, productId);
+    if (threshold !== null && (!Number.isSafeInteger(threshold) || threshold < 0)) {
+      throw new ConvexError("The threshold must be a whole number from 0.");
+    }
+    if (threshold === (product.lowStockThreshold ?? null)) return;
+    await ctx.db.patch("products", productId, { lowStockThreshold: threshold ?? undefined });
+    await refreshProductStockStatus(ctx, productId);
+    await ctx.audit({
+      action: "update",
+      entityTable: "products",
+      entityId: productId,
+      businessUnitId: product.businessUnitId,
+      before: { name: product.name, sku: product.sku, lowStockThreshold: product.lowStockThreshold ?? null },
+      after: { name: product.name, sku: product.sku, lowStockThreshold: threshold },
     });
   },
 });

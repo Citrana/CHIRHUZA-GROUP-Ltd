@@ -358,7 +358,8 @@
       "location": "Location",
       "note": "Note",
       "size": "Size",
-      "photo": "Photo"
+      "photo": "Photo",
+      "lowStockThreshold": "Low stock at"
     }
   },
   "Approvals": {
@@ -842,7 +843,62 @@
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
     "receivedCount": "{count} received",
     "empty": "No stock on hand yet. Stock appears once a purchase batch is received.",
-    "valueHint": "Value is units on hand × the purchase unit cost. Trip expenses are kept separately."
+    "valueHint": "Value is units on hand × the purchase unit cost. Trip expenses are kept separately.",
+    "report": {
+      "all": "All",
+      "statuses": {
+        "in_stock": "In stock",
+        "low": "Low stock",
+        "out": "Out of stock",
+        "never": "Never stocked"
+      },
+      "since": "since {date}",
+      "download": "Download (CSV)",
+      "searchPlaceholder": "Search by name, SKU, length, size or colour",
+      "empty": "No products match.",
+      "productHeader": "Product",
+      "statusHeader": "Status",
+      "onHandHeader": "On hand",
+      "soldHeader": "Sold",
+      "receivedHeader": "Received",
+      "lastSoldHeader": "Last sold",
+      "soldCount": "{count} sold",
+      "loading": "Loading…",
+      "whereNow": "Where it is now",
+      "noneLeft": "None left anywhere.",
+      "history": "History",
+      "noHistory": "No movements yet.",
+      "balance": "{count} held",
+      "movements": {
+        "receive": "Received",
+        "distribute": "Sent to a shop or person",
+        "sale": "Sold",
+        "adjustment": "Adjusted",
+        "transfer": "Transferred",
+        "return": "Returned"
+      },
+      "thresholdLabel": "Low stock at",
+      "thresholdPlaceholder": "e.g. 5",
+      "thresholdHint": "Marked \"Low stock\" when this many or fewer are left. Leave empty for none.",
+      "thresholdError": "Enter a whole number from 0.",
+      "save": "Save",
+      "csv": {
+        "product": "Product",
+        "sku": "SKU",
+        "details": "Details",
+        "status": "Status",
+        "onHand": "On hand",
+        "received": "Received",
+        "sold": "Sold",
+        "lastReceived": "Last received",
+        "lastSold": "Last sold",
+        "outSince": "Out of stock since",
+        "threshold": "Low stock at"
+      }
+    },
+    "lowOutLabel": "Low / out of stock",
+    "lowCount": "{count} low",
+    "outCount": "{count} out"
   },
   "Distributions": {
     "title": "Distributions",

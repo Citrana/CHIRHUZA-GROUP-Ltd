@@ -47,6 +47,134 @@ export const movementTypeValidator = v.union(
 );
 export type MovementType = Infer<typeof movementTypeValidator>;
 
+// ------------------------------------------------- per-product summary
+
+export const productStockStatusValidator = v.union(v.literal("in_stock"), v.literal("low"), v.literal("out"));
+export type ProductStockStatus = Infer<typeof productStockStatusValidator>;
+
+/** A product's stock summary (the productStock row without ids/status). */
+export type ProductStockState = {
+  received: number;
+  sold: number;
+  onHand: number;
+  lastReceivedAt?: number;
+  lastSoldAt?: number;
+  outOfStockSince?: number;
+};
+
+/** Out at 0; low at or below the product's threshold; otherwise in stock. */
+export function stockStatus(onHand: number, threshold: number | undefined): ProductStockStatus {
+  if (onHand <= 0) return "out";
+  if (threshold !== undefined && onHand <= threshold) return "low";
+  return "in_stock";
+}
+
+/**
+ * How one movement changes a product's summary (pure): on hand goes up for
+ * a destination and down for a source (a distribution nets to 0);
+ * receipts and sales add to their totals; reaching 0 starts "out of stock
+ * since", rising above 0 clears it.
+ */
+export function nextProductStock(
+  prev: ProductStockState | null,
+  movement: { type: MovementType; qty: number; hasFrom: boolean; hasTo: boolean },
+  at: number,
+): ProductStockState {
+  const base: ProductStockState = prev ?? { received: 0, sold: 0, onHand: 0 };
+  const onHand = base.onHand + (movement.hasTo ? movement.qty : 0) - (movement.hasFrom ? movement.qty : 0);
+  const next: ProductStockState = {
+    ...base,
+    onHand,
+    received: base.received + (movement.type === "receive" ? movement.qty : 0),
+    sold: base.sold + (movement.type === "sale" ? movement.qty : 0),
+  };
+  if (movement.type === "receive") next.lastReceivedAt = at;
+  if (movement.type === "sale") next.lastSoldAt = at;
+  if (onHand <= 0) {
+    next.outOfStockSince = base.onHand > 0 || base.outOfStockSince === undefined ? at : base.outOfStockSince;
+  } else {
+    delete next.outOfStockSince;
+  }
+  return next;
+}
+
+function stateOf(row: Doc<"productStock">): ProductStockState {
+  const { received, sold, onHand, lastReceivedAt, lastSoldAt, outOfStockSince } = row;
+  return {
+    received,
+    sold,
+    onHand,
+    ...(lastReceivedAt !== undefined ? { lastReceivedAt } : {}),
+    ...(lastSoldAt !== undefined ? { lastSoldAt } : {}),
+    ...(outOfStockSince !== undefined ? { outOfStockSince } : {}),
+  };
+}
+
+/** Writes a product's summary (insert or full replace), with its status. */
+async function writeProductStock(
+  ctx: MutationCtx,
+  businessUnitId: Id<"businessUnits">,
+  productId: Id<"products">,
+  state: ProductStockState,
+  existing: Doc<"productStock"> | null,
+) {
+  const product = await ctx.db.get("products", productId);
+  const row = { businessUnitId, productId, ...state, status: stockStatus(state.onHand, product?.lowStockThreshold) };
+  if (existing) await ctx.db.replace("productStock", existing._id, row);
+  else await ctx.db.insert("productStock", row);
+}
+
+async function productStockOf(ctx: QueryCtx, productId: Id<"products">) {
+  return await ctx.db.query("productStock").withIndex("by_productId", (q) => q.eq("productId", productId)).unique();
+}
+
+/** Recomputes a product's status after its low-stock threshold changed. */
+export async function refreshProductStockStatus(ctx: MutationCtx, productId: Id<"products">) {
+  const row = await productStockOf(ctx, productId);
+  if (row) await writeProductStock(ctx, row.businessUnitId, productId, stateOf(row), row);
+}
+
+/**
+ * Rebuilds a unit's product summaries from its movements (backfill /
+ * repair), replaying them in time order so dates and "out of stock since"
+ * come out as they happened.
+ */
+export async function rebuildProductStock(ctx: MutationCtx, businessUnitId: Id<"businessUnits">) {
+  for (const status of ["in_stock", "low", "out"] as const) {
+    const rows = await ctx.db
+      .query("productStock")
+      .withIndex("by_businessUnitId_and_status", (q) => q.eq("businessUnitId", businessUnitId).eq("status", status))
+      .take(10_000);
+    for (const row of rows) await ctx.db.delete("productStock", row._id);
+  }
+  const lots = await ctx.db
+    .query("inventoryBatches")
+    .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", businessUnitId))
+    .take(10_000);
+  const events: { productId: Id<"products">; movement: Doc<"inventoryMovements"> }[] = [];
+  for (const lot of lots) {
+    const movements = await ctx.db
+      .query("inventoryMovements")
+      .withIndex("by_inventoryBatchId", (q) => q.eq("inventoryBatchId", lot._id))
+      .take(10_000);
+    for (const movement of movements) events.push({ productId: lot.productId, movement });
+  }
+  events.sort((a, b) => a.movement.timestamp - b.movement.timestamp || a.movement._creationTime - b.movement._creationTime);
+  const states = new Map<Id<"products">, ProductStockState>();
+  for (const { productId, movement } of events) {
+    states.set(
+      productId,
+      nextProductStock(
+        states.get(productId) ?? null,
+        { type: movement.type, qty: movement.qty, hasFrom: !!movement.fromHolderId, hasTo: !!movement.toHolderId },
+        movement.timestamp,
+      ),
+    );
+  }
+  for (const [productId, state] of states) await writeProductStock(ctx, businessUnitId, productId, state, null);
+  return { products: states.size };
+}
+
 type HolderRef =
   | { type: "business"; refId: Id<"businessUnits"> }
   | { type: "location"; refId: Id<"locations"> }
@@ -172,6 +300,7 @@ export async function applyMovement(ctx: MutationCtx, movement: Movement): Promi
     levels.to = { before: onHand, after: onHand + qty };
   }
 
+  const timestamp = Date.now();
   const movementId = await ctx.db.insert("inventoryMovements", {
     businessUnitId: lot.businessUnitId,
     type: movement.type,
@@ -182,8 +311,18 @@ export async function applyMovement(ctx: MutationCtx, movement: Movement): Promi
     refTable: movement.refTable,
     refId: movement.refId,
     actorId: movement.actorId,
-    timestamp: Date.now(),
+    timestamp,
   });
+
+  // The product's stock summary (report), in the same transaction.
+  const summary = await productStockOf(ctx, lot.productId);
+  await writeProductStock(
+    ctx,
+    lot.businessUnitId,
+    lot.productId,
+    nextProductStock(summary ? stateOf(summary) : null, { type: movement.type, qty, hasFrom: !!fromHolderId, hasTo: !!toHolderId }, timestamp),
+    summary,
+  );
 
   const product = await ctx.db.get("products", lot.productId);
   const nameOf = async (id?: Id<"holders">) => {

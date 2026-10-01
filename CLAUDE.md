@@ -173,6 +173,12 @@ this repo, now and later — do not relax them for convenience.
   mutation. It refuses to take a holder below zero — stock never goes
   negative. Nothing else inserts, patches or deletes `stockLevels` or
   `inventoryMovements` (a test scans the source for it).
+- `applyMovement` also maintains `productStock` (per product: received,
+  sold, on hand, last received/sold, out-of-stock-since, status in_stock /
+  low / out, with the product's optional `lowStockThreshold`) — the Stock
+  overview's report, so finished products never disappear. Never write it
+  elsewhere; rebuild with `npx convex run inventory:rebuildProductStock
+  '{"businessUnitKey":"<key>"}'` (tests assert incremental == rebuild).
 - A change that needs approval (e.g. a distribution) checks availability
   when requested, and its handler moves stock through `applyMovement` on
   approval — if stock ran out meanwhile it throws and the approval stays
