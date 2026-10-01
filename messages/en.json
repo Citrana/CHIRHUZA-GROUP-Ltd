@@ -357,7 +357,8 @@
       "date": "Date",
       "location": "Location",
       "note": "Note",
-      "size": "Size"
+      "size": "Size",
+      "photo": "Photo"
     }
   },
   "Approvals": {
@@ -509,7 +510,11 @@
       "prices": "Prices"
     },
     "sizeLabel": "Size",
-    "noSettingsHintSizes": "Sizes and colours are chosen from Product settings. Ask an administrator to add more."
+    "noSettingsHintSizes": "Sizes and colours are chosen from Product settings. Ask an administrator to add more.",
+    "photoLabel": "Photo",
+    "photoHint": "A picture of the item (JPG or PNG, up to 5 MB). On a phone you can take it with the camera.",
+    "removePhoto": "Remove photo",
+    "photoInvalid": "Choose an image of 5 MB or less."
   },
   "ProductSettings": {
     "title": "Product settings",

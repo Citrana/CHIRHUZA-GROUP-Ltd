@@ -6,6 +6,7 @@ import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
 import { businessDayOf } from "./lib/time";
+import { MAX_PHOTO_BYTES, photoProblem } from "./lib/products";
 import { getBusinessUnitId, insertLocation, insertUserWithRole, seedReferenceDataForTest } from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
@@ -267,4 +268,108 @@ test("one shop, two services: shared location, separate stock, sales and analyti
     const requisitionLocations = await s.as(s.sales).query(api.requisitions.locationOptions, { businessUnitKey });
     expect(requisitionLocations.map((l) => l.name)).toContain("Boutique Mode");
   }
+});
+
+test("a Mode product has one optional photo: set, replace, remove, shown where it's picked", async () => {
+  const s = await setup();
+  const productId = await dress(s);
+  const store = () => s.t.run((ctx) => ctx.storage.store(new Blob(["png"], { type: "image/png" })));
+  const fileExists = (id: Id<"_storage">) => s.t.run(async (ctx) => (await ctx.db.system.get("_storage", id)) !== null);
+
+  // Upload URL + setPhoto (products.manage; the agent has it too).
+  await s.as(s.agent).mutation(api.products.generatePhotoUploadUrl, { businessUnitKey: "fashion" });
+  const first = await store();
+  await s.as(s.agent).mutation(api.products.setPhoto, { productId, fileId: first });
+  const product = await s.as(s.agent).query(api.products.get, { productId });
+  expect(product!.photoUrl).toBeTruthy();
+  const listed = await s.as(s.agent).query(api.products.list, { businessUnitKey: "fashion", paginationOpts: PAGE });
+  expect(listed.page[0].photoUrl).toBeTruthy();
+
+  // Replacing deletes the old file; removing deletes the file and clears the URL.
+  const second = await store();
+  await s.as(s.chief).mutation(api.products.setPhoto, { productId, fileId: second });
+  expect(await fileExists(first)).toBe(false);
+  await s.as(s.chief).mutation(api.products.setPhoto, { productId, fileId: null });
+  expect(await fileExists(second)).toBe(false);
+  expect((await s.as(s.agent).query(api.products.get, { productId }))!.photoUrl).toBeNull();
+
+  // Audited without the file itself.
+  const audits = await s.t.run(async (ctx) =>
+    (await ctx.db.query("auditLogs").collect()).filter((a) => a.entityTable === "products" && a.entityId === productId),
+  );
+  expect(audits.slice(-3).map((a) => (a.after as { photo: string | null }).photo)).toEqual(["attached", "attached", null]);
+
+  // Hair products have no photo.
+  const wig = await s.as(s.chief).mutation(api.products.create, { businessUnitKey: "hair", name: "Wig", category: "wigs", unit: "piece" });
+  await expect(s.as(s.chief).mutation(api.products.generatePhotoUploadUrl, { businessUnitKey: "hair" })).rejects.toThrow(/no photo/);
+  await expect(s.as(s.chief).mutation(api.products.setPhoto, { productId: wig, fileId: await store() })).rejects.toThrow(/no photo/);
+  // Without products.manage, no.
+  const nobody = await insertUserWithRole(s.t, null, { email: "none@x.com" });
+  await expect(s.as(nobody).mutation(api.products.setPhoto, { productId, fileId: await store() })).rejects.toThrow(/products\.manage/);
+});
+
+test("the sale form's lots carry the photo; deleting the product removes its photo file", async () => {
+  const s = await setup();
+  const productId = await dress(s);
+  const photo = await s.t.run((ctx) => ctx.storage.store(new Blob(["png"], { type: "image/png" })));
+  await s.as(s.chief).mutation(api.products.setPhoto, { productId, fileId: photo });
+
+  // A lot of it at the shop -> the sale form shows its photo.
+  await s.t.run(async (ctx) => {
+    const batchId = await ctx.db.insert("stockBatches", {
+      businessUnitId: s.fashionId,
+      number: "B-1",
+      title: "Seed",
+      status: "received",
+      currency: "USD",
+      createdBy: s.chief,
+    });
+    const itemId = await ctx.db.insert("stockBatchItems", {
+      batchId,
+      productId,
+      status: "purchased",
+      qtyRequested: 0,
+      qtyPurchased: 1,
+      unitCost: 1000,
+      currency: "USD",
+    });
+    const lotId = await ctx.db.insert("inventoryBatches", {
+      businessUnitId: s.fashionId,
+      productId,
+      sourceStockBatchItemId: itemId,
+      stockBatchId: batchId,
+      unitCost: 1000,
+      currency: "USD",
+      receivedQty: 1,
+      createdAt: Date.now(),
+    });
+    await applyMovement(ctx, {
+      type: "receive",
+      inventoryBatchId: lotId,
+      toHolderId: await getOrCreateHolder(ctx, s.fashionId, { type: "location", refId: s.shop }),
+      qty: 1,
+      refTable: "test",
+      refId: "seed",
+      actorId: s.chief,
+    });
+  });
+  const options = await s.as(s.agent).query(api.sales.options, { businessUnitKey: "fashion" });
+  expect(options.lots[0].photoUrl).toBeTruthy();
+
+  // An unused product deleted through an approval loses its photo file.
+  const unused = await dress(s, { name: "Jupe" });
+  const unusedPhoto = await s.t.run((ctx) => ctx.storage.store(new Blob(["png"], { type: "image/png" })));
+  await s.as(s.chief).mutation(api.products.setPhoto, { productId: unused, fileId: unusedPhoto });
+  const approvalId = await s.as(s.chief).mutation(api.products.requestDeletion, { productId: unused, reason: "Duplicate" });
+  const superAdmin = await insertUserWithRole(s.t, "super_admin", { email: "sa@x.com" });
+  await s.as(superAdmin).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
+  expect(await s.t.run((ctx) => ctx.db.get("products", unused))).toBeNull();
+  expect(await s.t.run((ctx) => ctx.db.system.get("_storage", unusedPhoto))).toBeNull();
+});
+
+test("photoProblem: images only, up to 5 MB", () => {
+  expect(photoProblem({ contentType: "image/jpeg", size: 1000 })).toBeNull();
+  expect(photoProblem({ contentType: "application/pdf", size: 1000 })).toBe("type");
+  expect(photoProblem({ contentType: "image/png", size: MAX_PHOTO_BYTES + 1 })).toBe("size");
+  expect(photoProblem({ size: 10 })).toBeNull();
 });

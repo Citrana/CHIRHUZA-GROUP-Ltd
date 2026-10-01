@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { DataTableSearch } from "@/components/data-table/data-table-search";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,6 +19,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProductPhoto } from "@/components/products/product-photo";
 import { cn } from "@/lib/utils";
 
 const RESULTS = 20;
@@ -42,6 +44,8 @@ export function ProductPickerDialog({
 }) {
   const t = useTranslations("Requisitions");
   const tProducts = useTranslations("Products");
+  // Mode products have a photo: show it so the right item is picked.
+  const withPhotos = PRODUCT_PROFILES[service].attributes.photo;
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Id<"products"> | null>(null);
   const [qty, setQty] = useState("1");
@@ -133,6 +137,8 @@ export function ProductPickerDialog({
                           taken && "cursor-not-allowed opacity-50 hover:bg-transparent",
                         )}
                       >
+                        <span className="flex min-w-0 items-center gap-3">
+                          {withPhotos ? <ProductPhoto url={p.photoUrl} /> : null}
                         <span className="min-w-0">
                           <span className="block truncate font-medium">{p.name}</span>
                           <span className={cn("block text-xs", isSelected ? "opacity-80" : "text-muted-foreground")}>
@@ -140,6 +146,7 @@ export function ProductPickerDialog({
                               .filter(Boolean)
                               .join(" · ")}
                           </span>
+                        </span>
                         </span>
                         {taken ? (
                           <span className="shrink-0 text-xs">{t("alreadyAdded")}</span>

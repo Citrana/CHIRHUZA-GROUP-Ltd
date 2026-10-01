@@ -7,6 +7,7 @@ import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { DataTableSearch } from "@/components/data-table/data-table-search";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { ProductPhoto } from "@/components/products/product-photo";
 import { cn } from "@/lib/utils";
 
 /**
@@ -44,6 +46,8 @@ export function AddExtraProductDialog({
 }) {
   const t = useTranslations("StockBatches");
   const tProducts = useTranslations("Products");
+  // Mode products have a photo: show it so the right item is picked.
+  const withPhotos = PRODUCT_PROFILES[service].attributes.photo;
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState<Id<"products"> | null>(null);
   const [qty, setQty] = useState("1");
@@ -141,6 +145,8 @@ export function AddExtraProductDialog({
                             isSelected ? "bg-primary text-primary-foreground" : "hover:bg-muted",
                           )}
                         >
+                          <span className="flex min-w-0 items-center gap-3">
+                            {withPhotos ? <ProductPhoto url={p.photoUrl} /> : null}
                           <span className="min-w-0">
                             <span className="block truncate font-medium">{p.name}</span>
                             <span className={cn("block text-xs", isSelected ? "opacity-80" : "text-muted-foreground")}>
@@ -148,6 +154,7 @@ export function AddExtraProductDialog({
                                 .filter(Boolean)
                                 .join(" · ")}
                             </span>
+                          </span>
                           </span>
                           {p.status === "pending_confirmation" ? (
                             <Badge variant="outline" className="shrink-0">{tProducts("statuses.pending_confirmation")}</Badge>

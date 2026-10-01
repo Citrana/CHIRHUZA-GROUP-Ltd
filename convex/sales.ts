@@ -75,6 +75,7 @@ export const options = authedQuery({
           productId: lot.productId,
           ...(await describeProduct(ctx, lot.productId)),
           suggestedPrice: product?.suggestedPrice ?? null,
+          photoUrl: product?.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
           batchNumber: batch?.number ?? null,
           lotDate: lot.createdAt,
           unitCost: lot.unitCost,

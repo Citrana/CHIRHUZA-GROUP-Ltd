@@ -38,7 +38,8 @@ Shared server-side helpers, not routable Convex functions themselves.
   `APPROVAL_REJECTION_HANDLERS` (status bookkeeping on reject).
 - `products.ts` — product catalogue constants (categories, units,
   statuses), `PRODUCT_PROFILES` (what each service's products look like:
-  hair length/texture, fashion size), `productDetails` (length, size,
+  hair length/texture, fashion size + photo), `photoProblem`,
+  `productDetails` (length, size,
   colour for display), `nextSku`, `searchTextFor`,
   `productUsage.isProductInUse` (requisition and stock batch lines) and the
   approved product delete handler.

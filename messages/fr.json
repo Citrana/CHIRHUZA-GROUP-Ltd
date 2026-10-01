@@ -357,7 +357,8 @@
       "date": "Date",
       "location": "Site",
       "note": "Note",
-      "size": "Taille"
+      "size": "Taille",
+      "photo": "Photo"
     }
   },
   "Approvals": {
@@ -509,7 +510,11 @@
       "prices": "Prix"
     },
     "sizeLabel": "Taille",
-    "noSettingsHintSizes": "Les tailles et couleurs se choisissent dans les paramètres produits. Demandez à un administrateur d'en ajouter."
+    "noSettingsHintSizes": "Les tailles et couleurs se choisissent dans les paramètres produits. Demandez à un administrateur d'en ajouter.",
+    "photoLabel": "Photo",
+    "photoHint": "Une photo de l'article (JPG ou PNG, 5 Mo maximum). Sur un téléphone, vous pouvez la prendre avec l'appareil photo.",
+    "removePhoto": "Retirer la photo",
+    "photoInvalid": "Choisissez une image de 5 Mo maximum."
   },
   "ProductSettings": {
     "title": "Paramètres produits",

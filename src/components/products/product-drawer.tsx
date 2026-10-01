@@ -27,6 +27,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { ProductFormDialog } from "@/components/products/product-form-dialog";
+import { ProductPhoto } from "@/components/products/product-photo";
 import { ProductStatusBadge } from "@/components/products/product-status-badge";
 
 /**
@@ -121,6 +122,8 @@ export function ProductDrawer({
                   </Link>
                 </p>
               ) : null}
+
+              {profile.attributes.photo ? <ProductPhoto url={product.photoUrl} size="lg" className="self-center" /> : null}
 
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-2">
                 <dt className="text-muted-foreground">{t("categoryLabel")}</dt>

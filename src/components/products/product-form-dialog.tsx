@@ -7,6 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import {
+  MAX_PHOTO_BYTES,
   PRODUCT_PROFILES,
   type ProductCategory,
   type ProductUnit,
@@ -24,6 +25,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { ProductPhoto } from "@/components/products/product-photo";
 import { useCan } from "@/lib/use-can";
 
 type Form = {
@@ -65,7 +67,8 @@ export function ProductFormDialog({
   onCreated,
 }: {
   service: BusinessUnitKey;
-  product?: Doc<"products">;
+  /** The product to edit (with its photo URL, from products.get). */
+  product?: Doc<"products"> & { photoUrl?: string | null };
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Called with the new product's id after a successful create. */
@@ -93,9 +96,16 @@ export function ProductFormDialog({
   const create = useMutation(api.products.create);
   const update = useMutation(api.products.update);
   const setSuggestedPrice = useMutation(api.products.setSuggestedPrice);
+  const generatePhotoUploadUrl = useMutation(api.products.generatePhotoUploadUrl);
+  const setPhoto = useMutation(api.products.setPhoto);
 
   const [form, setForm] = useState<Form>(() => formFrom(product));
   const [price, setPrice] = useState<number | null>(product?.suggestedPrice ?? null);
+  // Photo (Mode): a newly chosen file (with a local preview), or removal.
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const [photoError, setPhotoError] = useState(false);
   const [loadedFor, setLoadedFor] = useState<string | null>(null);
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -107,6 +117,10 @@ export function ProductFormDialog({
     if (openKey) {
       setForm(formFrom(product));
       setPrice(product?.suggestedPrice ?? null);
+      setPhotoFile(null);
+      setPhotoPreview(null);
+      setPhotoError(false);
+      setRemovePhoto(false);
       setError(false);
     }
   }
@@ -122,6 +136,36 @@ export function ProductFormDialog({
     (c) => c.active || c._id === product?.colourId,
   );
   const sizeOptions = (sizes ?? []).filter((z) => z.active || z._id === product?.sizeId);
+
+  function choosePhoto(file: File | null) {
+    if (photoPreview) URL.revokeObjectURL(photoPreview);
+    setPhotoError(false);
+    if (file && (!file.type.startsWith("image/") || file.size > MAX_PHOTO_BYTES)) {
+      setPhotoError(true);
+      file = null;
+    }
+    setPhotoFile(file);
+    setPhotoPreview(file ? URL.createObjectURL(file) : null);
+    if (file) setRemovePhoto(false);
+  }
+
+  /** Uploads the chosen photo (or removes the current one) for the saved product. */
+  async function savePhoto(productId: Id<"products">) {
+    if (!profile.attributes.photo) return;
+    if (photoFile) {
+      const url = await generatePhotoUploadUrl({ businessUnitKey: service });
+      const response = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": photoFile.type },
+        body: photoFile,
+      });
+      if (!response.ok) throw new Error("Upload failed");
+      const { storageId } = (await response.json()) as { storageId: Id<"_storage"> };
+      await setPhoto({ productId, fileId: storageId });
+    } else if (removePhoto && product?.photoFileId) {
+      await setPhoto({ productId, fileId: null });
+    }
+  }
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -150,6 +194,8 @@ export function ProductFormDialog({
       if (canSetPrice && price !== (product?.suggestedPrice ?? null)) {
         await setSuggestedPrice({ productId, price });
       }
+      await savePhoto(productId);
+      choosePhoto(null);
       onOpenChange(false);
     } catch {
       setError(true);
@@ -294,6 +340,40 @@ export function ProductFormDialog({
                 </div>
               ) : null}
             </div>
+            {profile.attributes.photo ? (
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="product-photo">{t("photoLabel")}</Label>
+                <div className="flex items-center gap-3">
+                  <ProductPhoto url={photoPreview ?? (removePhoto ? null : product?.photoUrl)} size="md" />
+                  <div className="flex min-w-0 flex-col gap-2">
+                    <Input
+                      id="product-photo"
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => choosePhoto(e.target.files?.[0] ?? null)}
+                      className="h-11"
+                    />
+                    {(photoFile || product?.photoUrl) && !removePhoto ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="self-start text-destructive"
+                        onClick={() => {
+                          choosePhoto(null);
+                          setRemovePhoto(Boolean(product?.photoFileId));
+                        }}
+                      >
+                        {t("removePhoto")}
+                      </Button>
+                    ) : null}
+                  </div>
+                </div>
+                <p className={photoError ? "text-xs text-destructive" : "text-xs text-muted-foreground"}>
+                  {photoError ? t("photoInvalid") : t("photoHint")}
+                </p>
+              </div>
+            ) : null}
             {canSetPrice ? (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="product-price">{t("suggestedPriceLabel")}</Label>

@@ -136,6 +136,8 @@ export default defineSchema({
     colourId: v.optional(v.id("productColours")),
     // One of the business unit's productSizes (fashion).
     sizeId: v.optional(v.id("productSizes")),
+    // One optional photo (fashion), in Convex file storage.
+    photoFileId: v.optional(v.id("_storage")),
     // Optional suggested selling price (cents) and its currency, set or
     // cleared together (products.set_price). A sale at another price
     // needs a discount reason.

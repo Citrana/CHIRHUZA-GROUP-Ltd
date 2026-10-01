@@ -83,7 +83,10 @@ this repo, now and later — do not relax them for convenience.
   categories, units and attributes (hair: length + colour + texture;
   fashion: size + colour), enforced server-side and driving the forms and
   settings. Display product details via `productDetails` (server) so
-  length, size and colour show everywhere.
+  length, size and colour show everywhere. Mode products can have one
+  optional photo (`products.setPhoto`, images ≤ 5 MB via `photoProblem`); a
+  replaced or removed photo file — or a deleted product's — is deleted
+  from storage.
 - A user's own location is `users.locationId`. It is required for any user
   whose role has at least one `own_location` permission (enforced in
   `convex/users.ts`); that is what `own_location` scope checks compare
