@@ -22,6 +22,7 @@ import {
   businessDayOf,
   businessDayStartUtc,
 } from "../../../convex/lib/time";
+import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { Link } from "@/i18n/navigation";
 import { DataTableSearch } from "@/components/data-table/data-table-search";
 import { Button } from "@/components/ui/button";
@@ -30,6 +31,7 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
+import { ProductPhoto } from "@/components/products/product-photo";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -97,6 +99,8 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
   if (!canSell) return <p className="text-sm text-muted-foreground">{t("cannotSell")}</p>;
 
   const inches = (n: number) => tProducts("inches", { inches: n });
+  // Mode products have a photo: show it so sellers pick the right item.
+  const withPhotos = PRODUCT_PROFILES[service].attributes.photo;
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const earliest = addBusinessDays(today, -MAX_BACKDATE_DAYS);
   const longDay = (day: string) =>
@@ -332,12 +336,15 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
                       onClick={() => addProduct(first.productId)}
                       className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted"
                     >
-                      <span className="min-w-0">
+                      <span className="flex min-w-0 items-center gap-3">
+                        {withPhotos ? <ProductPhoto url={first.photoUrl} size="md" /> : null}
+                        <span className="min-w-0">
                         <span className="block truncate font-medium">{productLabel(first, inches)}</span>
                         <span className="block text-xs text-muted-foreground">
                           {first.sku}
                           {" · "}
                           {first.suggestedPrice !== null ? money(first.suggestedPrice) : t("noPriceShort")}
+                        </span>
                         </span>
                       </span>
                       <span className="shrink-0 text-xs text-muted-foreground">{t("inStock", { count: onHand })}</span>
@@ -362,7 +369,10 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
             return (
               <div key={line.key} className="flex flex-col gap-3 rounded-lg border border-border p-3">
                 <div className="flex items-start justify-between gap-2">
-                  <p className="font-medium">{lot ? productLabel(lot, inches) : t("goneLine")}</p>
+                  <div className="flex min-w-0 items-center gap-3">
+                    {withPhotos ? <ProductPhoto url={lot?.photoUrl} size="md" /> : null}
+                    <p className="font-medium">{lot ? productLabel(lot, inches) : t("goneLine")}</p>
+                  </div>
                   <Button
                     type="button"
                     variant="ghost"

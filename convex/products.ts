@@ -15,6 +15,7 @@ import {
   nextSku,
   PRODUCT_IN_USE,
   PRODUCT_PROFILES,
+  photoProblem,
   productDetails,
   productCategoryValidator,
   productStatusValidator,
@@ -210,6 +211,7 @@ export const list = authedQuery({
             ...product,
             colourName,
             sizeName,
+            photoUrl: product.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
             pendingDeletion: (await pendingDeletionFor(ctx, product._id)) !== null,
           };
         }),
@@ -317,6 +319,7 @@ export const get = authedQuery({
       ...product,
       colourName,
       sizeName,
+      photoUrl: product.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
       createdByName: creator?.name || creator?.email || null,
       confirmedByName: confirmer?.name || confirmer?.email || null,
       pendingDeletionApprovalId: await pendingDeletionFor(ctx, productId),
@@ -436,6 +439,53 @@ export const update = authedMutation({
       entityId: productId,
       businessUnitId: product.businessUnitId,
       ...changes,
+    });
+  },
+});
+
+/** Where to upload a product photo (services whose products have one). */
+export const generatePhotoUploadUrl = authedMutation({
+  args: { businessUnitKey: businessUnitKeyValidator },
+  handler: async (ctx, { businessUnitKey }) => {
+    await ctx.requirePermission("products.manage");
+    if (!PRODUCT_PROFILES[businessUnitKey].attributes.photo) {
+      throw new ConvexError("Products of this service have no photo.");
+    }
+    return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/**
+ * Sets (fileId) or removes (null) a product's photo. The replaced or
+ * removed file is deleted from storage. Only for services whose products
+ * have a photo (fashion).
+ */
+export const setPhoto = authedMutation({
+  args: { productId: v.id("products"), fileId: v.union(v.id("_storage"), v.null()) },
+  handler: async (ctx, { productId, fileId }) => {
+    await ctx.requirePermission("products.manage");
+    const product = await requireProduct(ctx, productId);
+    const unit = (await ctx.db.get("businessUnits", product.businessUnitId))!;
+    if (!PRODUCT_PROFILES[unit.key].attributes.photo) {
+      throw new ConvexError("Products of this service have no photo.");
+    }
+    if (fileId === (product.photoFileId ?? null)) return;
+    if (fileId) {
+      const file = await ctx.db.system.get("_storage", fileId);
+      if (!file) throw new ConvexError("Photo upload not found.");
+      const problem = photoProblem(file);
+      if (problem === "type") throw new ConvexError("The photo must be an image.");
+      if (problem === "size") throw new ConvexError("The photo must be 5 MB or smaller.");
+    }
+    await ctx.db.patch("products", productId, { photoFileId: fileId ?? undefined });
+    if (product.photoFileId) await ctx.storage.delete(product.photoFileId);
+    await ctx.audit({
+      action: "update",
+      entityTable: "products",
+      entityId: productId,
+      businessUnitId: product.businessUnitId,
+      before: { name: product.name, sku: product.sku, photo: product.photoFileId ? "attached" : null },
+      after: { name: product.name, sku: product.sku, photo: fileId ? "attached" : null },
     });
   },
 });

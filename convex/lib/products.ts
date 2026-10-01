@@ -70,7 +70,7 @@ export type ProductProfile = {
   categories: readonly ProductCategory[];
   units: readonly ProductUnit[];
   /** Which attributes a product of this service can have. */
-  attributes: { length: boolean; size: boolean; texture: boolean };
+  attributes: { length: boolean; size: boolean; texture: boolean; photo: boolean };
 };
 
 /** How each service describes its products (server-checked, UI-driven). */
@@ -78,16 +78,29 @@ export const PRODUCT_PROFILES: Record<BusinessUnitKey, ProductProfile> = {
   hair: {
     categories: ["wigs", "bundles", "closures", "frontals", "extensions", "hair_care", "accessories"],
     units: ["piece", "bundle", "pack", "set", "bottle"],
-    attributes: { length: true, size: false, texture: true },
+    attributes: { length: true, size: false, texture: true, photo: false },
   },
   fashion: {
     categories: ["dresses", "tops", "trousers", "skirts", "suits_sets", "jackets_coats", "shoes", "bags", "accessories"],
     units: ["piece", "pair", "set"],
-    attributes: { length: false, size: true, texture: false },
+    // Clothes are hard to tell apart by name: one optional photo each.
+    attributes: { length: false, size: true, texture: false, photo: true },
   },
-  housing: { categories: [], units: [], attributes: { length: false, size: false, texture: false } },
-  transport: { categories: [], units: [], attributes: { length: false, size: false, texture: false } },
+  housing: { categories: [], units: [], attributes: { length: false, size: false, texture: false, photo: false } },
+  transport: { categories: [], units: [], attributes: { length: false, size: false, texture: false, photo: false } },
 };
+
+export const MAX_PHOTO_BYTES = 5 * 1024 * 1024;
+
+/**
+ * Why an uploaded product photo isn't acceptable, or null if it is: an
+ * image, at most 5 MB. Browser uploads always carry a content type; a file
+ * without one is treated as unknown rather than rejected.
+ */
+export function photoProblem(file: { contentType?: string; size: number }): "type" | "size" | null {
+  if (file.contentType !== undefined && !file.contentType.startsWith("image/")) return "type";
+  return file.size > MAX_PHOTO_BYTES ? "size" : null;
+}
 
 export const PRODUCT_STATUSES = [
   "active",
@@ -272,6 +285,8 @@ export async function deleteApprovedProduct(
     throw new ConvexError(PRODUCT_IN_USE);
   }
   await ctx.db.delete("products", productId);
+  // Its photo file is no longer referenced.
+  if (product.photoFileId) await ctx.storage.delete(product.photoFileId);
   await logAudit(ctx, {
     actorId: decider._id,
     action: "delete",
