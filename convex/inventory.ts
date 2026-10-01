@@ -2,6 +2,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { authedQuery, type AuthedQueryCtx } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { findHolder, groupStock, holderName, type StockRow } from "./lib/inventory";
+import { productDetails } from "./lib/products";
 
 /**
  * Stock overview (stock.view): what's on hand, by product, by lot and by
@@ -37,13 +38,14 @@ export async function stockRows(ctx: AuthedQueryCtx, levels: Doc<"stockLevels">[
     }
     if (!products.has(level.productId)) {
       const product = await ctx.db.get("products", level.productId);
-      const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+      const details = await productDetails(ctx, product);
       products.set(level.productId, {
         id: level.productId,
         name: product?.name ?? null,
         sku: product?.sku ?? null,
         lengthInches: product?.lengthInches ?? null,
-        colourName: colour?.name ?? null,
+        colourName: details.colourName,
+        sizeName: details.sizeName,
       });
     }
     rows.push({

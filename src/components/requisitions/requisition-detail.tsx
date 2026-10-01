@@ -176,7 +176,7 @@ export function RequisitionDetail({
           <p className="text-xs text-muted-foreground">
             {[
               row.original.sku,
-              row.original.lengthInches !== null ? tProducts("inches", { inches: row.original.lengthInches }) : null,
+              row.original.lengthInches !== null ? tProducts("inches", { inches: row.original.lengthInches }) : null, row.original.sizeName,
               row.original.colourName,
             ]
               .filter(Boolean)

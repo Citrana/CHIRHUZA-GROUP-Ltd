@@ -14,6 +14,8 @@ import {
 import {
   nextSku,
   PRODUCT_IN_USE,
+  PRODUCT_PROFILES,
+  productDetails,
   productCategoryValidator,
   productStatusValidator,
   productUnitValidator,
@@ -36,6 +38,7 @@ const editableFields = {
   brand: v.optional(v.string()),
   texture: v.optional(v.string()),
   lengthInches: v.optional(v.number()),
+  sizeId: v.optional(v.id("productSizes")),
   colourId: v.optional(v.id("productColours")),
 };
 
@@ -60,10 +63,41 @@ function cleanOptional(value: string | undefined, label: string): string | undef
  */
 async function assertValidOptions(
   ctx: QueryCtx,
-  businessUnitId: Id<"businessUnits">,
-  next: { lengthInches?: number; colourId?: Id<"productColours"> },
+  unit: Doc<"businessUnits">,
+  next: {
+    category: string;
+    unit: string;
+    texture?: string;
+    lengthInches?: number;
+    sizeId?: Id<"productSizes">;
+    colourId?: Id<"productColours">;
+  },
   current?: Doc<"products">,
 ) {
+  const businessUnitId = unit._id;
+  // What this service's products look like (PRODUCT_PROFILES).
+  const profile = PRODUCT_PROFILES[unit.key];
+  if (!(profile.categories as readonly string[]).includes(next.category)) {
+    throw new ConvexError("This category isn't used by this service.");
+  }
+  if (!(profile.units as readonly string[]).includes(next.unit)) {
+    throw new ConvexError("This unit isn't used by this service.");
+  }
+  if (next.lengthInches !== undefined && !profile.attributes.length) {
+    throw new ConvexError("Products of this service have no length.");
+  }
+  if (next.sizeId !== undefined && !profile.attributes.size) {
+    throw new ConvexError("Products of this service have no size.");
+  }
+  if (next.texture?.trim() && !profile.attributes.texture) {
+    throw new ConvexError("Products of this service have no texture.");
+  }
+  if (next.sizeId !== undefined && next.sizeId !== current?.sizeId) {
+    const size = await ctx.db.get("productSizes", next.sizeId);
+    if (!size || !size.active || size.businessUnitId !== businessUnitId) {
+      throw new ConvexError("Choose a size from the product settings.");
+    }
+  }
   if (next.lengthInches !== undefined && next.lengthInches !== current?.lengthInches) {
     const length = await ctx.db
       .query("productLengths")
@@ -86,6 +120,7 @@ async function assertValidOptions(
 /** Readable snapshot for audit entries and deletion approvals. */
 async function describe(ctx: QueryCtx, product: Omit<Doc<"products">, "_id" | "_creationTime">) {
   const colour = product.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+  const size = product.sizeId ? await ctx.db.get("productSizes", product.sizeId) : null;
   return {
     name: product.name,
     sku: product.sku,
@@ -94,6 +129,7 @@ async function describe(ctx: QueryCtx, product: Omit<Doc<"products">, "_id" | "_
     brand: product.brand ?? null,
     texture: product.texture ?? null,
     lengthInches: product.lengthInches ?? null,
+    size: size?.name ?? null,
     colour: colour?.name ?? null,
     status: product.status,
   };
@@ -169,12 +205,11 @@ export const list = authedQuery({
       ...result,
       page: await Promise.all(
         result.page.map(async (product) => {
-          const colour = product.colourId
-            ? await ctx.db.get("productColours", product.colourId)
-            : null;
+          const { colourName, sizeName } = await productDetails(ctx, product);
           return {
             ...product,
-            colourName: colour?.name ?? null,
+            colourName,
+            sizeName,
             pendingDeletion: (await pendingDeletionFor(ctx, product._id)) !== null,
           };
         }),
@@ -215,7 +250,7 @@ export const priceList = authedQuery({
       result.page
         .filter((product) => product.status !== "archived")
         .map(async (product) => {
-          const colour = product.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+          const details = await productDetails(ctx, product);
           const suggested = product.suggestedPrice ?? null;
           const rawLots = await ctx.db
             .query("inventoryBatches")
@@ -254,8 +289,7 @@ export const priceList = authedQuery({
             name: product.name,
             sku: product.sku,
             status: product.status,
-            lengthInches: product.lengthInches ?? null,
-            colourName: colour?.name ?? null,
+            ...details,
             suggestedPrice: suggested,
             lots,
             onHand: lots.reduce((s, l) => s + l.onHand, 0),
@@ -276,12 +310,13 @@ export const get = authedQuery({
     await ctx.requirePermission("products.view");
     const product = await ctx.db.get("products", productId);
     if (!product) return null;
-    const colour = product.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+    const { colourName, sizeName } = await productDetails(ctx, product);
     const creator = await ctx.db.get("users", product.createdBy);
     const confirmer = product.confirmedBy ? await ctx.db.get("users", product.confirmedBy) : null;
     return {
       ...product,
-      colourName: colour?.name ?? null,
+      colourName,
+      sizeName,
       createdByName: creator?.name || creator?.email || null,
       confirmedByName: confirmer?.name || confirmer?.email || null,
       pendingDeletionApprovalId: await pendingDeletionFor(ctx, productId),
@@ -308,7 +343,7 @@ export const create = authedMutation({
     const name = cleanName(args.name);
     const brand = cleanOptional(args.brand, "Brand");
     const texture = cleanOptional(args.texture, "Texture");
-    await assertValidOptions(ctx, unit._id, args);
+    await assertValidOptions(ctx, unit, args);
 
     const confirmed = ctx.can("products.confirm");
     const sku = await nextSku(ctx, unit);
@@ -321,6 +356,7 @@ export const create = authedMutation({
       ...(brand ? { brand } : {}),
       ...(texture ? { texture } : {}),
       ...(args.lengthInches !== undefined ? { lengthInches: args.lengthInches } : {}),
+      ...(args.sizeId ? { sizeId: args.sizeId } : {}),
       ...(args.colourId ? { colourId: args.colourId } : {}),
       status: confirmed ? ("active" as const) : ("pending_confirmation" as const),
       createdBy: ctx.user._id,
@@ -332,6 +368,7 @@ export const create = authedMutation({
         brand,
         texture,
         lengthInches: args.lengthInches,
+        sizeId: args.sizeId,
         colourId: args.colourId,
       }),
     };
@@ -356,7 +393,8 @@ export const update = authedMutation({
     const name = cleanName(args.name);
     const brand = cleanOptional(args.brand, "Brand");
     const texture = cleanOptional(args.texture, "Texture");
-    await assertValidOptions(ctx, product.businessUnitId, args, product);
+    const unit = (await ctx.db.get("businessUnits", product.businessUnitId))!;
+    await assertValidOptions(ctx, unit, args, product);
 
     const next = {
       ...product,
@@ -366,6 +404,7 @@ export const update = authedMutation({
       brand,
       texture,
       lengthInches: args.lengthInches,
+      sizeId: args.sizeId,
       colourId: args.colourId,
     };
     const changes = diff(await describe(ctx, product), await describe(ctx, next));
@@ -378,6 +417,7 @@ export const update = authedMutation({
       brand,
       texture,
       lengthInches: args.lengthInches,
+      sizeId: args.sizeId,
       colourId: args.colourId,
       searchText: await computeSearchText(ctx, {
         name,
@@ -386,6 +426,7 @@ export const update = authedMutation({
         brand,
         texture,
         lengthInches: args.lengthInches,
+        sizeId: args.sizeId,
         colourId: args.colourId,
       }),
     });

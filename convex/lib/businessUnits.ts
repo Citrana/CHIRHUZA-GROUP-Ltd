@@ -10,7 +10,7 @@ import type { Doc } from "../_generated/dataModel";
  */
 export const BUSINESS_UNITS = [
   { key: "hair", name: "Hair", enabledByDefault: true },
-  { key: "fashion", name: "Fashion", enabledByDefault: false },
+  { key: "fashion", name: "Fashion", enabledByDefault: true },
   { key: "housing", name: "Housing", enabledByDefault: false },
   { key: "transport", name: "Transport", enabledByDefault: false },
 ] as const;

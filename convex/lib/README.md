@@ -37,9 +37,11 @@ Shared server-side helpers, not routable Convex functions themselves.
   `DELETE_HANDLERS` (by table) and the optional
   `APPROVAL_REJECTION_HANDLERS` (status bookkeeping on reject).
 - `products.ts` — product catalogue constants (categories, units,
-  statuses), `nextSku`, `searchTextFor`, `productUsage.isProductInUse`
-  (checks requisition lines; TODO: the stock feature adds its check) and the approved
-  product delete handler.
+  statuses), `PRODUCT_PROFILES` (what each service's products look like:
+  hair length/texture, fashion size), `productDetails` (length, size,
+  colour for display), `nextSku`, `searchTextFor`,
+  `productUsage.isProductInUse` (requisition and stock batch lines) and the
+  approved product delete handler.
 - `money.ts` — `currencyValidator` / `usdValidator`, `parseMoneyToMinor`,
   `minorToInput`, `formatMoney` (shared with the UI's `MoneyInput`).
 - `stockBatches.ts` — batch/line/expense validators, `lineProblems`,

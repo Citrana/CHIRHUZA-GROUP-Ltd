@@ -129,7 +129,7 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
                 <span className="block font-medium">
                   {[
                     line.productName ?? "—",
-                    line.lengthInches !== null ? tProducts("inches", { inches: line.lengthInches }) : null,
+                    line.lengthInches !== null ? tProducts("inches", { inches: line.lengthInches }) : null, line.sizeName,
                     line.colourName,
                   ]
                     .filter(Boolean)

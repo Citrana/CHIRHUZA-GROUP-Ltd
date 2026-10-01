@@ -133,7 +133,7 @@ test("groupStock ignores empty levels", () => {
     qty,
     holder: { id: "h" as Id<"holders">, type: "business" as const, name: "business" },
     lot: { id: "l" as Id<"inventoryBatches">, batchNumber: "BATCH-1", unitCost: 100, receivedQty: 5, createdAt: 1 },
-    product: { id: "p" as Id<"products">, name: "P", sku: "S", lengthInches: null, colourName: null },
+    product: { id: "p" as Id<"products">, name: "P", sku: "S", lengthInches: null, sizeName: null, colourName: null },
   });
   expect(groupStock([row(0)])).toEqual({ byProduct: [], byLot: [], byHolder: [] });
   expect(groupStock([row(5)]).byProduct[0]).toMatchObject({ qty: 5, value: 500 });

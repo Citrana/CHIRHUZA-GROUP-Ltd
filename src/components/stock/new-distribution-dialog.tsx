@@ -72,7 +72,7 @@ export function NewDistributionDialog({
   const lots = (options?.lots ?? []).filter(
     (lot) =>
       !term ||
-      [lot.productName, lot.sku, lot.colourName, lot.batchNumber, lot.lengthInches?.toString()]
+      [lot.productName, lot.sku, lot.colourName, lot.sizeName, lot.batchNumber, lot.lengthInches?.toString()]
         .filter(Boolean)
         .some((s) => s!.toLowerCase().includes(term)),
   );
@@ -201,7 +201,7 @@ export function NewDistributionDialog({
                           <p className="text-xs text-muted-foreground">
                             {[
                               lot.sku,
-                              lot.lengthInches !== null ? tProducts("inches", { inches: lot.lengthInches }) : null,
+                              lot.lengthInches !== null ? tProducts("inches", { inches: lot.lengthInches }) : null, lot.sizeName,
                               lot.colourName,
                               lot.batchNumber,
                               formatMoney(lot.unitCost, "USD", locale),

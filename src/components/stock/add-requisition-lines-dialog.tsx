@@ -123,7 +123,7 @@ export function AddRequisitionLinesDialog({
                             <span className="block text-xs text-muted-foreground">
                               {[
                                 line.sku,
-                                line.lengthInches !== null ? tProducts("inches", { inches: line.lengthInches }) : null,
+                                line.lengthInches !== null ? tProducts("inches", { inches: line.lengthInches }) : null, line.sizeName,
                                 line.colourName,
                                 line.note,
                               ]

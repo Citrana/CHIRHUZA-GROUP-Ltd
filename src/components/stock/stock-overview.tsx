@@ -54,7 +54,7 @@ function ProductName({ product }: { product: Product }) {
       <p className="text-xs text-muted-foreground">
         {[
           product.sku,
-          product.lengthInches !== null ? tProducts("inches", { inches: product.lengthInches }) : null,
+          product.lengthInches !== null ? tProducts("inches", { inches: product.lengthInches }) : null, product.sizeName,
           product.colourName,
         ]
           .filter(Boolean)

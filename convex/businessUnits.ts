@@ -53,3 +53,22 @@ export const list = authedQuery({
       .map(({ _id, key, name, enabled }) => ({ _id, key, name, enabled }));
   },
 });
+
+/**
+ * Switches a service on or off (the seed never changes an existing unit's
+ * flag). System configuration with no acting user, like the seed:
+ *   npx convex run businessUnits:setEnabled '{"key":"fashion","enabled":true}'
+ */
+export const setEnabled = internalMutation({
+  args: { key: businessUnitKeyValidator, enabled: v.boolean() },
+  returns: v.null(),
+  handler: async (ctx, { key, enabled }) => {
+    const unit = await ctx.db
+      .query("businessUnits")
+      .withIndex("by_key", (q) => q.eq("key", key))
+      .unique();
+    if (!unit) throw new Error(`Business unit "${key}" isn't seeded.`);
+    if (unit.enabled !== enabled) await ctx.db.patch("businessUnits", unit._id, { enabled });
+    return null;
+  },
+});

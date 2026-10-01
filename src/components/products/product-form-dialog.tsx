@@ -7,8 +7,7 @@ import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import {
-  PRODUCT_CATEGORIES,
-  PRODUCT_UNITS,
+  PRODUCT_PROFILES,
   type ProductCategory,
   type ProductUnit,
 } from "../../../convex/lib/products";
@@ -34,6 +33,7 @@ type Form = {
   brand: string;
   texture: string;
   lengthInches: string;
+  sizeId: Id<"productSizes"> | "";
   colourId: Id<"productColours"> | "";
 };
 
@@ -45,6 +45,7 @@ function formFrom(product?: Doc<"products">): Form {
     brand: product?.brand ?? "",
     texture: product?.texture ?? "",
     lengthInches: product?.lengthInches?.toString() ?? "",
+    sizeId: product?.sizeId ?? "",
     colourId: product?.colourId ?? "",
   };
 }
@@ -75,9 +76,15 @@ export function ProductFormDialog({
   const tUnits = useTranslations("ProductUnits");
   const canConfirm = useCan("products.confirm");
   const canSetPrice = useCan("products.set_price");
+  // What this service's products look like (categories, units, attributes).
+  const profile = PRODUCT_PROFILES[service];
   const lengths = useQuery(
     api.productOptions.listLengths,
-    open ? { businessUnitKey: service, includeInactive: true } : "skip",
+    open && profile.attributes.length ? { businessUnitKey: service, includeInactive: true } : "skip",
+  );
+  const sizes = useQuery(
+    api.productOptions.listSizes,
+    open && profile.attributes.size ? { businessUnitKey: service, includeInactive: true } : "skip",
   );
   const colours = useQuery(
     api.productOptions.listColours,
@@ -114,6 +121,7 @@ export function ProductFormDialog({
   const colourOptions = (colours ?? []).filter(
     (c) => c.active || c._id === product?.colourId,
   );
+  const sizeOptions = (sizes ?? []).filter((z) => z.active || z._id === product?.sizeId);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -125,8 +133,9 @@ export function ProductFormDialog({
       category: form.category,
       unit: form.unit,
       ...(form.brand.trim() ? { brand: form.brand } : {}),
-      ...(form.texture.trim() ? { texture: form.texture } : {}),
-      ...(form.lengthInches ? { lengthInches: Number(form.lengthInches) } : {}),
+      ...(profile.attributes.texture && form.texture.trim() ? { texture: form.texture } : {}),
+      ...(profile.attributes.length && form.lengthInches ? { lengthInches: Number(form.lengthInches) } : {}),
+      ...(profile.attributes.size && form.sizeId ? { sizeId: form.sizeId } : {}),
       ...(form.colourId ? { colourId: form.colourId } : {}),
     };
     try {
@@ -189,7 +198,7 @@ export function ProductFormDialog({
                   <option value="" disabled>
                     {t("selectCategory")}
                   </option>
-                  {PRODUCT_CATEGORIES.map((c) => (
+                  {profile.categories.map((c) => (
                     <option key={c} value={c}>
                       {tCategories(c)}
                     </option>
@@ -207,28 +216,47 @@ export function ProductFormDialog({
                   <option value="" disabled>
                     {t("selectUnit")}
                   </option>
-                  {PRODUCT_UNITS.map((u) => (
+                  {profile.units.map((u) => (
                     <option key={u} value={u}>
                       {tUnits(u)}
                     </option>
                   ))}
                 </NativeSelect>
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="product-length">{t("lengthLabel")}</Label>
-                <NativeSelect
-                  id="product-length"
-                  value={form.lengthInches}
-                  onChange={(e) => set("lengthInches", e.target.value)}
-                >
-                  <option value="">{t("none")}</option>
-                  {lengthOptions.map((l) => (
-                    <option key={l._id} value={l.inches}>
-                      {t("inches", { inches: l.inches })}
-                    </option>
-                  ))}
-                </NativeSelect>
-              </div>
+              {profile.attributes.length ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="product-length">{t("lengthLabel")}</Label>
+                  <NativeSelect
+                    id="product-length"
+                    value={form.lengthInches}
+                    onChange={(e) => set("lengthInches", e.target.value)}
+                  >
+                    <option value="">{t("none")}</option>
+                    {lengthOptions.map((l) => (
+                      <option key={l._id} value={l.inches}>
+                        {t("inches", { inches: l.inches })}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              ) : null}
+              {profile.attributes.size ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="product-size">{t("sizeLabel")}</Label>
+                  <NativeSelect
+                    id="product-size"
+                    value={form.sizeId}
+                    onChange={(e) => set("sizeId", e.target.value as Id<"productSizes"> | "")}
+                  >
+                    <option value="">{t("none")}</option>
+                    {sizeOptions.map((z) => (
+                      <option key={z._id} value={z._id}>
+                        {z.name}
+                      </option>
+                    ))}
+                  </NativeSelect>
+                </div>
+              ) : null}
               <div className="flex flex-col gap-2">
                 <Label htmlFor="product-colour">{t("colourLabel")}</Label>
                 <NativeSelect
@@ -253,16 +281,18 @@ export function ProductFormDialog({
                   maxLength={60}
                 />
               </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="product-texture">{t("textureLabel")}</Label>
-                <Input
-                  id="product-texture"
-                  value={form.texture}
-                  onChange={(e) => set("texture", e.target.value)}
-                  placeholder={t("texturePlaceholder")}
-                  maxLength={60}
-                />
-              </div>
+              {profile.attributes.texture ? (
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="product-texture">{t("textureLabel")}</Label>
+                  <Input
+                    id="product-texture"
+                    value={form.texture}
+                    onChange={(e) => set("texture", e.target.value)}
+                    placeholder={t("texturePlaceholder")}
+                    maxLength={60}
+                  />
+                </div>
+              ) : null}
             </div>
             {canSetPrice ? (
               <div className="flex flex-col gap-2">
@@ -271,8 +301,12 @@ export function ProductFormDialog({
                 <p className="text-xs text-muted-foreground">{t("suggestedPriceHint")}</p>
               </div>
             ) : null}
-            {lengths?.length === 0 || colours?.length === 0 ? (
-              <p className="text-xs text-muted-foreground">{t("noSettingsHint")}</p>
+            {(profile.attributes.length && lengths?.length === 0) ||
+            (profile.attributes.size && sizes?.length === 0) ||
+            colours?.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                {profile.attributes.size ? t("noSettingsHintSizes") : t("noSettingsHint")}
+              </p>
             ) : null}
             {error ? <p className="text-sm text-destructive">{t("saveError")}</p> : null}
           </div>

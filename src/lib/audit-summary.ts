@@ -80,6 +80,7 @@ export type LineItem = {
   product: string;
   qty: number;
   lengthInches?: number | null;
+  size?: string | null;
   colour?: string | null;
   sku?: string | null;
   batch?: string | null;

@@ -5,19 +5,33 @@ import type { BusinessUnitKey } from "./businessUnits";
 import { logAudit } from "./audit";
 
 /**
- * The product catalogue. Products carry NO prices - prices are set at
- * purchase time. Categories and units are fixed lists (translated in
- * messages/*.json under ProductCategories / ProductUnits); lengths and
- * colours are per-business-unit settings (productLengths / productColours).
+ * The product catalogue. Purchase prices live on stock lots; a product may
+ * carry a suggested selling price. Each service describes its products
+ * with a PRODUCT_PROFILE: its categories and units (fixed lists,
+ * translated under ProductCategories / ProductUnits) and which attributes
+ * apply - hair: length (inches) + colour + texture; fashion: size + colour.
+ * Lengths, sizes and colours are per-business-unit settings
+ * (productLengths / productSizes / productColours).
  */
 
 export const PRODUCT_CATEGORIES = [
+  // Hair
   "wigs",
   "bundles",
   "closures",
   "frontals",
   "extensions",
   "hair_care",
+  // Fashion
+  "dresses",
+  "tops",
+  "trousers",
+  "skirts",
+  "suits_sets",
+  "jackets_coats",
+  "shoes",
+  "bags",
+  // Both
   "accessories",
 ] as const;
 
@@ -28,20 +42,52 @@ export const productCategoryValidator = v.union(
   v.literal("frontals"),
   v.literal("extensions"),
   v.literal("hair_care"),
+  v.literal("dresses"),
+  v.literal("tops"),
+  v.literal("trousers"),
+  v.literal("skirts"),
+  v.literal("suits_sets"),
+  v.literal("jackets_coats"),
+  v.literal("shoes"),
+  v.literal("bags"),
   v.literal("accessories"),
 );
 export type ProductCategory = Infer<typeof productCategoryValidator>;
 
-export const PRODUCT_UNITS = ["piece", "bundle", "pack", "set", "bottle"] as const;
+export const PRODUCT_UNITS = ["piece", "pair", "bundle", "pack", "set", "bottle"] as const;
 
 export const productUnitValidator = v.union(
   v.literal("piece"),
+  v.literal("pair"),
   v.literal("bundle"),
   v.literal("pack"),
   v.literal("set"),
   v.literal("bottle"),
 );
 export type ProductUnit = Infer<typeof productUnitValidator>;
+
+export type ProductProfile = {
+  categories: readonly ProductCategory[];
+  units: readonly ProductUnit[];
+  /** Which attributes a product of this service can have. */
+  attributes: { length: boolean; size: boolean; texture: boolean };
+};
+
+/** How each service describes its products (server-checked, UI-driven). */
+export const PRODUCT_PROFILES: Record<BusinessUnitKey, ProductProfile> = {
+  hair: {
+    categories: ["wigs", "bundles", "closures", "frontals", "extensions", "hair_care", "accessories"],
+    units: ["piece", "bundle", "pack", "set", "bottle"],
+    attributes: { length: true, size: false, texture: true },
+  },
+  fashion: {
+    categories: ["dresses", "tops", "trousers", "skirts", "suits_sets", "jackets_coats", "shoes", "bags", "accessories"],
+    units: ["piece", "pair", "set"],
+    attributes: { length: false, size: true, texture: false },
+  },
+  housing: { categories: [], units: [], attributes: { length: false, size: false, texture: false } },
+  transport: { categories: [], units: [], attributes: { length: false, size: false, texture: false } },
+};
 
 export const PRODUCT_STATUSES = [
   "active",
@@ -102,9 +148,10 @@ export function searchTextFor(product: {
   brand?: string;
   texture?: string;
   lengthInches?: number;
+  sizeName?: string;
   colourName?: string;
 }): string {
-  // A length is searchable as "18" and "18in"; the colour by its name.
+  // A length is searchable as "18" and "18in"; size and colour by name.
   const length =
     product.lengthInches !== undefined
       ? `${product.lengthInches} ${product.lengthInches}in`
@@ -116,6 +163,7 @@ export function searchTextFor(product: {
     product.texture,
     product.category,
     length,
+    product.sizeName,
     product.colourName,
   ]
     .filter(Boolean)
@@ -130,10 +178,11 @@ type SearchableProduct = {
   brand?: string;
   texture?: string;
   lengthInches?: number;
+  sizeId?: Id<"productSizes">;
   colourId?: Id<"productColours">;
 };
 
-/** searchTextFor, looking up the product's colour name. */
+/** searchTextFor, looking up the product's size and colour names. */
 export async function computeSearchText(
   ctx: QueryCtx | MutationCtx,
   product: SearchableProduct,
@@ -141,7 +190,24 @@ export async function computeSearchText(
   const colour = product.colourId
     ? await ctx.db.get("productColours", product.colourId)
     : null;
-  return searchTextFor({ ...product, colourName: colour?.name });
+  const size = product.sizeId ? await ctx.db.get("productSizes", product.sizeId) : null;
+  return searchTextFor({ ...product, colourName: colour?.name, sizeName: size?.name });
+}
+
+/**
+ * The attributes that tell a product apart, for display anywhere (lists,
+ * pickers, stock, sales, analytics): length (hair), size (fashion), colour.
+ */
+export async function productDetails(ctx: QueryCtx, product: Doc<"products"> | null) {
+  const [colour, size] = await Promise.all([
+    product?.colourId ? ctx.db.get("productColours", product.colourId) : null,
+    product?.sizeId ? ctx.db.get("productSizes", product.sizeId) : null,
+  ]);
+  return {
+    lengthInches: product?.lengthInches ?? null,
+    sizeName: size?.name ?? null,
+    colourName: colour?.name ?? null,
+  };
 }
 
 /**

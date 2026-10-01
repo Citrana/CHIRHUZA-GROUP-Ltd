@@ -55,7 +55,7 @@ export function BatchItemProduct({ item }: { item: BatchItem }) {
       <p className="text-xs text-muted-foreground">
         {[
           item.sku,
-          item.lengthInches !== null ? tProducts("inches", { inches: item.lengthInches }) : null,
+          item.lengthInches !== null ? tProducts("inches", { inches: item.lengthInches }) : null, item.sizeName,
           item.colourName,
         ]
           .filter(Boolean)

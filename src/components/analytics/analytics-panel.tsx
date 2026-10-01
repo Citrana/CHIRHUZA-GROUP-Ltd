@@ -126,7 +126,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
               <span className="w-4 shrink-0 text-xs text-muted-foreground tabular-nums">{i + 1}</span>
               <span className="min-w-0">
                 <span className="block truncate font-medium">
-                  {[p.name ?? "—", p.lengthInches !== null ? tProducts("inches", { inches: p.lengthInches }) : null, p.colourName]
+                  {[p.name ?? "—", p.lengthInches !== null ? tProducts("inches", { inches: p.lengthInches }) : null, p.sizeName, p.colourName]
                     .filter(Boolean)
                     .join(" · ")}
                 </span>

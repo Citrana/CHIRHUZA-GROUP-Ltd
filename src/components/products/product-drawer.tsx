@@ -7,6 +7,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { BUSINESS_TIME_ZONE } from "../../../convex/lib/time";
 import { Link } from "@/i18n/navigation";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ export function ProductDrawer({
   const tCategories = useTranslations("ProductCategories");
   const tUnits = useTranslations("ProductUnits");
   const locale = useLocale();
+  const profile = PRODUCT_PROFILES[service];
   const product = useQuery(api.products.get, productId ? { productId } : "skip");
   const confirm = useMutation(api.products.confirm);
   const setArchived = useMutation(api.products.setArchived);
@@ -125,18 +127,32 @@ export function ProductDrawer({
                 <dd>{tCategories(product.category)}</dd>
                 <dt className="text-muted-foreground">{t("unitLabel")}</dt>
                 <dd>{tUnits(product.unit)}</dd>
-                <dt className="text-muted-foreground">{t("lengthLabel")}</dt>
-                <dd>
-                  {product.lengthInches !== undefined
-                    ? t("inches", { inches: product.lengthInches })
-                    : empty}
-                </dd>
+                {profile.attributes.length ? (
+                  <>
+                    <dt className="text-muted-foreground">{t("lengthLabel")}</dt>
+                    <dd>
+                      {product.lengthInches !== undefined
+                        ? t("inches", { inches: product.lengthInches })
+                        : empty}
+                    </dd>
+                  </>
+                ) : null}
+                {profile.attributes.size ? (
+                  <>
+                    <dt className="text-muted-foreground">{t("sizeLabel")}</dt>
+                    <dd>{product.sizeName ?? empty}</dd>
+                  </>
+                ) : null}
                 <dt className="text-muted-foreground">{t("colourLabel")}</dt>
                 <dd>{product.colourName ?? empty}</dd>
                 <dt className="text-muted-foreground">{t("brandLabel")}</dt>
                 <dd>{product.brand ?? empty}</dd>
-                <dt className="text-muted-foreground">{t("textureLabel")}</dt>
-                <dd>{product.texture ?? empty}</dd>
+                {profile.attributes.texture ? (
+                  <>
+                    <dt className="text-muted-foreground">{t("textureLabel")}</dt>
+                    <dd>{product.texture ?? empty}</dd>
+                  </>
+                ) : null}
                 <dt className="text-muted-foreground">{t("createdBy")}</dt>
                 <dd>
                   {product.createdByName ?? empty} · {time.format(product._creationTime)}

@@ -54,8 +54,8 @@ function rememberedLocation(): string {
   }
 }
 
-function productLabel(lot: Pick<Lot, "productName" | "lengthInches" | "colourName">, inches: (n: number) => string) {
-  return [lot.productName ?? "—", lot.lengthInches !== null ? inches(lot.lengthInches) : null, lot.colourName]
+function productLabel(lot: Pick<Lot, "productName" | "lengthInches" | "sizeName" | "colourName">, inches: (n: number) => string) {
+  return [lot.productName ?? "—", lot.lengthInches !== null ? inches(lot.lengthInches) : null, lot.sizeName, lot.colourName]
     .filter(Boolean)
     .join(" · ");
 }
@@ -119,7 +119,14 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
   const term = search.trim().toLowerCase();
   const matches = term
     ? [...products.values()].filter(({ first }) =>
-        [first.productName, first.sku, first.colourName, first.lengthInches?.toString(), first.lengthInches ? `${first.lengthInches}"` : null]
+        [
+          first.productName,
+          first.sku,
+          first.colourName,
+          first.sizeName,
+          first.lengthInches?.toString(),
+          first.lengthInches ? `${first.lengthInches}"` : null,
+        ]
           .filter(Boolean)
           .some((s) => s!.toLowerCase().includes(term)),
       )

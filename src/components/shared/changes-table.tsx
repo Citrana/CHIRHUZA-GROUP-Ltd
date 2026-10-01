@@ -106,6 +106,7 @@ function LineItems({ items }: { items: LineItem[] }) {
               {[
                 item.product,
                 typeof item.lengthInches === "number" ? `${item.lengthInches}″` : null,
+                item.size,
                 item.colour,
               ]
                 .filter(Boolean)
