@@ -29,10 +29,6 @@ const PAGE = { numItems: 50, cursor: null };
 test("creating a user, changing their role and editing permissions all show up in the log", async () => {
   const { t, adminId, asAdmin } = await setup();
   const locationId = await insertLocation(t, { name: "Kenya Shop" });
-  const hairId = await t.run(async (ctx) => {
-    const location = await ctx.db.get("locations", locationId);
-    return location!.businessUnitId;
-  });
 
   const { password } = await asAdmin.action(api.users.createUser, {
     name: "New Agent",
@@ -71,7 +67,6 @@ test("creating a user, changing their role and editing permissions all show up i
     actorName: "Admin",
     actorEmail: "admin@x.com",
     entityId: newUser!._id,
-    businessUnitId: hairId,
     after: {
       name: "New Agent",
       email: "agent@x.com",

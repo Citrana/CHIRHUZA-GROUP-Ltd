@@ -75,13 +75,18 @@ export default defineSchema({
   }).index("by_key", ["key"]),
 
   // Shops and warehouses. Never deleted - retire with `active: false`.
+  // Global: every location (shop / warehouse) serves every service. Data
+  // at a location stays per service through the records' own
+  // businessUnitId (stock holders, sales, payroll, analytics...).
   locations: defineTable({
-    businessUnitId: v.id("businessUnits"),
+    // DEPRECATED - locations were once tied to one service. Never read and
+    // not written for new locations; optional so old rows stay valid.
+    businessUnitId: v.optional(v.id("businessUnits")),
     name: v.string(),
     type: locationTypeValidator,
     address: v.string(),
     active: v.boolean(),
-  }).index("by_businessUnitId", ["businessUnitId"]),
+  }),
 
   // RBAC tables are global (no businessUnitId): roles and permissions are
   // shared system configuration, not data owned by one business unit.
@@ -129,6 +134,8 @@ export default defineSchema({
     // One of the business unit's productLengths.
     lengthInches: v.optional(v.number()),
     colourId: v.optional(v.id("productColours")),
+    // One of the business unit's productSizes (fashion).
+    sizeId: v.optional(v.id("productSizes")),
     // Optional suggested selling price (cents) and its currency, set or
     // cleared together (products.set_price). A sale at another price
     // needs a discount reason.
@@ -149,6 +156,7 @@ export default defineSchema({
     // For "is this length / colour used by any product?" in product settings.
     .index("by_businessUnitId_and_lengthInches", ["businessUnitId", "lengthInches"])
     .index("by_colourId", ["colourId"])
+    .index("by_sizeId", ["sizeId"])
     .searchIndex("search_text", {
       searchField: "searchText",
       filterFields: ["businessUnitId", "status", "category"],
@@ -161,6 +169,16 @@ export default defineSchema({
     inches: v.number(),
     active: v.boolean(),
   }).index("by_businessUnitId_and_inches", ["businessUnitId", "inches"]),
+
+  // Sizes (fashion), in the order the settings page sets.
+  productSizes: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    sortOrder: v.number(),
+    active: v.boolean(),
+  })
+    .index("by_businessUnitId_and_name", ["businessUnitId", "name"])
+    .index("by_businessUnitId_and_sortOrder", ["businessUnitId", "sortOrder"]),
 
   productColours: defineTable({
     businessUnitId: v.id("businessUnits"),

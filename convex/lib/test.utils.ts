@@ -33,22 +33,17 @@ export async function getBusinessUnitId(
   return unit._id;
 }
 
+/** A location - global, shared by every service. */
 export async function insertLocation(
   t: T,
   overrides: Partial<{
-    businessUnit: BusinessUnitKey;
     name: string;
     type: "shop" | "warehouse";
     active: boolean;
   }> = {},
 ): Promise<Id<"locations">> {
-  const businessUnitId = await getBusinessUnitId(
-    t,
-    overrides.businessUnit ?? "hair",
-  );
   return await t.run((ctx) =>
     ctx.db.insert("locations", {
-      businessUnitId,
       name: overrides.name ?? "Main shop",
       type: overrides.type ?? "shop",
       address: "1 Test Avenue",

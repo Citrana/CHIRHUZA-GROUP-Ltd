@@ -20,6 +20,8 @@ import {
   requisitionStatusValidator,
 } from "./lib/requisitions";
 import type { Scope } from "./lib/permissions";
+import { productDetails } from "./lib/products";
+import { activeLocations } from "./lib/locationScope";
 
 /**
  * Requisitions (see convex/lib/requisitions.ts). Created and edited by
@@ -42,16 +44,15 @@ function assertQty(qty: number) {
   }
 }
 
-/** An active location of this business unit, within the caller's scope. */
+/** An active location (locations serve every service), within the caller's scope. */
 async function assertLocationAllowed(
   ctx: AuthedQueryCtx,
-  businessUnitId: Id<"businessUnits">,
   locationId: Id<"locations">,
   scope: Scope,
 ) {
   const location = await ctx.db.get("locations", locationId);
-  if (!location || !location.active || location.businessUnitId !== businessUnitId) {
-    throw new ConvexError("Choose an active location of this service.");
+  if (!location || !location.active) {
+    throw new ConvexError("Choose an active location.");
   }
   if (scope === "own_location" && ctx.user.locationId !== locationId) {
     throw new ConvexError("You can only create requisitions for your own location.");
@@ -173,13 +174,14 @@ export const get = authedQuery({
     const items = await Promise.all(
       rawItems.map(async (item) => {
         const product = await ctx.db.get("products", item.productId);
-        const colour = product?.colourId ? await ctx.db.get("productColours", product.colourId) : null;
+        const details = await productDetails(ctx, product);
         return {
           ...item,
           productName: product?.name ?? null,
           sku: product?.sku ?? null,
           lengthInches: product?.lengthInches ?? null,
-          colourName: colour?.name ?? null,
+          colourName: details.colourName,
+          sizeName: details.sizeName,
         };
       }),
     );
@@ -221,14 +223,9 @@ export const locationOptions = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator },
   handler: async (ctx, { businessUnitKey }) => {
     const { scope } = await ctx.requirePermission("requisition.create");
-    const unit = await requireBusinessUnit(ctx, businessUnitKey);
-    const locations = await ctx.db
-      .query("locations")
-      .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unit._id))
-      .take(500);
-    return locations
-      .filter((l) => l.active && (scope === "all_locations" || l._id === ctx.user.locationId))
-      .sort((a, b) => a.name.localeCompare(b.name))
+    await requireBusinessUnit(ctx, businessUnitKey);
+    return (await activeLocations(ctx))
+      .filter((l) => scope === "all_locations" || l._id === ctx.user.locationId)
       .map((l) => ({ _id: l._id, name: l.name, type: l.type }));
   },
 });
@@ -243,7 +240,7 @@ export const create = authedMutation({
   handler: async (ctx, args) => {
     const { scope } = await ctx.requirePermission("requisition.create");
     const unit = await requireBusinessUnit(ctx, args.businessUnitKey);
-    const location = await assertLocationAllowed(ctx, unit._id, args.locationId, scope);
+    const location = await assertLocationAllowed(ctx, args.locationId, scope);
     const note = cleanNote(args.note);
     const number = await nextSequenceNumber(ctx, unit._id, "requisition", "REQ");
     const requisitionId = await ctx.db.insert("requisitions", {
@@ -274,12 +271,7 @@ export const update = authedMutation({
   },
   handler: async (ctx, args) => {
     const { requisition, scope } = await requireEditable(ctx, args.requisitionId);
-    const location = await assertLocationAllowed(
-      ctx,
-      requisition.businessUnitId,
-      args.locationId,
-      scope,
-    );
+    const location = await assertLocationAllowed(ctx, args.locationId, scope);
     const previousLocation = await ctx.db.get("locations", requisition.locationId);
     const note = cleanNote(args.note);
     const changes = diff(

@@ -158,10 +158,9 @@
     "locations": {
       "title": "Locations",
       "accessDenied": "You don't have access to this page.",
-      "businessUnitLabel": "Service",
       "add": "Add location",
       "edit": "Edit",
-      "empty": "No locations yet for this service.",
+      "empty": "No locations yet.",
       "createTitle": "Add location",
       "editTitle": "Edit location",
       "nameLabel": "Name",
@@ -181,7 +180,8 @@
       "save": "Save",
       "saving": "Saving…",
       "saveError": "Could not save the location. Check the name and try again.",
-      "searchPlaceholder": "Search locations…"
+      "searchPlaceholder": "Search locations…",
+      "sharedHint": "Locations are shared by every service: a shop serves Hair and Mode alike, with separate stock and sales for each."
     }
   },
   "Roles": {
@@ -356,7 +356,8 @@
       "takenBy": "Taken by",
       "date": "Date",
       "location": "Location",
-      "note": "Note"
+      "note": "Note",
+      "size": "Size"
     }
   },
   "Approvals": {
@@ -423,6 +424,14 @@
     "frontals": "Frontals",
     "extensions": "Extensions",
     "hair_care": "Hair care",
+    "dresses": "Dresses",
+    "tops": "Tops & shirts",
+    "trousers": "Trousers & jeans",
+    "skirts": "Skirts",
+    "suits_sets": "Suits & sets",
+    "jackets_coats": "Jackets & coats",
+    "shoes": "Shoes",
+    "bags": "Bags",
     "accessories": "Accessories"
   },
   "ProductUnits": {
@@ -430,7 +439,8 @@
     "bundle": "Bundle",
     "pack": "Pack",
     "set": "Set",
-    "bottle": "Bottle"
+    "bottle": "Bottle",
+    "pair": "Pair"
   },
   "Products": {
     "title": "Products",
@@ -497,7 +507,9 @@
       "label": "Product sections",
       "catalogue": "Catalogue",
       "prices": "Prices"
-    }
+    },
+    "sizeLabel": "Size",
+    "noSettingsHintSizes": "Sizes and colours are chosen from Product settings. Ask an administrator to add more."
   },
   "ProductSettings": {
     "title": "Product settings",
@@ -534,7 +546,20 @@
     "inUse": "{count, plural, one {Used by # product} other {Used by # products}} — deactivate it instead.",
     "deleteError": "Could not delete. Please refresh and try again.",
     "lengthExists": "{value} already exists (it may be deactivated — reactivate it instead).",
-    "colourExists": "“{value}” already exists (it may be deactivated — reactivate it instead)."
+    "colourExists": "“{value}” already exists (it may be deactivated — reactivate it instead).",
+    "subtitleSizes": "The sizes and colours products can use. Deactivate values you no longer sell; products keep them.",
+    "sizesTitle": "Sizes",
+    "sizesHint": "Pickers list sizes in this order — use the arrows to reorder (e.g. XS, S, M, L, XL).",
+    "sizeHeader": "Size",
+    "sizeNameLabel": "Size",
+    "sizePlaceholder": "e.g. M or 42",
+    "addSize": "Add size",
+    "noSizes": "No sizes yet.",
+    "sizeExists": "The size \"{value}\" already exists (it may be deactivated).",
+    "sizeError": "Could not save the size. Please try again.",
+    "renameSizeTitle": "Rename size",
+    "moveUp": "Move up",
+    "moveDown": "Move down"
   },
   "Requisitions": {
     "title": "Requisitions",

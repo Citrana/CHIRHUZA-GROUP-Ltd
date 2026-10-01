@@ -3,7 +3,6 @@ import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import schema from "./schema";
 import {
-  getBusinessUnitId,
   insertLocation,
   insertUserWithRole,
   seedReferenceDataForTest,
@@ -20,10 +19,8 @@ async function setup() {
 
 test("a Super Admin creates and edits a location, each change audited", async () => {
   const { t, asAdmin, adminId } = await setup();
-  const hairId = await getBusinessUnitId(t, "hair");
 
   const locationId = await asAdmin.mutation(api.locations.create, {
-    businessUnitId: hairId,
     name: "  Kenya Shop  ",
     type: "shop",
     address: "Av. Kasai 12",
@@ -39,7 +36,6 @@ test("a Super Admin creates and edits a location, each change audited", async ()
 
   const location = await t.run((ctx) => ctx.db.get("locations", locationId));
   expect(location).toMatchObject({
-    businessUnitId: hairId,
     name: "Kenya Shop",
     address: "Av. Kasai 14",
     active: false,
@@ -51,14 +47,15 @@ test("a Super Admin creates and edits a location, each change audited", async ()
     actorId: adminId,
     entityTable: "locations",
     entityId: locationId,
-    businessUnitId: hairId,
-    after: { businessUnit: "hair", name: "Kenya Shop", type: "shop", active: true },
+    after: { name: "Kenya Shop", type: "shop", active: true },
   });
+  // Locations are global: shared by every service, not tied to one.
+  expect(location!.businessUnitId).toBeUndefined();
+  expect(logs[0].businessUnitId).toBeUndefined();
   expect(logs[0].before).toBeUndefined();
   // Updates record only the changed fields.
   expect(logs[1]).toMatchObject({
     action: "update",
-    businessUnitId: hairId,
     before: { address: "Av. Kasai 12", active: true },
     after: { address: "Av. Kasai 14", active: false },
   });
@@ -81,7 +78,6 @@ test("an update with no changes writes no audit entry", async () => {
 
 test("location management is rejected without locations.manage", async () => {
   const { t } = await setup();
-  const hairId = await getBusinessUnitId(t, "hair");
   const agentId = await insertUserWithRole(t, "sales_agent", {
     email: "g@x.com",
     locationId: await insertLocation(t),
@@ -90,7 +86,6 @@ test("location management is rejected without locations.manage", async () => {
 
   await expect(
     asAgent.mutation(api.locations.create, {
-      businessUnitId: hairId,
       name: "Nope",
       type: "shop",
       address: "",
@@ -98,15 +93,14 @@ test("location management is rejected without locations.manage", async () => {
     }),
   ).rejects.toThrow(/locations\.manage/);
   await expect(
-    asAgent.query(api.locations.list, { businessUnitId: hairId }),
+    asAgent.query(api.locations.list, {}),
   ).rejects.toThrow(/locations\.manage/);
 });
 
 test("create rejects a blank name", async () => {
-  const { t, asAdmin } = await setup();
+  const { asAdmin } = await setup();
   await expect(
     asAdmin.mutation(api.locations.create, {
-      businessUnitId: await getBusinessUnitId(t, "hair"),
       name: "   ",
       type: "warehouse",
       address: "",
@@ -115,20 +109,15 @@ test("create rejects a blank name", async () => {
   ).rejects.toThrow(/name is required/);
 });
 
-test("list is scoped to one business unit; listOptions returns only active locations", async () => {
+test("list returns every location (shared by all services); listOptions only active ones", async () => {
   const { t, asAdmin } = await setup();
-  await insertLocation(t, { name: "B hair", businessUnit: "hair" });
-  await insertLocation(t, { name: "A hair", businessUnit: "hair", active: false });
-  await insertLocation(t, { name: "Fashion shop", businessUnit: "fashion" });
+  await insertLocation(t, { name: "B shop" });
+  await insertLocation(t, { name: "A closed", active: false });
+  await insertLocation(t, { name: "C warehouse", type: "warehouse" });
 
-  const hair = await asAdmin.query(api.locations.list, {
-    businessUnitId: await getBusinessUnitId(t, "hair"),
-  });
-  expect(hair.map((l) => l.name)).toEqual(["A hair", "B hair"]);
+  const all = await asAdmin.query(api.locations.list, {});
+  expect(all.map((l) => l.name)).toEqual(["A closed", "B shop", "C warehouse"]);
 
   const options = await asAdmin.query(api.locations.listOptions, {});
-  expect(options.map((o) => [o.name, o.businessUnitKey])).toEqual([
-    ["B hair", "hair"],
-    ["Fashion shop", "fashion"],
-  ]);
+  expect(options.map((o) => o.name)).toEqual(["B shop", "C warehouse"]);
 });

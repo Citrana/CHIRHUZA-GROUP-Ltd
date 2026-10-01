@@ -156,7 +156,6 @@ export const createUser = authedAction({
       action: "create",
       entityTable: "users",
       entityId: user._id,
-      ...(location ? { businessUnitId: location.businessUnitId } : {}),
       after: {
         name,
         email,
