@@ -1,0 +1,527 @@
+<!doctype html><html lang='en'><head><meta charset='utf-8'><title>CHIRHUZA GROUP Ltd — Training guide v01</title><style>/* CHIRHUZA training guide — print layout (A4). Brand: #1a2e22 / #c8e6a0. */
+
+@page {
+  size: A4;
+  margin: 18mm 16mm 20mm 16mm;
+  @bottom-right {
+    content: counter(page);
+    font: 9pt Inter, Helvetica, Arial, sans-serif;
+    color: #5b6b60;
+  }
+  @bottom-left {
+    content: "CHIRHUZA GROUP Ltd · v01";
+    font: 9pt Inter, Helvetica, Arial, sans-serif;
+    color: #5b6b60;
+  }
+}
+@page cover {
+  margin: 0;
+  @bottom-right { content: none; }
+  @bottom-left { content: none; }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body {
+  margin: 0;
+  font: 10.5pt/1.5 Inter, Helvetica, Arial, sans-serif;
+  color: #1c2620;
+  background: #fff;
+}
+
+/* Cover */
+.cover {
+  page: cover;
+  height: 297mm;
+  padding: 34mm 22mm;
+  background: #1a2e22;
+  color: #f5f8f2;
+  display: flex;
+  flex-direction: column;
+  break-after: page;
+}
+.cover .brand { font-size: 13pt; font-weight: 800; letter-spacing: 0.06em; color: #c8e6a0; }
+.cover h1 { font-size: 34pt; line-height: 1.1; margin: 28mm 0 6mm; color: #fff; }
+.cover .lead { font-size: 13pt; max-width: 140mm; color: #dbe7d6; }
+.cover .meta { margin-top: auto; font-size: 11pt; color: #c8e6a0; }
+.cover .version {
+  display: inline-block;
+  margin-top: 8mm;
+  padding: 2mm 5mm;
+  border-radius: 99px;
+  background: #c8e6a0;
+  color: #1a2e22;
+  font-weight: 800;
+}
+
+/* Chapters */
+h2 {
+  break-before: page;
+  font-size: 20pt;
+  color: #1a2e22;
+  margin: 0 0 4mm;
+  padding-bottom: 2mm;
+  border-bottom: 3px solid #c8e6a0;
+}
+h2 .num { color: #6b8f6e; margin-right: 3mm; }
+h3 { font-size: 12.5pt; color: #1a2e22; margin: 6mm 0 2mm; break-after: avoid; }
+p { margin: 0 0 2.5mm; }
+ul, ol { margin: 0 0 3mm; padding-left: 6mm; }
+li { margin: 0.6mm 0; }
+.lead { font-size: 11.5pt; color: #3d4b42; }
+
+/* Contents */
+.toc { columns: 2; column-gap: 10mm; padding: 0; list-style: none; }
+.toc li { break-inside: avoid; padding: 1.2mm 0; border-bottom: 1px dotted #c9d6c6; }
+.toc a { color: #1a2e22; text-decoration: none; }
+.toc .n { display: inline-block; width: 8mm; color: #6b8f6e; font-weight: 700; }
+
+/* UI words, call-outs, steps */
+.ui {
+  font-weight: 700;
+  color: #1a2e22;
+  background: #eef5e6;
+  border: 1px solid #c9dcbf;
+  border-radius: 4px;
+  padding: 0 1.5mm;
+  white-space: nowrap;
+}
+.note, .tip, .rule {
+  break-inside: avoid;
+  border-radius: 6px;
+  padding: 3mm 4mm;
+  margin: 3mm 0 4mm;
+  border-left: 4px solid;
+}
+.note { background: #eef5e6; border-color: #6b8f6e; }
+.tip { background: #f3f7fb; border-color: #4b7bb5; }
+.rule { background: #fdf0e3; border-color: #b54708; }
+.note strong:first-child, .tip strong:first-child, .rule strong:first-child { color: #1a2e22; }
+
+ol.steps { counter-reset: s; list-style: none; padding: 0; }
+ol.steps > li {
+  counter-increment: s;
+  position: relative;
+  padding: 1.6mm 0 1.6mm 10mm;
+  break-inside: avoid;
+}
+ol.steps > li::before {
+  content: counter(s);
+  position: absolute;
+  left: 0;
+  top: 1.4mm;
+  width: 6.5mm;
+  height: 6.5mm;
+  border-radius: 50%;
+  background: #1a2e22;
+  color: #c8e6a0;
+  font-weight: 800;
+  font-size: 9pt;
+  text-align: center;
+  line-height: 6.5mm;
+}
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; margin: 2mm 0 4mm; font-size: 9.5pt; break-inside: auto; }
+th, td { border: 1px solid #d3dfcf; padding: 1.8mm 2.2mm; text-align: left; vertical-align: top; }
+th { background: #1a2e22; color: #f5f8f2; font-weight: 700; }
+tr:nth-child(even) td { background: #f7faf4; }
+tr { break-inside: avoid; }
+td.c, th.c { text-align: center; }
+.yes { color: #1a2e22; font-weight: 800; }
+.own { color: #b54708; font-weight: 700; }
+.no { color: #a3ada5; }
+
+/* Figures */
+.figure { margin: 4mm 0 5mm; text-align: center; break-inside: avoid; }
+.figure .diagram { width: 100%; max-height: 205mm; }
+.figure.small .diagram { width: 62%; }
+.caption { font-size: 9pt; color: #5b6b60; margin-top: 1.5mm; }
+
+/* Role quick reference */
+.card {
+  break-inside: avoid;
+  border: 1px solid #d3dfcf;
+  border-radius: 8px;
+  padding: 3mm 4mm;
+  margin: 0 0 4mm;
+}
+.card h3 { margin-top: 0; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+.faq dt { font-weight: 700; color: #1a2e22; margin-top: 3mm; break-after: avoid; }
+.faq dd { margin: 1mm 0 0; }
+.glossary dt { font-weight: 700; color: #1a2e22; margin-top: 2mm; }
+.glossary dd { margin: 0.5mm 0 0; }
+</style></head><body><section class="cover">
+  <div class="brand">CHIRHUZA GROUP Ltd</div>
+  <h1>Business management platform<br>Training guide</h1>
+  <p class="lead">Every feature and process of the platform, step by step — from a shop's stock request to the sale and the analytics.</p>
+  <div class="meta">
+    For every team member: sales agents, managers, chiefs and administrators.<br>
+    Services covered: Hair and Fashion (Mode).<br>
+    October 2026
+    <div><span class="version">Version 01</span></div>
+  </div>
+</section>
+
+<h2 id="contents">Contents</h2>
+<ol class="toc">
+  <li><a href="#start"><span class="n">1</span>Getting started</a></li>
+  <li><a href="#roles"><span class="n">2</span>Roles and permissions</a></li>
+  <li><a href="#picture"><span class="n">3</span>The big picture</a></li>
+  <li><a href="#products"><span class="n">4</span>Products and prices</a></li>
+  <li><a href="#requisitions"><span class="n">5</span>Requisitions</a></li>
+  <li><a href="#batches"><span class="n">6</span>Purchasing abroad (purchase batches)</a></li>
+  <li><a href="#receiving"><span class="n">7</span>Receiving in Goma</a></li>
+  <li><a href="#distribution"><span class="n">8</span>Distribution to shops and people</a></li>
+  <li><a href="#stock"><span class="n">9</span>Stock overview and report</a></li>
+  <li><a href="#sales"><span class="n">10</span>Sales</a></li>
+  <li><a href="#payroll"><span class="n">11</span>Payroll</a></li>
+  <li><a href="#withdrawals"><span class="n">12</span>Withdrawals</a></li>
+  <li><a href="#approvals"><span class="n">13</span>Approvals</a></li>
+  <li><a href="#analytics"><span class="n">14</span>Analytics</a></li>
+  <li><a href="#admin"><span class="n">15</span>Administration</a></li>
+  <li><a href="#quick"><span class="n">16</span>Quick reference by role</a></li>
+  <li><a href="#faq"><span class="n">17</span>Questions and troubleshooting</a></li>
+  <li><a href="#glossary"><span class="n">18</span>Glossary</a></li>
+</ol>
+<div class="note"><strong>About this guide.</strong> Words in <span class="ui">boxes</span> are exactly what you see on the screen (buttons, tabs, fields). The platform works in English and French — switch with the language selector at the top. Version 01 describes the platform as of October 2026; new versions will follow as features are added.</div>
+
+<!-- 1 -->
+<h2 id="start"><span class="num">1</span>Getting started</h2>
+<p class="lead">The platform manages the whole business: products, stock requests, purchases abroad, stock in Goma and in the shops, sales, payroll, withdrawals and analytics.</p>
+
+<h3>Services</h3>
+<p>The company runs several services. Each one has its own products, stock, sales and figures:</p>
+<ul>
+  <li><strong>Hair</strong> — wigs, bundles, closures… told apart by <em>length</em> (inches) and <em>colour</em>.</li>
+  <li><strong>Fashion</strong> (<em>Mode</em> in French) — clothes, told apart by <em>size</em> and <em>colour</em>, with a photo.</li>
+  <li>Housing and Transport — <em>Coming soon</em>.</li>
+</ul>
+<p><strong>Locations</strong> (shops and warehouses) are shared by every service: Boutique la Grace 1 can sell Hair and Fashion. Each service's stock and sales at that shop stay separate.</p>
+
+<h3>Signing in</h3>
+<ol class="steps">
+  <li>Open the platform and sign in with your <strong>email</strong> and <strong>password</strong>. Accounts are created by the Super Admin — there is no self sign-up.</li>
+  <li>The first time, you must <strong>choose a new password</strong> (at least 8 characters).</li>
+  <li>Choose a service on the <span class="ui">Choose a service</span> screen. The one you used last is marked <span class="ui">Last used</span>.</li>
+</ol>
+<div class="rule"><strong>Blocked accounts.</strong> If the Super Admin blocks an account, that person is signed out and cannot sign in again until unblocked.</div>
+
+<h3>The screen</h3>
+<ul>
+  <li><strong>Side menu</strong> (on a phone: the menu button): <span class="ui">Home</span>, <span class="ui">Analytics</span>, <span class="ui">Products</span>, <span class="ui">Requisitions</span>, <span class="ui">Stock</span>, <span class="ui">Sales</span>, <span class="ui">Expenses</span>, <span class="ui">Payroll</span>, <span class="ui">Withdrawals</span>, <span class="ui">Approvals</span>, and at the bottom <span class="ui">Product settings</span> and <span class="ui">Switch service</span>. You only see the modules your role allows.</li>
+  <li><strong>Top bar</strong>: <span class="ui">Switch service</span>, administration links (for administrators), the language selector, <span class="ui">Log out</span>.</li>
+  <li>The <span class="ui">Approvals</span> item shows a number when requests are waiting for you.</li>
+</ul>
+<div class="note"><strong>Phones first.</strong> Everything works on a phone: long tables turn into cards, and buttons are large enough to tap.</div>
+<div class="tip"><strong>Version 01 notes.</strong> The <span class="ui">Expenses</span> module (rent, electricity…) is not available yet — today only purchase-trip expenses are recorded, inside purchase batches. Correcting or refunding a sale will come in a later version. All amounts are in US dollars (USD).</div>
+
+<!-- 2 -->
+<h2 id="roles"><span class="num">2</span>Roles and permissions</h2>
+<p>Each person has one <strong>role</strong>. The role decides what they can see and do. These are the default roles; the Super Admin can adjust any role except Super Admin.</p>
+<table>
+  <tr><th>What</th><th class="c">Super Admin</th><th class="c">Chief Admin</th><th class="c">Manager Admin</th><th class="c">Chief Sales Admin</th><th class="c">Chief Inventory Admin</th><th class="c">Sales Agent</th></tr>
+  <tr><td>Create / edit products</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c own">own shop</td></tr>
+  <tr><td>Confirm new products</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Product settings (lengths, sizes, colours)</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td></tr>
+  <tr><td>Set selling prices and low-stock levels</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Create requisitions</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Buy abroad (purchase batches)</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td></tr>
+  <tr><td>Receive in Goma, distribute stock</td><td class="c yes">✓</td><td class="c no">—</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>View stock</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td></tr>
+  <tr><td>Record sales</td><td class="c yes">✓ anywhere</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓ anywhere</td><td class="c no">—</td><td class="c own">own shop</td></tr>
+  <tr><td>View sales</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c own">own shop</td></tr>
+  <tr><td>Submit payroll entries</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c own">own shop</td></tr>
+  <tr><td>Request withdrawals</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c own">own shop</td></tr>
+  <tr><td>Approve requisitions, batches, distributions, payroll, withdrawals, deletions</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Analytics, audit log</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Users, roles, locations</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+</table>
+<h3>"Own shop" and "anywhere"</h3>
+<p>Each permission has a reach. <strong>Own location</strong> means the person can only act at the location set on their account (a Sales Agent sells only in their shop — the platform fills it in and refuses any other). <strong>All locations</strong> means anywhere.</p>
+<div class="rule"><strong>Golden rule: nobody approves their own request.</strong> The person who asks and the person who approves must be different. The only exception is the Super Admin, whose self-approvals are allowed and clearly marked in the audit log.</div>
+<p>The <strong>Super Admin</strong> can do everything. Their own role can't be edited, and the last active Super Admin can't be blocked or demoted.</p>
+
+<!-- 3 -->
+<h2 id="picture"><span class="num">3</span>The big picture</h2>
+<p class="lead">How stock travels from a shop's request to a sale. Each later chapter explains one step.</p>
+<figure class='figure'><svg viewBox='0 0 790 616' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:830px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='20' y='20' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='36' cy='36' r='11' fill='#1a2e22'/><text x='36' y='40' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>1</text><text x='133.0' y='46.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Requisition</text><text x='125.0' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Shop asks for stock</text><text x='125.0' y='103.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Sales Admin</text><line x1='230' y1='66.0' x2='288' y2='66.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='290' y='20' width='210' height='92' rx='10' fill='#fff7e8' stroke='#d9a548' stroke-width='1.4'/><circle cx='306' cy='36' r='11' fill='#1a2e22'/><text x='306' y='40' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>2</text><text x='403.0' y='46.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approval</text><text x='395.0' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Chief Admin approves</text><text x='395.0' y='103.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Admin</text><line x1='500' y1='66.0' x2='558' y2='66.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='560' y='20' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='576' cy='36' r='11' fill='#1a2e22'/><text x='576' y='40' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>3</text><text x='673.0' y='46.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Purchase batch</text><text x='665.0' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Buyer buys abroad</text><text x='665.0' y='103.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Inventory Admin</text><line x1='665.0' y1='112' x2='665.0' y2='156' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='560' y='158' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='576' cy='174' r='11' fill='#1a2e22'/><text x='576' y='178' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>4</text><text x='673.0' y='184.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Mark as purchased</text><text x='665.0' y='208.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Lines and costs locked</text><text x='665.0' y='241.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Inventory Admin</text><line x1='560' y1='204.0' x2='502' y2='204.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='290' y='158' width='210' height='92' rx='10' fill='#fff7e8' stroke='#d9a548' stroke-width='1.4'/><circle cx='306' cy='174' r='11' fill='#1a2e22'/><text x='306' y='178' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>5</text><text x='403.0' y='184.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approval</text><text x='395.0' y='208.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Chief Admin approves the batch</text><text x='395.0' y='241.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Admin</text><line x1='290' y1='204.0' x2='232' y2='204.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='20' y='158' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='36' cy='174' r='11' fill='#1a2e22'/><text x='36' y='178' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>6</text><text x='133.0' y='184.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Shipped → Arrived</text><text x='125.0' y='208.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>On the way, then in Goma</text><text x='125.0' y='241.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Buyer / Goma team</text><line x1='125.0' y1='250' x2='125.0' y2='294' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='20' y='296' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='36' cy='312' r='11' fill='#1a2e22'/><text x='36' y='316' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>7</text><text x='133.0' y='322.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Receiving in Goma</text><text x='125.0' y='346.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Count good, damaged, missing</text><text x='125.0' y='379.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Manager / Chief Sales</text><line x1='230' y1='342.0' x2='288' y2='342.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='290' y='296' width='210' height='92' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><circle cx='306' cy='312' r='11' fill='#1a2e22'/><text x='306' y='316' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>8</text><text x='403.0' y='322.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Stock at the business</text><text x='395.0' y='346.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Sellable lots</text><line x1='500' y1='342.0' x2='558' y2='342.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='560' y='296' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='576' cy='312' r='11' fill='#1a2e22'/><text x='576' y='316' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>9</text><text x='673.0' y='322.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Distribution</text><text x='665.0' y='346.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Send to a shop or person</text><text x='665.0' y='379.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Manager / Chief Sales</text><line x1='665.0' y1='388' x2='665.0' y2='432' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='560' y='434' width='210' height='92' rx='10' fill='#fff7e8' stroke='#d9a548' stroke-width='1.4'/><circle cx='576' cy='450' r='11' fill='#1a2e22'/><text x='576' y='454' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>10</text><text x='673.0' y='460.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approval</text><text x='665.0' y='484.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Chief Admin approves</text><text x='665.0' y='517.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Chief Admin</text><line x1='560' y1='480.0' x2='502' y2='480.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='290' y='434' width='210' height='92' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><circle cx='306' cy='450' r='11' fill='#1a2e22'/><text x='306' y='454' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>11</text><text x='403.0' y='460.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Stock in the shop</text><text x='395.0' y='484.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Ready to sell</text><line x1='290' y1='480.0' x2='232' y2='480.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='20' y='434' width='210' height='92' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><circle cx='36' cy='450' r='11' fill='#1a2e22'/><text x='36' y='454' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11' font-weight='700' fill='#fff' text-anchor='middle'>12</text><text x='133.0' y='460.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='middle'>Sale</text><text x='125.0' y='484.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='400' fill='#3d4b42' text-anchor='middle'>Recorded on the phone</text><text x='125.0' y='517.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10' font-weight='600' fill='#3e5c43' text-anchor='middle'>Sales Agent</text><line x1='125.0' y1='526' x2='125.0' y2='554' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='55.0' y='556' width='140' height='40' rx='10' fill='#1a2e22' stroke='#1a2e22' stroke-width='1.4'/><text x='125.0' y='581.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#fff' text-anchor='middle'>Analytics</text></svg></figure>
+<p class="caption">Orange boxes are approvals by the Chief Admin. Green boxes are where stock sits.</p>
+<div class="note"><strong>Everything is recorded.</strong> Every change (who, what, when, before and after) is written to the audit log, and stock can never go below zero.</div>
+
+<!-- 4 -->
+<h2 id="products"><span class="num">4</span>Products and prices</h2>
+<h3>The catalogue</h3>
+<p>Open <span class="ui">Products</span> → <span class="ui">Catalogue</span>. Each product gets an automatic code (SKU): <strong>HAIR-00001</strong> for Hair, <strong>FASH-00001</strong> for Fashion.</p>
+<table>
+  <tr><th>Service</th><th>Categories</th><th>How products are told apart</th></tr>
+  <tr><td>Hair</td><td>Wigs, Bundles, Closures, Frontals, Extensions, Hair care, Accessories</td><td>Length (inches), colour, texture</td></tr>
+  <tr><td>Fashion</td><td>Dresses, Tops &amp; shirts, Trousers &amp; jeans, Skirts, Suits &amp; sets, Jackets &amp; coats, Shoes, Bags, Accessories</td><td>Size, colour, and one photo</td></tr>
+</table>
+<ol class="steps">
+  <li>Click <span class="ui">New product</span>, fill in the name, category and unit (piece, pair, set…), then the length or size and the colour from the lists.</li>
+  <li><strong>Fashion:</strong> add a <strong>photo</strong> (an image up to 5 MB — on a phone you can take it with the camera). It then appears in the sale form and the product pickers.</li>
+  <li><span class="ui">Save</span>. Search works on the name, SKU, length, size and colour.</li>
+</ol>
+<div class="note"><strong>Pending confirmation.</strong> A product created by someone who can't confirm products starts as <em>pending</em>; a Chief Admin or Chief Sales Admin confirms it (never their own, except the Super Admin).</div>
+<div class="rule"><strong>Archive, don't delete.</strong> A product used in a requisition or stock can only be <em>archived</em>. Deleting an unused product needs an approval.</div>
+
+<h3>Product settings</h3>
+<p><span class="ui">Product settings</span> holds the lists used by product forms: <strong>lengths</strong> (Hair), <strong>sizes</strong> (Fashion — use the arrows to set the order, e.g. XS, S, M, L, XL) and <strong>colours</strong>. Values in use can be deactivated but not deleted.</p>
+
+<h3>Prices</h3>
+<p><span class="ui">Products</span> → <span class="ui">Prices</span> shows, for each product, its <strong>selling price</strong> next to what it was <strong>bought at</strong> (every lot), what's on hand and the last sale. Open a product to set its selling price. This price fills the sale form automatically; sellers can still enter another price, with a reason.</p>
+
+<!-- 5 -->
+<h2 id="requisitions"><span class="num">5</span>Requisitions</h2>
+<p class="lead">A requisition is a shop's request for stock. Once approved, it is ready to be purchased.</p>
+<figure class='figure'><svg viewBox='0 0 780 160' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:819px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='74.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Draft</text><line x1='138' y1='36.0' x2='166' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='168' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='232.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Submitted</text><line x1='296' y1='36.0' x2='324' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='326' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='390.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approved</text><line x1='454' y1='36.0' x2='482' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='484' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='548.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Purchasing</text><line x1='612' y1='36.0' x2='640' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='642' y='10' width='128' height='52' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='706.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Closed</text><line x1='232.0' y1='62' x2='232.0' y2='104' stroke='#b42318' stroke-width='1.8' stroke-dasharray='5 4' marker-end='url(#arr)'/><rect x='168' y='106' width='330' height='42' rx='10' fill='#fde8e7' stroke='#f1a9a3' stroke-width='1.4'/><text x='333.0' y='132.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12' font-weight='600' fill='#b42318' text-anchor='middle'>Rejected → revise and resubmit</text></svg></figure>
+<ol class="steps">
+  <li><span class="ui">Requisitions</span> → <span class="ui">New requisition</span>: choose the location and add a note.</li>
+  <li><span class="ui">Add product</span> for each item, with the quantity — <em>or</em> leave it <strong>empty</strong> and describe the need in the note (for example "New stock for the shop, dresses and shoes, about $500"). The buyer will then choose the products.</li>
+  <li><span class="ui">Submit for approval</span>. The requisition is locked while it waits.</li>
+  <li>The Chief Admin approves or rejects it in <span class="ui">Approvals</span>. If rejected, revise it and submit again.</li>
+</ol>
+<p>Approved requisitions appear under the <span class="ui">Ready to purchase</span> filter. When the buyer adds them to a purchase, the status becomes <em>Purchasing</em>, then <em>Closed</em> once everything is resolved. Products the buyer adds to a requisition are marked <span class="ui">Added by buyer</span>.</p>
+
+<!-- 6 -->
+<h2 id="batches"><span class="num">6</span>Purchasing abroad (purchase batches)</h2>
+<p class="lead">A purchase batch is one buying trip: what was bought, what wasn't, what it cost and the trip's expenses. It's done by the Chief Inventory Admin (the buyer).</p>
+<figure class='figure'><svg viewBox='0 0 938 160' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:985px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='74.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Draft</text><line x1='138' y1='36.0' x2='166' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='168' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='232.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Purchased</text><line x1='296' y1='36.0' x2='324' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='326' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='390.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approved</text><line x1='454' y1='36.0' x2='482' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='484' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='548.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Shipped</text><line x1='612' y1='36.0' x2='640' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='642' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='706.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Arrived</text><line x1='770' y1='36.0' x2='798' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='800' y='10' width='128' height='52' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='864.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Received</text><line x1='232.0' y1='62' x2='232.0' y2='104' stroke='#b42318' stroke-width='1.8' stroke-dasharray='5 4' marker-end='url(#arr)'/><rect x='168' y='106' width='330' height='42' rx='10' fill='#fde8e7' stroke='#f1a9a3' stroke-width='1.4'/><text x='333.0' y='132.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12' font-weight='600' fill='#b42318' text-anchor='middle'>Rejected or reopened → back to Draft</text></svg></figure>
+<h3>Building the batch</h3>
+<ol class="steps">
+  <li><span class="ui">Stock</span> → <span class="ui">Purchase batches</span> → <span class="ui">New batch</span>: give it a title (e.g. "Guangzhou, October").</li>
+  <li><span class="ui">Add from requisitions</span>: tick the approved lines to buy. An <strong>empty requisition</strong> shows its note and an <span class="ui">Add products</span> button.</li>
+  <li><span class="ui">Add extra product</span>: for anything else. Choose <strong>For requisition</strong> to attach it to an approved requisition, or <em>None (extra purchase)</em>. Use <span class="ui">New product</span> to create a product on the spot.</li>
+  <li>For each line: <strong>Purchased</strong> with quantity and unit cost, or <strong>Not purchased</strong> with a reason. Buying fewer than requested also needs a reason.</li>
+  <li><span class="ui">Add expense</span> for the trip: category (transport, freight, customs, meals…), amount, note and a receipt (photo or PDF up to 10 MB).</li>
+</ol>
+<div class="note"><strong>Expenses stay separate.</strong> Trip expenses never change the product costs. They can be added at any time — even after the batch has arrived — by the buyer and by the Goma team (for example transport paid on arrival).</div>
+<h3>After buying</h3>
+<ol class="steps">
+  <li><span class="ui">Mark as purchased</span>: the lines and costs are locked, and the requisition lines are marked purchased, partial or not purchased.</li>
+  <li><span class="ui">Submit for approval</span>: the Chief Admin approves the batch. If something must change before approval, use <span class="ui">Request reopen</span>.</li>
+  <li><span class="ui">Mark shipped</span> when the goods leave. The Goma team then uses <span class="ui">Mark arrived</span>.</li>
+</ol>
+
+<!-- 7 -->
+<h2 id="receiving"><span class="num">7</span>Receiving in Goma</h2>
+<p class="lead">When a batch arrives, the Manager Admin or Chief Sales Admin counts what actually arrived. This is the moment the goods become sellable stock.</p>
+<ol class="steps">
+  <li>Open the batch (status <em>Arrived</em>) and scroll to <span class="ui">Receiving in Goma</span>.</li>
+  <li>For each purchased line enter <strong>Received</strong> (good pieces) and <strong>Damaged</strong>. <strong>Missing</strong> is calculated for you.</li>
+  <li>If anything is damaged or missing, give a <strong>reason</strong>.</li>
+  <li><span class="ui">Confirm receipt</span>. The batch becomes <em>Received</em>.</li>
+</ol>
+<div class="rule"><strong>What happens.</strong> Only the good pieces become stock. They are held by the <strong>business</strong> (not yet in a shop), each line as a <strong>lot</strong> at its purchase cost. The count can't be changed after confirming.</div>
+
+<!-- 8 -->
+<h2 id="distribution"><span class="num">8</span>Distribution to shops and people</h2>
+<p class="lead">A distribution sends stock from the business to a shop or a person. The Chief Admin approves it.</p>
+<figure class='figure'><svg viewBox='0 0 830 250' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:872px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='95' width='150' height='56' rx='10' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='85' y='128.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='600' fill='#1a2e22' text-anchor='middle'>Supplier abroad</text><rect x='225' y='85' width='175' height='76' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='312' y='127.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Business</text><text x='312' y='143.9' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>(unassigned)</text><line x1='160' y1='123' x2='223' y2='123' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><text x='192' y='114.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='600' fill='#3e5c43' text-anchor='middle'>receive</text><rect x='470' y='10' width='150' height='56' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='545' y='43.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='middle'>Shop A</text><line x1='400' y1='123' x2='468' y2='38' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='700' y='10' width='120' height='56' rx='10' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='760' y='43.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='600' fill='#1a2e22' text-anchor='middle'>Customer</text><line x1='620' y1='38' x2='698' y2='38' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><text x='659' y='30.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='600' fill='#3e5c43' text-anchor='middle'>sale</text><rect x='470' y='95' width='150' height='56' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='545' y='128.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='middle'>Shop B</text><line x1='400' y1='123' x2='468' y2='123' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='700' y='95' width='120' height='56' rx='10' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='760' y='128.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='600' fill='#1a2e22' text-anchor='middle'>Customer</text><line x1='620' y1='123' x2='698' y2='123' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><text x='659' y='115.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='600' fill='#3e5c43' text-anchor='middle'>sale</text><rect x='470' y='180' width='150' height='56' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='545' y='213.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='middle'>A person</text><line x1='400' y1='123' x2='468' y2='208' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='700' y='180' width='120' height='56' rx='10' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='760' y='213.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='600' fill='#1a2e22' text-anchor='middle'>Customer</text><line x1='620' y1='208' x2='698' y2='208' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><text x='659' y='200.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='600' fill='#3e5c43' text-anchor='middle'>sale</text><text x='435' y='72.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='600' fill='#3e5c43' text-anchor='middle'>distribute</text></svg></figure>
+<ol class="steps">
+  <li><span class="ui">Stock</span> → <span class="ui">Distributions</span> → <span class="ui">New distribution</span>.</li>
+  <li>Choose <strong>A location</strong> or <strong>A person</strong>.</li>
+  <li>Enter the quantity for each lot. You can't ask for more than is <strong>available</strong> (on hand minus other pending distributions).</li>
+  <li><span class="ui">Submit for approval</span>.</li>
+</ol>
+<figure class='figure'><svg viewBox='0 0 464 160' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:487px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='74.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Submitted</text><line x1='138' y1='36.0' x2='166' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='168' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='232.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Pending</text><line x1='296' y1='36.0' x2='324' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='326' y='10' width='128' height='52' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='390.0' y='32.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approved: stock</text><text x='390.0' y='47.6' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>moves</text><line x1='232.0' y1='62' x2='232.0' y2='104' stroke='#b42318' stroke-width='1.8' stroke-dasharray='5 4' marker-end='url(#arr)'/><rect x='168' y='106' width='286' height='42' rx='10' fill='#fde8e7' stroke='#f1a9a3' stroke-width='1.4'/><text x='311.0' y='132.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12' font-weight='600' fill='#b42318' text-anchor='middle'>Rejected: nothing moves</text></svg></figure>
+<div class="note"><strong>Safe by design.</strong> When the Chief Admin approves, the platform checks the stock again. If it's no longer there, the approval is refused and nothing moves.</div>
+
+<!-- 9 -->
+<h2 id="stock"><span class="num">9</span>Stock overview and report</h2>
+<p><span class="ui">Stock</span> → <span class="ui">Overview</span> shows the units on hand, the stock value (purchase cost) and how many products are low or out of stock.</p>
+<h3>By product — the stock report</h3>
+<p>Every product of the service, including finished ones, with: <strong>status</strong>, on hand, sold, received and last sold. It opens on <strong>In stock</strong>.</p>
+<table>
+  <tr><th>Status</th><th>Meaning</th></tr>
+  <tr><td>In stock</td><td>Pieces are available.</td></tr>
+  <tr><td>Low stock</td><td>At or below the product's "low stock" level.</td></tr>
+  <tr><td>Out of stock</td><td>None left anywhere, with the date it ran out ("since …").</td></tr>
+  <tr><td>Never stocked</td><td>Created, but never received.</td></tr>
+</table>
+<ul>
+  <li>Use the <strong>status chips</strong> and the <strong>search</strong> to find products quickly.</li>
+  <li><span class="ui">Download (CSV)</span> exports the list for Excel.</li>
+  <li>Open a product to see <strong>where it is now</strong> (each shop or person) and its <strong>history</strong>: received (BATCH-…), sent (DIST-…), sold (SALE-…), with the running total.</li>
+  <li>Price managers can set <strong>Low stock at</strong> (e.g. 5) for each product.</li>
+</ul>
+<h3>By lot and By holder</h3>
+<p><span class="ui">By lot</span> shows each purchase lot (batch, cost, received, on hand). <span class="ui">By holder</span> shows what each shop, person or the business holds.</p>
+<div class="rule"><strong>Stock never goes negative.</strong> Every receipt, distribution and sale goes through the same check; the platform refuses anything that would take more than is there.</div>
+
+<!-- 10 -->
+<h2 id="sales"><span class="num">10</span>Sales</h2>
+<p class="lead">Sales are recorded on the phone, in the shop, as they happen.</p>
+<div class="two">
+  <div>
+    <ol class="steps">
+      <li><span class="ui">Sales</span> → <span class="ui">New sale</span>.</li>
+      <li><strong>Sale date</strong>: today by default. Forgot a sale? Pick the day it happened — up to 7 days back.</li>
+      <li><strong>Location</strong>: Sales Agents are locked to their shop; chiefs choose.</li>
+      <li><strong>Add a product</strong>: search by name, SKU, length, size or colour (photos in Fashion).</li>
+      <li>Choose the <strong>lot</strong> (batch · cost · date · pieces left), the <strong>quantity</strong> and the <strong>price</strong>. The suggested price is filled in; a different price needs a short <strong>reason</strong>.</li>
+      <li><strong>Payment</strong>: <span class="ui">Cash</span>, <span class="ui">Mobile money</span> or <span class="ui">Credit</span> (credit needs the customer's name).</li>
+      <li><span class="ui">Record sale</span>. If something is missing, the bottom bar says what.</li>
+    </ol>
+  </div>
+  <div><figure class='figure'><svg viewBox='0 0 290 488' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:304px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='20' y='8' width='250' height='470' rx='30' fill='#fff' stroke='#1a2e22' stroke-width='3'/><rect x='115' y='20' width='60' height='6' rx='3' fill='#9fb59f'/><rect x='38' y='44' width='214' height='60' rx='9' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#3e5c43' text-anchor='start'>1</text><text x='74' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='start'>Sale date</text><text x='74' y='89.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#3d4b42' text-anchor='start'>Today, or up to 7 days back</text><rect x='38' y='114' width='214' height='60' rx='9' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='140.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#3e5c43' text-anchor='start'>2</text><text x='74' y='140.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='start'>Location</text><text x='74' y='159.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#3d4b42' text-anchor='start'>Locked to your shop (agents)</text><rect x='38' y='184' width='214' height='60' rx='9' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='210.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#3e5c43' text-anchor='start'>3</text><text x='74' y='210.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='start'>Add a product</text><text x='74' y='229.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#3d4b42' text-anchor='start'>Search name, SKU, length, size</text><rect x='38' y='254' width='214' height='60' rx='9' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='280.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#3e5c43' text-anchor='start'>4</text><text x='74' y='280.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='start'>Lot · quantity · price</text><text x='74' y='299.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#3d4b42' text-anchor='start'>Suggested price filled in</text><rect x='38' y='324' width='214' height='60' rx='9' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='350.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#3e5c43' text-anchor='start'>5</text><text x='74' y='350.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#1a2e22' text-anchor='start'>Payment</text><text x='74' y='369.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#3d4b42' text-anchor='start'>Cash · Mobile money · Credit</text><rect x='38' y='394' width='214' height='60' rx='9' fill='#1a2e22' stroke='#9fb59f' stroke-width='1.4'/><text x='54' y='420.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='800' fill='#c8e6a0' text-anchor='start'>6</text><text x='74' y='420.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13' font-weight='700' fill='#fff' text-anchor='start'>Record sale</text><text x='74' y='439.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='10.5' font-weight='400' fill='#dfe8dc' text-anchor='start'>Total shown at the bottom</text></svg></figure></div>
+</div>
+<div class="rule"><strong>No overselling.</strong> You can't sell more than the shop holds. If two people try to sell the last piece at the same moment, only one sale goes through.</div>
+<h3>The sales list</h3>
+<p><span class="ui">Sales</span> lists every sale with its number (SALE-00001…), date, location, seller, payment, total and <strong>margin</strong>. Filter by dates and location; open a sale to see its lines and any price reason. Sales recorded on a later day show a <em>Recorded …</em> badge. Sales Agents see only their own shop's sales.</p>
+
+<!-- 11 -->
+<h2 id="payroll"><span class="num">11</span>Payroll</h2>
+<ol class="steps">
+  <li><span class="ui">Payroll</span> → <span class="ui">New payroll entry</span>.</li>
+  <li><strong>Paid to</strong>: a person on the platform, or someone else by name.</li>
+  <li>The <strong>month</strong>, the <strong>amount</strong> (USD), the location and a note (e.g. "first half of the month").</li>
+  <li><span class="ui">Submit for approval</span>. The Chief Admin approves it — never their own entry.</li>
+</ol>
+<div class="note"><strong>Salaries are private.</strong> Only the Chief Admin and the Super Admin see every entry. Everyone else sees only the entries they submitted.</div>
+<p>The page shows the <strong>approved</strong> and <strong>pending</strong> totals, with filters by month, location and status.</p>
+
+<!-- 12 -->
+<h2 id="withdrawals"><span class="num">12</span>Withdrawals</h2>
+<p class="lead">A withdrawal is money taken that serves no business purpose (for example a family expense).</p>
+<ol class="steps">
+  <li><span class="ui">Withdrawals</span> → <span class="ui">New withdrawal</span>.</li>
+  <li>The amount, <strong>who took it</strong> (you by default), the date (today or earlier), the location (the till) and a <strong>reason</strong>.</li>
+  <li><span class="ui">Submit for approval</span>. Only the Chief Admin (or the Super Admin) approves withdrawals.</li>
+</ol>
+<div class="rule"><strong>Not a business cost.</strong> Withdrawals are never subtracted from profit. They are shown separately so the owners see the real picture.</div>
+
+<!-- 13 -->
+<h2 id="approvals"><span class="num">13</span>Approvals</h2>
+<p><span class="ui">Approvals</span> lists the requests waiting for you, and your own requests (<span class="ui">Requested by me</span>). Filter by status, type and dates.</p>
+<figure class='figure'><svg viewBox='0 0 464 160' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:487px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='74.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Request</text><line x1='138' y1='36.0' x2='166' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='168' y='10' width='128' height='52' rx='10' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='232.0' y='41.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Pending</text><line x1='296' y1='36.0' x2='324' y2='36.0' stroke='#3e5c43' stroke-width='1.8' marker-end='url(#arr)'/><rect x='326' y='10' width='128' height='52' rx='10' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='390.0' y='32.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>Approved: change</text><text x='390.0' y='47.6' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12.5' font-weight='700' fill='#1a2e22' text-anchor='middle'>applied</text><line x1='232.0' y1='62' x2='232.0' y2='104' stroke='#b42318' stroke-width='1.8' stroke-dasharray='5 4' marker-end='url(#arr)'/><rect x='168' y='106' width='286' height='42' rx='10' fill='#fde8e7' stroke='#f1a9a3' stroke-width='1.4'/><text x='311.0' y='132.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='12' font-weight='600' fill='#b42318' text-anchor='middle'>Rejected: nothing changes</text></svg></figure>
+<ol class="steps">
+  <li>Open a request: who asked, when, the reason and the <strong>proposed change</strong> (amounts shown in dollars, products with their length or size and pieces).</li>
+  <li>Add a note if useful, then <span class="ui">Approve</span> or <span class="ui">Reject</span>.</li>
+</ol>
+<table>
+  <tr><th>Request type</th><th>Raised by</th><th>Decided by</th><th>On approval</th></tr>
+  <tr><td>Requisition</td><td>Chief Sales Admin</td><td>Chief Admin</td><td>Ready to purchase</td></tr>
+  <tr><td>Stock batch</td><td>Chief Inventory Admin</td><td>Chief Admin</td><td>Batch approved (or reopened)</td></tr>
+  <tr><td>Stock distribution</td><td>Manager / Chief Sales Admin</td><td>Chief Admin</td><td>Stock moves to the shop or person</td></tr>
+  <tr><td>Payroll</td><td>Anyone</td><td>Chief Admin</td><td>Entry approved</td></tr>
+  <tr><td>Withdrawal</td><td>Anyone</td><td>Chief Admin</td><td>Withdrawal approved</td></tr>
+  <tr><td>Deletion</td><td>Product managers</td><td>Chief Admin</td><td>Product deleted (if unused)</td></tr>
+</table>
+<div class="rule"><strong>Reminder:</strong> nobody approves their own request (Super Admin excepted, and marked).</div>
+
+<!-- 14 -->
+<h2 id="analytics"><span class="num">14</span>Analytics</h2>
+<p><span class="ui">Analytics</span> (Chief Admin and Super Admin) shows the service's results.</p>
+<ul>
+  <li><strong>Filters:</strong> <span class="ui">Day</span>, <span class="ui">Week</span> (from Monday), <span class="ui">Month</span>, <span class="ui">Custom</span> (up to 366 days), and <strong>Location</strong> (all or one shop). Dates are in Lubumbashi time.</li>
+  <li><strong>Cards:</strong> total sales, margin, expenses, payroll, net profit, and withdrawals shown apart.</li>
+  <li><strong>Lists:</strong> most sold, least sold and best margin products.</li>
+  <li><strong>Charts:</strong> sales (with margin), expenses and payroll over time.</li>
+</ul>
+<h3>How the figures are calculated</h3>
+<figure class='figure'><svg viewBox='0 0 740 314' xmlns='http://www.w3.org/2000/svg' role='img' class='diagram' style='max-width:777px'><defs><marker id='arr' viewBox='0 0 10 10' refX='9' refY='5' markerWidth='7' markerHeight='7' orient='auto-start-reverse'><path d='M0,0 L10,5 L0,10 z' fill='#3e5c43'/></marker></defs><rect x='10' y='10' width='470' height='42' rx='8' fill='#eef5e6' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='37.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#1a2e22' text-anchor='start'>Total sales</text><text x='462' y='37.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='end'>$185.00</text><rect x='10' y='60' width='470' height='42' rx='8' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='87.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#1a2e22' text-anchor='start'>− Purchase cost of the pieces sold</text><text x='462' y='87.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='end'>$81.77</text><rect x='10' y='110' width='470' height='42' rx='8' fill='#c8e6a0' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='137.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#1a2e22' text-anchor='start'>= Margin</text><text x='462' y='137.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='end'>$103.23</text><rect x='10' y='160' width='470' height='42' rx='8' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='187.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#1a2e22' text-anchor='start'>− Expenses</text><text x='462' y='187.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='end'>$518.60</text><rect x='10' y='210' width='470' height='42' rx='8' fill='#fff' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='237.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#1a2e22' text-anchor='start'>− Payroll</text><text x='462' y='237.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#1a2e22' text-anchor='end'>$0.00</text><rect x='10' y='260' width='470' height='42' rx='8' fill='#fde8e7' stroke='#9fb59f' stroke-width='1.4'/><text x='28' y='287.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='13.5' font-weight='600' fill='#b42318' text-anchor='start'>= Net profit</text><text x='462' y='287.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#b42318' text-anchor='end'>−$415.37</text><rect x='510' y='10' width='220' height='92' rx='8' fill='#fdf0e3' stroke='#e9b679' stroke-width='1.4'/><text x='620' y='44.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='14' font-weight='700' fill='#b54708' text-anchor='middle'>Withdrawals: $26.00</text><text x='620' y='70.0' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='500' fill='#b54708' text-anchor='middle'>shown apart, never</text><text x='620' y='84.4' font-family='Inter, Helvetica, Arial, sans-serif' font-size='11.5' font-weight='500' fill='#b54708' text-anchor='middle'>subtracted</text></svg></figure>
+<ul>
+  <li><strong>Margin</strong> = sale price − purchase cost of the pieces sold.</li>
+  <li><strong>Net profit</strong> = margin − expenses − payroll. In red when negative.</li>
+  <li><strong>Expenses</strong> in version 01 are the purchase-trip expenses, counted on the day they were recorded. <strong>Payroll</strong> counts on the day it was approved.</li>
+</ul>
+<div class="note"><strong>Example above:</strong> a whole trip's expenses ($518.60) were recorded this month while only a few pieces were sold yet, so net profit is negative. It improves as the rest of the stock sells.</div>
+
+<!-- 15 -->
+<h2 id="admin"><span class="num">15</span>Administration</h2>
+<h3>Manage users (Super Admin)</h3>
+<ol class="steps">
+  <li><span class="ui">Manage users</span> → <span class="ui">Create user</span>: name, email, role and — for roles limited to their own shop — a location.</li>
+  <li>A strong password is shown <strong>once</strong>. Copy it and give it to the person; they must change it at first sign-in.</li>
+  <li>Change a person's role or location at any time; <span class="ui">Block</span> / <span class="ui">Unblock</span> to stop or allow access.</li>
+</ol>
+<h3>Manage roles (Super Admin)</h3>
+<p>Turn permissions on or off for a role, and choose <em>Own location</em> or <em>All locations</em> for each. Changes apply immediately. The Super Admin role can't be edited.</p>
+<h3>Locations (Super Admin)</h3>
+<p>Shops and warehouses, shared by every service. Locations are never deleted — untick <em>Active</em> to retire one.</p>
+<h3>Audit log (Chief Admin, Super Admin)</h3>
+<p><span class="ui">Audit log</span> lists every change: who did what, when, with the values before and after. It can't be edited or deleted.</p>
+
+<!-- 16 -->
+<h2 id="quick"><span class="num">16</span>Quick reference by role</h2>
+<div class="two">
+  <div class="card"><h3>Sales Agent</h3><ul>
+    <li>Record each sale: <span class="ui">Sales</span> → <span class="ui">New sale</span>.</li>
+    <li>Forgot one? Pick the sale date (up to 7 days back).</li>
+    <li>Check your shop's sales in <span class="ui">Sales</span>.</li>
+    <li>Request withdrawals and submit payroll for your shop.</li>
+  </ul></div>
+  <div class="card"><h3>Manager Admin</h3><ul>
+    <li><span class="ui">Mark arrived</span>, then count in <span class="ui">Receiving in Goma</span> and <span class="ui">Confirm receipt</span>.</li>
+    <li>Send stock: <span class="ui">Stock</span> → <span class="ui">Distributions</span> → <span class="ui">New distribution</span>.</li>
+    <li>Add expenses paid on arrival to the batch.</li>
+    <li>Watch <span class="ui">Stock</span> → <span class="ui">Overview</span>.</li>
+  </ul></div>
+  <div class="card"><h3>Chief Sales Admin</h3><ul>
+    <li>Create requisitions for the shops.</li>
+    <li>Receive and distribute stock like the Manager.</li>
+    <li>Sell at any location; set selling prices in <span class="ui">Prices</span>.</li>
+    <li>Confirm pending products.</li>
+  </ul></div>
+  <div class="card"><h3>Chief Inventory Admin (buyer)</h3><ul>
+    <li><span class="ui">Purchase batches</span> → <span class="ui">New batch</span>; add requisition lines and extra products.</li>
+    <li>Set unit costs, add trip expenses with receipts.</li>
+    <li><span class="ui">Mark as purchased</span> → <span class="ui">Submit for approval</span> → <span class="ui">Mark shipped</span>.</li>
+    <li>Keep Product settings up to date.</li>
+  </ul></div>
+  <div class="card"><h3>Chief Admin</h3><ul>
+    <li>Check <span class="ui">Approvals</span> every day: requisitions, batches, distributions, payroll, withdrawals, deletions.</li>
+    <li>Follow results in <span class="ui">Analytics</span>.</li>
+    <li>Set selling prices; review the audit log.</li>
+  </ul></div>
+  <div class="card"><h3>Super Admin</h3><ul>
+    <li>Create users, set roles and locations, block access.</li>
+    <li>Adjust role permissions; manage locations.</li>
+    <li>Can do everything; self-approvals are marked.</li>
+  </ul></div>
+</div>
+
+<!-- 17 -->
+<h2 id="faq"><span class="num">17</span>Questions and troubleshooting</h2>
+<dl class="faq">
+  <dt>"Record sale" doesn't go through.</dt>
+  <dd>Read the message in the bottom bar: a price is missing, a reason is needed for a changed price, a credit sale needs the customer's name, or a quantity is more than what's left.</dd>
+  <dt>I can't see the "Receiving in Goma" section.</dt>
+  <dd>The batch must be <em>Arrived</em>, and your role must be allowed to receive stock (Manager Admin, Chief Sales Admin, Super Admin).</dd>
+  <dt>A product disappeared from the stock.</dt>
+  <dd>It's not gone: in <span class="ui">Stock</span> → <span class="ui">By product</span>, choose <span class="ui">Out of stock</span> or <span class="ui">All</span>.</dd>
+  <dt>Why is net profit negative?</dt>
+  <dd>Expenses and payroll for the period are bigger than the margin — often because a trip's expenses were recorded before most of its stock was sold.</dd>
+  <dt>I can't approve my own request.</dt>
+  <dd>That's the rule — another approver must decide.</dd>
+  <dt>I forgot to record yesterday's sale.</dt>
+  <dd>In <span class="ui">New sale</span>, set the <strong>Sale date</strong> to yesterday (up to 7 days back).</dd>
+  <dt>The price field asks for a reason.</dt>
+  <dd>You entered a price different from the suggested selling price — type why (offer, loyal customer…).</dd>
+  <dt>I can't choose another shop when selling.</dt>
+  <dd>Sales Agents sell only at their own location. A chief can sell anywhere.</dd>
+</dl>
+
+<!-- 18 -->
+<h2 id="glossary"><span class="num">18</span>Glossary</h2>
+<dl class="glossary">
+  <dt>Service</dt><dd>A business line: Hair, Fashion (Mode)…</dd>
+  <dt>Location</dt><dd>A shop or warehouse, shared by every service.</dd>
+  <dt>SKU</dt><dd>A product's automatic code, e.g. HAIR-00003.</dd>
+  <dt>Requisition (REQ-…)</dt><dd>A shop's request for stock.</dd>
+  <dt>Purchase batch (BATCH-…)</dt><dd>One buying trip: lines bought, costs and trip expenses.</dd>
+  <dt>Lot</dt><dd>The pieces of one product received from one batch, at one purchase cost.</dd>
+  <dt>Holder</dt><dd>Who holds stock: the business, a location or a person.</dd>
+  <dt>Distribution (DIST-…)</dt><dd>Stock sent from the business to a shop or person.</dd>
+  <dt>Sale (SALE-…)</dt><dd>A recorded sale; it takes stock out of a shop.</dd>
+  <dt>Suggested price</dt><dd>The selling price set in Prices; filled in automatically on sales.</dd>
+  <dt>Margin</dt><dd>Sale price minus the purchase cost of the pieces sold.</dd>
+  <dt>Net profit</dt><dd>Margin minus expenses minus payroll.</dd>
+  <dt>Withdrawal</dt><dd>Money taken for no business purpose; shown apart from profit.</dd>
+  <dt>Approval</dt><dd>A decision by the Chief Admin before a change takes effect.</dd>
+  <dt>Audit log</dt><dd>The permanent record of every change.</dd>
+</dl>
+</body></html>
