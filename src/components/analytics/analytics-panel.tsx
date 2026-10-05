@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { MoneyChart } from "@/components/analytics/analytics-charts";
+import { ProductsSoldTable } from "@/components/analytics/products-sold-table";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -80,10 +81,22 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
   const [period, setPeriod] = useState<Period>("month");
   const [from, setFrom] = useState(() => monthStart(businessDayOf(Date.now())));
   const [to, setTo] = useState(today);
+  // "Day": today by default, or any earlier day.
+  const [day, setDay] = useState(today);
   const [locationId, setLocationId] = useState("");
 
   const customValid = from !== "" && to !== "" && from <= to && to <= today && daysBetween(from, to) <= 366;
-  const range: RangeInput | null = period === "custom" ? (customValid ? { from, to } : null) : { preset: period };
+  const dayValid = day !== "" && day <= today;
+  const range: RangeInput | null =
+    period === "custom"
+      ? customValid
+        ? { from, to }
+        : null
+      : period === "today" && day !== today
+        ? dayValid
+          ? { from: day, to: day }
+          : null
+        : { preset: period };
   const granularity = granularityFor(period, from, to);
   const args =
     canView && range
@@ -96,6 +109,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
   const mostSold = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "units", order: "desc" });
   const leastSold = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "units", order: "asc" });
   const bestMargin = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "margin", order: "desc" });
+  const productSales = useQuery(api.analytics.getProductSales, args);
 
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
@@ -108,6 +122,16 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
       ? dayLabel.format(Date.parse(`${summary.from}T12:00:00Z`))
       : `${dayLabel.format(Date.parse(`${summary.from}T12:00:00Z`))} – ${dayLabel.format(Date.parse(`${summary.to}T12:00:00Z`))}`
     : "";
+
+  const shopName = locationId ? filters?.locations.find((l) => l._id === locationId)?.name : undefined;
+  const productsSoldFileName = [
+    "products-sold",
+    service,
+    productSales ? (productSales.from === productSales.to ? productSales.from : `${productSales.from}_${productSales.to}`) : today,
+    shopName?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""),
+  ]
+    .filter(Boolean)
+    .join("-");
 
   const productList = (data: typeof mostSold, value: (p: NonNullable<typeof mostSold>["products"][number]) => string) =>
     data === undefined ? (
@@ -171,6 +195,14 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
           ))}
         </div>
         <div className="flex flex-wrap items-end gap-3">
+          {period === "today" ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="analytics-day" className="text-xs text-muted-foreground">
+                {t("dayLabel")}
+              </Label>
+              <Input id="analytics-day" type="date" value={day} max={today} onChange={(e) => setDay(e.target.value)} className="h-10 w-40" />
+            </div>
+          ) : null}
           {period === "custom" ? (
             <>
               <div className="flex flex-col gap-1">
@@ -242,6 +274,11 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
         <Section title={t("lists.leastSold")}>{productList(leastSold, (p) => t("pieces", { count: p.unitsSold }))}</Section>
         <Section title={t("lists.bestMargin")}>{productList(bestMargin, (p) => money(p.margin))}</Section>
       </div>
+
+      {/* Every product sold in the range */}
+      <Section title={t("productsSold.title")}>
+        <ProductsSoldTable report={productSales} fileName={productsSoldFileName} />
+      </Section>
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">

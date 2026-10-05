@@ -201,6 +201,46 @@ test("access: analytics.view required; own_location viewers see only their shop"
   });
 });
 
+const productSales = (s: Setup, range: object, locationId?: Id<"locations">, who = s.chief) =>
+  s.as(who).query(api.analytics.getProductSales, {
+    businessUnitKey: "hair",
+    range: range as { preset: "today" },
+    ...(locationId ? { locationId } : {}),
+  });
+const rowsOf = (report: Awaited<ReturnType<typeof productSales>>) =>
+  report.rows.map((r) => [r.name, r.unitsSold, r.revenue, r.cost, r.margin, r.marginPct]);
+
+test("getProductSales: every product sold, with totals matching the summary", async () => {
+  const { s, other, today, yesterday } = await scenario();
+  const day = await productSales(s, { from: today, to: today });
+  expect(rowsOf(day)).toEqual([
+    ["P1", 3, 1700, 600, 1100, 64.7],
+    ["P2", 1, 1500, 1000, 500, 33.3],
+  ]);
+  const totals = await summary(s, { from: today, to: today });
+  expect(day.totals).toEqual({ unitsSold: 4, revenue: totals.sales, cost: totals.cost, margin: totals.margin });
+  expect(day).toMatchObject({ from: today, to: today, currency: "USD", truncated: false });
+
+  // One day, one shop.
+  expect(rowsOf(await productSales(s, { from: yesterday, to: yesterday }, s.shop))).toEqual([["P1", 1, 600, 200, 400, 66.7]]);
+  expect(rowsOf(await productSales(s, { from: today, to: today }, other))).toEqual([["P1", 1, 700, 200, 500, 71.4]]);
+  expect((await productSales(s, { from: addBusinessDays(yesterday, -1), to: addBusinessDays(yesterday, -1) })).rows).toEqual([]);
+});
+
+test("getProductSales access: analytics.view required; own_location viewers see only their shop", async () => {
+  const { s, other, today } = await scenario();
+  await expect(productSales(s, { preset: "today" }, undefined, s.agent)).rejects.toThrow(/analytics\.view/);
+  await s.t.run(async (ctx) => {
+    const roleId = (await ctx.db.get("users", s.agent))!.roleId!;
+    const permission = (await ctx.db.query("permissions").collect()).find((p) => p.key === "analytics.view")!;
+    await ctx.db.insert("rolePermissions", { roleId, permissionId: permission._id, scope: "own_location" });
+  });
+  expect(rowsOf(await productSales(s, { from: today, to: today }, other, s.agent))).toEqual([
+    ["P1", 2, 1000, 400, 600, 60],
+    ["P2", 1, 1500, 1000, 500, 33.3],
+  ]);
+});
+
 test("only convex/lib/analytics.ts writes the rollup tables", () => {
   const sources = import.meta.glob("./**/*.ts", { query: "?raw", import: "default", eager: true });
   const writes = /\.(insert|patch|replace|delete)\(\s*["'`](dailyStats|dailyFinance)["'`]/;

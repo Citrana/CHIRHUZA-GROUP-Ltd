@@ -93,6 +93,44 @@ export const getSummary = authedQuery({
   },
 });
 
+type ProductTotals = { unitsSold: number; revenue: number; cost: number; margin: number };
+
+/** Per-product totals over the scope's days (products sold at least once). */
+async function productTotals(ctx: AuthedQueryCtx, s: Awaited<ReturnType<typeof scopeOf>>) {
+  const rows = await ctx.db
+    .query("dailyStats")
+    .withIndex("by_unit_location_day", (q) =>
+      q.eq("businessUnitId", s.unitId).eq("locationKey", s.locationKey).gte("day", s.from).lte("day", s.to),
+    )
+    .take(MAX_STATS_ROWS + 1);
+  const truncated = rows.length > MAX_STATS_ROWS;
+  const byProduct = new Map<Id<"products">, ProductTotals>();
+  for (const row of rows.slice(0, MAX_STATS_ROWS)) {
+    const p = byProduct.get(row.productId) ?? { unitsSold: 0, revenue: 0, cost: 0, margin: 0 };
+    p.unitsSold += row.unitsSold;
+    p.revenue += row.revenue;
+    p.cost += row.cost;
+    p.margin += row.margin;
+    byProduct.set(row.productId, p);
+  }
+  for (const [productId, p] of byProduct) if (p.unitsSold <= 0) byProduct.delete(productId);
+  return { totals: byProduct, truncated };
+}
+
+/** Name, SKU, length, size and colour of a product, for the lists. */
+async function describeProduct(ctx: AuthedQueryCtx, productId: Id<"products">) {
+  const product = await ctx.db.get("products", productId);
+  const details = await productDetails(ctx, product);
+  return {
+    productId,
+    name: product?.name ?? null,
+    sku: product?.sku ?? null,
+    lengthInches: product?.lengthInches ?? null,
+    colourName: details.colourName,
+    sizeName: details.sizeName,
+  };
+}
+
 /**
  * Products ranked over a range, by units sold or by margin. "asc" by units
  * = least sold among products sold at least once in the range.
@@ -106,44 +144,47 @@ export const getTopProducts = authedQuery({
   },
   handler: async (ctx, args) => {
     const s = await scopeOf(ctx, args);
-    const rows = await ctx.db
-      .query("dailyStats")
-      .withIndex("by_unit_location_day", (q) =>
-        q.eq("businessUnitId", s.unitId).eq("locationKey", s.locationKey).gte("day", s.from).lte("day", s.to),
-      )
-      .take(MAX_STATS_ROWS + 1);
-    const truncated = rows.length > MAX_STATS_ROWS;
-    const byProduct = new Map<Id<"products">, { unitsSold: number; revenue: number; cost: number; margin: number }>();
-    for (const row of rows.slice(0, MAX_STATS_ROWS)) {
-      const p = byProduct.get(row.productId) ?? { unitsSold: 0, revenue: 0, cost: 0, margin: 0 };
-      p.unitsSold += row.unitsSold;
-      p.revenue += row.revenue;
-      p.cost += row.cost;
-      p.margin += row.margin;
-      byProduct.set(row.productId, p);
-    }
+    const { totals, truncated } = await productTotals(ctx, s);
     const key = args.by === "units" ? "unitsSold" : "margin";
     const sign = args.order === "desc" ? -1 : 1;
-    const ranked = [...byProduct.entries()]
-      .filter(([, p]) => p.unitsSold > 0)
+    const ranked = [...totals.entries()]
       .sort((a, b) => sign * (a[1][key] - b[1][key]) || b[1].revenue - a[1].revenue)
       .slice(0, Math.min(Math.max(args.limit ?? 5, 1), 50));
     const products = await Promise.all(
-      ranked.map(async ([productId, totals]) => {
-        const product = await ctx.db.get("products", productId);
-        const details = await productDetails(ctx, product);
-        return {
-          productId,
-          name: product?.name ?? null,
-          sku: product?.sku ?? null,
-          lengthInches: product?.lengthInches ?? null,
-          colourName: details.colourName,
-          sizeName: details.sizeName,
-          ...totals,
-        };
-      }),
+      ranked.map(async ([productId, t]) => ({ ...(await describeProduct(ctx, productId)), ...t })),
     );
     return { products, truncated };
+  },
+});
+
+/**
+ * Every product sold over a range (the "Products sold" report): units,
+ * revenue, cost, margin and margin %, most sold first, plus the totals.
+ */
+export const getProductSales = authedQuery({
+  args: commonArgs,
+  handler: async (ctx, args) => {
+    const s = await scopeOf(ctx, args);
+    const { totals, truncated } = await productTotals(ctx, s);
+    const ranked = [...totals.entries()].sort(
+      (a, b) => b[1].unitsSold - a[1].unitsSold || b[1].revenue - a[1].revenue,
+    );
+    const rows = await Promise.all(
+      ranked.map(async ([productId, t]) => ({
+        ...(await describeProduct(ctx, productId)),
+        ...t,
+        marginPct: t.revenue > 0 ? Math.round((t.margin / t.revenue) * 1000) / 10 : null,
+      })),
+    );
+    const sum = (f: keyof ProductTotals) => rows.reduce((total, r) => total + r[f], 0);
+    return {
+      from: s.from,
+      to: s.to,
+      currency: "USD" as const,
+      rows,
+      totals: { unitsSold: sum("unitsSold"), revenue: sum("revenue"), cost: sum("cost"), margin: sum("margin") },
+      truncated,
+    };
   },
 });
 
