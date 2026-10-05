@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ProductPhoto } from "@/components/products/product-photo";
 import { ProductStockHistory } from "@/components/stock/product-stock-history";
+import { downloadCsv } from "@/lib/csv";
 import { cn } from "@/lib/utils";
 
 type ReportRow = PaginatedQueryItem<typeof api.inventory.productReport>;
@@ -27,15 +28,6 @@ const STATUS_VARIANT: Record<Status, "secondary" | "outline" | "destructive" | "
   out: "destructive",
   never: "outline",
 };
-
-/** A CSV that Excel opens with accents intact (UTF-8 BOM, quoted cells). */
-function toCsv(rows: (string | number | null)[][]): string {
-  const cell = (v: string | number | null) => {
-    const s = v === null ? "" : String(v);
-    return /[",\n;]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  return "﻿" + rows.map((r) => r.map(cell).join(",")).join("\r\n");
-}
 
 /**
  * The stock report ("By product"): every product of the service - in
@@ -118,7 +110,7 @@ export function ProductStockReport({ service }: { service: BusinessUnitKey }) {
         businessUnitKey: service,
         ...(status ? { status } : {}),
       });
-      const csv = toCsv([
+      downloadCsv(`stock-${service}-${businessDayOf(Date.now())}.csv`, [
         [t("csv.product"), t("csv.sku"), t("csv.details"), t("csv.status"), t("csv.onHand"), t("csv.received"), t("csv.sold"), t("csv.lastReceived"), t("csv.lastSold"), t("csv.outSince"), t("csv.threshold")],
         ...rows.map((r) => [
           r.name,
@@ -134,12 +126,6 @@ export function ProductStockReport({ service }: { service: BusinessUnitKey }) {
           r.lowStockThreshold,
         ]),
       ]);
-      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `stock-${service}-${businessDayOf(Date.now())}.csv`;
-      link.click();
-      URL.revokeObjectURL(url);
     } finally {
       setDownloading(false);
     }

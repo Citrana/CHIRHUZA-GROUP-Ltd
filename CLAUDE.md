@@ -289,6 +289,37 @@ this repo, now and later — do not relax them for convenience.
   first (tap targets ≥ 44px, no horizontal page scroll; wide tables scroll
   inside their own container or become cards on small screens).
 
+## Data changes need the owner's approval first
+
+The platform holds real business data in production. Before implementing
+any change, feature or fix that **affects data**, stop and inform the
+owner, and start only after they explicitly approve. This applies to every
+AI assistant and contributor, for every change, now and later.
+
+- **What counts as affecting data:**
+  - schema changes: new, changed or removed tables, fields or indexes,
+    or a field becoming required;
+  - migrations or backfills of existing records;
+  - anything that rewrites, archives or deletes stored records;
+  - new `SEED_STEPS` or changes to seeded reference data (roles,
+    permissions, business units);
+  - changes to how stored values are computed (stock, `productStock`,
+    rollups, money fields), or anything that needs a rebuild;
+  - imports, exports or resets;
+  - any command run against a deployment's data (`npx convex run`,
+    `import`, `env set`, and anything with `--prod`).
+- **What to tell the owner, before writing the code:**
+  - what will change, and in which tables;
+  - what happens to the records that already exist on prod;
+  - whether it can be undone, and how;
+  - which commands must run after deploy;
+  - whether a backup should be taken first.
+- **Wait for a clear "yes".** Approval for one change doesn't carry over
+  to the next one.
+- A purely read-only change (a new query, a UI change, docs) that doesn't
+  touch stored data or the schema doesn't need this step. When in doubt,
+  ask.
+
 ## Workflow
 
 - Prefer small, focused commits.
@@ -384,7 +415,9 @@ the inventory core with the stock overview by product, lot and holder
 and refunds come next), payroll (`/[service]/payroll`) and withdrawals
 (`/[service]/withdrawals`), both approved by the Chief Admin, and the
 analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
-expenses, payroll, net profit, withdrawals apart, top products, charts).
+expenses, payroll, net profit, withdrawals apart, top products, charts, and
+the "Products sold" report - every product sold in any day or range, per
+shop, with CSV).
 Mode (fashion) is live on the same modules, with clothes told apart by
 name, size (managed, ordered list in Product settings) and colour. Locations are
 shared by every service.
