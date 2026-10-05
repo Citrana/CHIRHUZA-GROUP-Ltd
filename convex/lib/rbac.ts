@@ -178,6 +178,7 @@ const APPEND_ONLY_RULES: Rules<MutationCtx, DataModel> = {
   auditLogs: { modify: async () => false },
   appliedSeedSteps: { modify: async () => false },
   inventoryMovements: { modify: async () => false },
+  salePayments: { modify: async () => false },
 };
 
 /** `ctx.db` that throws on patch/replace/delete of append-only tables. */

@@ -205,6 +205,35 @@ this repo, now and later — do not relax them for convenience.
   `recordedAt` when it was entered; backdated sales are flagged in the list
   and the audit. Stock still moves at recording time.
 
+## Credit
+
+- A credit sale belongs to a **customer** (`customers`, per service, one
+  per name - `nameKey`; `convex/customers.ts`). Sellers pick or add the
+  customer in the sale form.
+- Every sale has an **agreed total**: `totalAmount`, pre-filled with the
+  lines' sum (`linesTotal`); never higher, and lower only with a
+  `saleDiscountReason`. The difference is split over the lines
+  (`saleItems.saleDiscountShare`, `splitDiscount`), and `saleEvents`
+  subtracts each line's share, so product revenue adds up to the agreed
+  total.
+- Money received for a credit sale is a `salePayments` row (**append-only**):
+  `at_sale` (paid at checkout, 0 or more), `repayment` (later, split over the
+  customer's oldest open sales first, `allocateRepayment`, never more than
+  owed) or `reversal` (negative). `applySalePayment`
+  (`convex/lib/credit.ts`) is the only writer: it inserts the row and
+  updates `sales.amountPaid` / `creditStatus` (`open` | `settled`) and
+  `customers.balance` in the same mutation, with audit entries.
+- Repayments need no approval (`sales.create`, scoped like sales). A wrong
+  payment is undone only through the approval engine (type
+  `credit_payment_reversal`, requested with `sales.edit.request`, decided
+  by `sales.edit.approve` holders): its handler adds the reversal row.
+- Revenue counts at the sale; payments are cash collected and **never**
+  touch the analytics rollups. Who owes what is on `/[service]/sales/credit`
+  (`credit.owed`, `credit.customer`), scoped by `sales.view`.
+- Credit sales recorded before this existed are fixed once by
+  `npx convex run credit:backfillLegacyCredit` (idempotent; counts them as
+  unpaid).
+
 ## Payroll & withdrawals
 
 - Payroll entries (`convex/payroll.ts`) and withdrawals
@@ -412,7 +441,8 @@ the inventory core with the stock overview by product, lot and holder
 (`/[service]/stock`), and sales (`/[service]/sales`, the phone sale form at
 `/[service]/sales/new`; suggested selling prices set on the price list at
 `/[service]/products/prices`, next to each lot's purchase cost). Sale edits
-and refunds come next), payroll (`/[service]/payroll`) and withdrawals
+and refunds come next), credit sales (customers, agreed totals, part
+payments and repayments at `/[service]/sales/credit`), payroll (`/[service]/payroll`) and withdrawals
 (`/[service]/withdrawals`), both approved by the Chief Admin, and the
 analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts, and

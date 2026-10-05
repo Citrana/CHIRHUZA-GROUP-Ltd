@@ -60,8 +60,8 @@ The movement types `adjustment`, `transfer` and `return` exist, but nothing uses
 - **transfers** between shops or people;
 - **returns** to the warehouse.
 
-### 2.3 Credit tracking
-Credit sales only record the customer's name.
+### 2.3 Credit tracking ✅ done
+Built: customer list, agreed total per sale, part payment at the sale, repayments (oldest sale first), corrections through approval, Credit page. Originally: credit sales only recorded the customer's name.
 
 **Needs:**
 - a "who owes what" list per customer;

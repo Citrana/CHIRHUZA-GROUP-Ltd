@@ -5,6 +5,7 @@ import type { ApprovalType } from "./approvalTypes";
 import { deleteApprovedProduct } from "./products";
 import { applyPayrollApproval, applyPayrollRejection } from "./payroll";
 import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals";
+import { applyCreditPaymentReversal } from "./credit";
 import {
   applyDistributionApproval,
   applyDistributionRejection,
@@ -75,6 +76,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   stock_batch: applyStockBatchApproval,
   distribution: applyDistributionApproval,
   withdrawal: applyWithdrawalApproval,
+  credit_payment_reversal: applyCreditPaymentReversal,
 };
 
 /**

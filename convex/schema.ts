@@ -10,6 +10,7 @@ import {
 } from "./lib/stockBatches";
 import { currencyValidator, usdValidator } from "./lib/money";
 import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
+import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
 import {
@@ -432,9 +433,21 @@ export default defineSchema({
     // UTC ms of when it was actually entered. Missing on the first sales,
     // recorded before sales could be backdated.
     recordedAt: v.optional(v.number()),
+    // Credit (convex/lib/credit.ts). The customer, for credit sales; the
+    // sum of the lines before a whole-sale discount (totalAmount is the
+    // agreed total), with the discount's reason; and, for credit sales,
+    // what has been paid so far and whether a balance remains. Missing on
+    // sales recorded before credit tracking.
+    customerId: v.optional(v.id("customers")),
+    linesTotal: v.optional(v.number()),
+    saleDiscountReason: v.optional(v.string()),
+    amountPaid: v.optional(v.number()),
+    creditStatus: v.optional(creditStatusValidator),
   })
     .index("by_businessUnitId_and_createdAt", ["businessUnitId", "createdAt"])
-    .index("by_locationId_and_createdAt", ["locationId", "createdAt"]),
+    .index("by_locationId_and_createdAt", ["locationId", "createdAt"])
+    .index("by_customerId_and_createdAt", ["customerId", "createdAt"])
+    .index("by_businessUnitId_and_creditStatus", ["businessUnitId", "creditStatus"]),
 
   saleItems: defineTable({
     saleId: v.id("sales"),
@@ -452,10 +465,57 @@ export default defineSchema({
     currency: currencyValidator,
     // Required when unitPrice differs from the suggested price.
     discountReason: v.optional(v.string()),
+    // This line's share (cents) of a whole-sale discount (agreed total
+    // below the lines' sum), split in proportion to line values. Its
+    // revenue is unitPrice x qty - saleDiscountShare.
+    saleDiscountShare: v.optional(v.number()),
   })
     .index("by_saleId", ["saleId"])
     .index("by_inventoryBatchId", ["inventoryBatchId"])
     .index("by_productId", ["productId"]),
+
+  // Customers who buy on credit (convex/lib/credit.ts), per service.
+  // `balance` (USD cents) is what they still owe across their credit
+  // sales, kept up to date in the same mutation as each sale or payment.
+  customers: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    // Lowercased name with spaces collapsed: one customer per name.
+    nameKey: v.string(),
+    phone: v.optional(v.string()),
+    // Name and phone, for the customer search.
+    searchText: v.string(),
+    balance: v.number(),
+    currency: usdValidator,
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_businessUnitId_and_nameKey", ["businessUnitId", "nameKey"])
+    .searchIndex("search_text", { searchField: "searchText", filterFields: ["businessUnitId"] }),
+
+  // Money received for credit sales: paid at the sale, repaid later, or a
+  // reversal (negative) of a wrong payment, approved through the approval
+  // engine. Append-only.
+  salePayments: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    saleId: v.id("sales"),
+    customerId: v.id("customers"),
+    // The sale's location (scopes own_location users).
+    locationId: v.id("locations"),
+    // Cents; negative only for a reversal.
+    amount: v.number(),
+    currency: usdValidator,
+    method: collectionMethodValidator,
+    kind: salePaymentKindValidator,
+    reversesPaymentId: v.optional(v.id("salePayments")),
+    // UTC ms of when the money was received.
+    paidAt: v.number(),
+    recordedBy: v.id("users"),
+    note: v.optional(v.string()),
+  })
+    .index("by_saleId", ["saleId"])
+    .index("by_customerId_and_paidAt", ["customerId", "paidAt"])
+    .index("by_reversesPaymentId", ["reversesPaymentId"]),
 
   // Payroll (convex/lib/payroll.ts): salary payments, approved by the Chief
   // Admin (approval type "payroll"). USD cents; a period is a month.
