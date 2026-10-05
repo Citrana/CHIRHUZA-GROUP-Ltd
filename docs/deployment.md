@@ -50,19 +50,22 @@ NEXT_PUBLIC_CONVEX_URL=https://fearless-chickadee-48.convex.cloud
 
 ## 3. How a release goes live
 
-Every push or merge to **`develop`** deploys automatically, in 2–4 minutes:
-1. Vercel sees the new commit on `develop` and starts a build.
-2. The build command `npx convex deploy --cmd 'pnpm run build'`:
-   - updates the prod Convex functions and schema, using `CONVEX_DEPLOY_KEY`;
-   - builds the website, with `NEXT_PUBLIC_CONVEX_URL` filled in automatically.
-3. The new version goes live; users see it on their next page load.
+Production follows the **`main`** branch (Vercel **Settings → Environments → Production → Branch Tracking**).
+
+1. Feature branch → PR into `chore/active-development`. Nothing deploys.
+2. PR `chore/active-development` → `develop`. Nothing deploys.
+3. PR `develop` → `main`. **This goes live**, in 2–4 minutes:
+   - Vercel builds `main` with `npx convex deploy --cmd 'pnpm run build'`;
+   - it updates the prod Convex functions and schema (`CONVEX_DEPLOY_KEY`), then builds the website;
+   - users see the new version on their next page load.
 
 If the build fails, nothing changes and the previous version stays live.
 
-**Planned improvement:** a separate `main` branch for releases.
-- Set Vercel **Settings → Environments → Production → Branch** to `main`.
-- Keep merging features into `develop`; merge `develop` into `main` to release.
-- Turn off automatic preview builds in **Settings → Git**. Preview builds would fail anyway, because the deploy key is Production-only.
+**Check a release:** Vercel → **Deployments** shows a **Production** row from `main` with status **Ready**; the Convex dashboard (Production) shows "Last deployed … just now".
+
+Pull-request previews fail by design (the deploy key is Production-only). Turn them off with **Settings → Build and Deployment → Ignored Build Step → "Only build production"**.
+
+Before merging `develop` → `main`, check **section 9** for commands that release needs.
 
 ---
 
@@ -186,3 +189,14 @@ Everything else was emptied, including file storage. A backup taken first is at 
 1. `npx convex export --include-file-storage --path backup.zip`
 2. Filter the tables to keep into a new zip.
 3. `npx convex import --replace-all -y clean.zip`
+
+---
+
+## 9. Release log: prod steps per release
+
+Some releases need commands on prod. Settings (`env set`) go **before** the merge into `main`; seed, migration and rebuild commands go **after** the deploy shows Ready.
+
+| Release | Before merging into `main` | After the deploy is Ready |
+|---|---|---|
+| Products sold report | — | — |
+| Credit sales (customers, agreed total, part payments, repayments) | Backup: `npx convex export --prod --include-file-storage --path chiruza-prod-backup-$(date +%F).zip` | `npx convex run --prod credit:backfillLegacyCredit` (rerun while it says `"more": true`). Earlier credit sales get a customer and count as unpaid. |

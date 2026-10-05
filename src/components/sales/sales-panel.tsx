@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { HandCoins, Plus } from "lucide-react";
 import { useQuery, type PaginatedQueryItem } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
@@ -30,6 +30,18 @@ function RecordedBadge({ sale }: { sale: SaleRow }) {
   if (!sale.backdated || !sale.recordedAt) return null;
   const day = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: BUSINESS_TIME_ZONE });
   return <Badge variant="outline">{t("recordedBadge", { date: day.format(sale.recordedAt) })}</Badge>;
+}
+
+/** "Owes $30.00" / "Paid" on a credit sale. */
+function CreditBadge({ sale }: { sale: SaleRow }) {
+  const t = useTranslations("Sales");
+  const locale = useLocale();
+  if (sale.balance === null) return null;
+  return sale.balance > 0 ? (
+    <Badge variant="destructive">{t("creditBalance", { amount: formatMoney(sale.balance, "USD", locale) })}</Badge>
+  ) : (
+    <Badge variant="secondary">{t("creditPaid")}</Badge>
+  );
 }
 
 /** Sales list (sales.view) with date and location filters; "New sale" for sellers. */
@@ -102,7 +114,12 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
     {
       id: "payment",
       header: t("paymentHeader"),
-      cell: ({ row }) => t(`payments.${row.original.paymentMethod}`),
+      cell: ({ row }) => (
+        <span className="flex flex-col items-start gap-1">
+          {t(`payments.${row.original.paymentMethod}`)}
+          <CreditBadge sale={row.original} />
+        </span>
+      ),
       meta: { hideBelow: "md" },
     },
     {
@@ -173,6 +190,29 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
           </>
         ) : null}
       </dl>
+      {sale.saleDiscountReason && sale.linesTotal !== undefined ? (
+        <p className="text-xs text-muted-foreground">
+          {t("saleDiscountShown", { lines: money(sale.linesTotal), reason: sale.saleDiscountReason })}
+        </p>
+      ) : null}
+      {sale.balance !== null ? (
+        <div className="flex flex-col gap-1">
+          <p className="flex items-center justify-between gap-2 font-medium">
+            {t("paymentsTitle")}
+            <CreditBadge sale={sale} />
+          </p>
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border bg-background">
+            {sale.payments.map((p) => (
+              <li key={p._id} className="flex items-center justify-between gap-3 px-3 py-2">
+                <span className="text-muted-foreground">
+                  {[t(`paymentKinds.${p.kind}`), t(`payments.${p.method}`), time.format(p.paidAt)].join(" · ")}
+                </span>
+                <span className={cn("shrink-0 tabular-nums", p.amount < 0 && "text-destructive")}>{money(p.amount)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 
@@ -183,12 +223,18 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
           <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("subtitle")}</p>
         </div>
-        {canSell ? (
-          <Link href={`/${service}/sales/new`} className={buttonVariants({ size: "lg", className: "min-h-11" })}>
-            <Plus aria-hidden />
-            {t("new")}
+        <div className="flex flex-wrap gap-2">
+          <Link href={`/${service}/sales/credit`} className={buttonVariants({ variant: "outline", size: "lg", className: "min-h-11" })}>
+            <HandCoins aria-hidden />
+            {t("creditLink")}
           </Link>
-        ) : null}
+          {canSell ? (
+            <Link href={`/${service}/sales/new`} className={buttonVariants({ size: "lg", className: "min-h-11" })}>
+              <Plus aria-hidden />
+              {t("new")}
+            </Link>
+          ) : null}
+        </div>
       </div>
       <DataTable
         columns={columns}
@@ -258,6 +304,7 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
               {t("pieces", { count: sale.totalQty })} · {t("marginHeader")}{" "}
               <span className={marginClass(sale.margin)}>{money(sale.margin)}</span>
             </p>
+            <CreditBadge sale={sale} />
           </div>
         )}
       />

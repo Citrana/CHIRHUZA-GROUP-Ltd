@@ -58,7 +58,7 @@ const sell = (
   extra: Partial<{
     locationId: Id<"locations">;
     paymentMethod: "cash" | "mobile_money" | "credit";
-    customerName: string;
+    customerId: Id<"customers">;
     soldOn: string;
   }> = {},
 ) =>
@@ -66,7 +66,7 @@ const sell = (
     businessUnitKey: "hair",
     paymentMethod: extra.paymentMethod ?? "cash",
     ...(extra.locationId ? { locationId: extra.locationId } : {}),
-    ...(extra.customerName ? { customerName: extra.customerName } : {}),
+    ...(extra.customerId ? { customerId: extra.customerId } : {}),
     ...(extra.soldOn ? { soldOn: extra.soldOn } : {}),
     lines,
   });
@@ -186,7 +186,7 @@ test("two sellers racing for the last units: one wins, the other fails", async (
   expect(remaining).toBeGreaterThanOrEqual(0);
 });
 
-test("price rules: discount reason when the price differs from the suggested one; credit needs a name", async () => {
+test("price rules: discount reason when the price differs from the suggested one; credit needs a customer", async () => {
   const { s, p1Lot, p2Lot } = await withShopStock();
   const p1 = (await s.t.run((ctx) => ctx.db.get("inventoryBatches", p1Lot)))!.productId;
   // Only products.set_price holders set the suggested price.
@@ -208,11 +208,12 @@ test("price rules: discount reason when the price differs from the suggested one
   const [item] = await s.t.run((ctx) => ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", saleId)).collect());
   expect(item).toMatchObject({ unitPrice: 400, unitCostSnapshot: 200, suggestedPriceSnapshot: 500, discountReason: "Loyal customer" });
 
-  // Credit needs the customer's name.
+  // Credit needs the customer.
   await expect(
     sell(s, s.agent, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1200 }], { paymentMethod: "credit" }),
-  ).rejects.toThrow(/customer's name/);
-  await sell(s, s.agent, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1200 }], { paymentMethod: "credit", customerName: "Mama Neema" });
+  ).rejects.toThrow(/needs the customer/);
+  const customerId = await s.as(s.agent).mutation(api.customers.create, { businessUnitKey: "hair", name: "Mama Neema" });
+  await sell(s, s.agent, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1200 }], { paymentMethod: "credit", customerId });
 
   // Bad input.
   await expect(sell(s, s.agent, [])).rejects.toThrow(/at least one line/);

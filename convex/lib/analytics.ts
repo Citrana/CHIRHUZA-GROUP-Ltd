@@ -42,17 +42,20 @@ export type RollupEvent = {
 /** A sale's rollup events (sign -1 reverses it, for voids/edits). */
 export function saleEvents(
   sale: Pick<Doc<"sales">, "locationId" | "createdAt">,
-  items: Pick<Doc<"saleItems">, "productId" | "qty" | "unitPrice" | "unitCostSnapshot">[],
+  items: Pick<Doc<"saleItems">, "productId" | "qty" | "unitPrice" | "unitCostSnapshot" | "saleDiscountShare">[],
   sign: 1 | -1 = 1,
 ): RollupEvent[] {
   const day = businessDayOf(sale.createdAt);
+  // A line's revenue: its price x quantity, less its share of a whole-sale
+  // discount (so product revenue adds up to the sale's agreed total).
+  const revenue = (item: (typeof items)[number]) => item.unitPrice * item.qty - (item.saleDiscountShare ?? 0);
   const events: RollupEvent[] = items.map((item) => ({
     locationId: sale.locationId,
     day,
     product: {
       productId: item.productId,
       units: sign * item.qty,
-      revenue: sign * item.unitPrice * item.qty,
+      revenue: sign * revenue(item),
       cost: sign * item.unitCostSnapshot * item.qty,
     },
   }));
@@ -60,7 +63,7 @@ export function saleEvents(
     locationId: sale.locationId,
     day,
     finance: {
-      sales: sign * items.reduce((s, i) => s + i.unitPrice * i.qty, 0),
+      sales: sign * items.reduce((s, i) => s + revenue(i), 0),
       saleCost: sign * items.reduce((s, i) => s + i.unitCostSnapshot * i.qty, 0),
     },
   });

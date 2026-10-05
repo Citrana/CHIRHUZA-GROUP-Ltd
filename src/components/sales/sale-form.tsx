@@ -23,6 +23,7 @@ import {
   businessDayStartUtc,
 } from "../../../convex/lib/time";
 import { PRODUCT_PROFILES } from "../../../convex/lib/products";
+import { COLLECTION_METHODS, type CollectionMethod } from "../../../convex/lib/credit";
 import { Link } from "@/i18n/navigation";
 import { DataTableSearch } from "@/components/data-table/data-table-search";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { ProductPhoto } from "@/components/products/product-photo";
+import { CustomerPicker, type PickedCustomer } from "@/components/sales/customer-picker";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -83,9 +85,24 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
   const [nextKey, setNextKey] = useState(1);
   const [search, setSearch] = useState("");
   const [payment, setPayment] = useState<PaymentMethod>("cash");
+  // Optional name on a cash / mobile money sale.
   const [customer, setCustomer] = useState("");
+  // Credit: the customer from the customer list, what they paid now and how.
+  const [creditCustomer, setCreditCustomer] = useState<PickedCustomer | null>(null);
+  const [paidNow, setPaidNow] = useState<number | null>(0);
+  const [paidNowMethod, setPaidNowMethod] = useState<CollectionMethod>("cash");
+  // The agreed total, for the lines' total it was entered against: when the
+  // lines change, it goes back to following their total. Lower than the
+  // lines is a whole-sale discount and needs a reason.
+  const [agreed, setAgreed] = useState<{ value: number; linesTotal: number } | null>(null);
+  const [saleReason, setSaleReason] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const [done, setDone] = useState<{ number: string; total: number; soldOn: string } | null>(null);
+  const [done, setDone] = useState<{
+    number: string;
+    total: number;
+    soldOn: string;
+    credit?: { customer: string; balance: number };
+  } | null>(null);
   // The day of the sale: today, or up to MAX_BACKDATE_DAYS back for a sale
   // recorded late. Kept after recording, to enter several late sales.
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
@@ -148,7 +165,12 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     if (line.qty > lot.onHand) problems.push("stock");
     return problems;
   };
-  const total = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
+  const linesTotal = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
+  const agreedTotal = agreed && agreed.linesTotal === linesTotal ? agreed.value : null;
+  const total = agreedTotal ?? linesTotal;
+  const discounted = total < linesTotal;
+  const isCredit = payment === "credit";
+  const balance = total - (paidNow ?? 0);
   // The first thing stopping the sale, in words (shown after a try).
   const allProblems = new Set(lines.flatMap(problemsOf));
   const blocker = !locationId
@@ -165,9 +187,15 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
               ? t("needQty")
               : allProblems.has("stock")
                 ? t("needStock")
-                : payment === "credit" && !customer.trim()
-                  ? t("needCustomer")
-                  : null;
+                : total > linesTotal
+                  ? t("needTotal")
+                  : discounted && !saleReason.trim()
+                    ? t("needSaleReason")
+                    : isCredit && !creditCustomer
+                      ? t("needCustomer")
+                      : isCredit && (paidNow ?? 0) > total
+                        ? t("needPaidNow")
+                        : null;
 
   function update(key: number, patch: Partial<Line>) {
     setLines((prev) => prev.map((l) => (l.key === key ? { ...l, ...patch } : l)));
@@ -217,7 +245,17 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         ...(options?.locationLocked ? {} : { locationId }),
         paymentMethod: payment,
         ...(soldOn !== today ? { soldOn } : {}),
-        ...(customer.trim() ? { customerName: customer } : {}),
+        ...(!isCredit && customer.trim() ? { customerName: customer } : {}),
+        ...(isCredit && creditCustomer
+          ? {
+              customerId: creditCustomer._id,
+              paidNow: paidNow ?? 0,
+              ...((paidNow ?? 0) > 0 ? { paidNowMethod } : {}),
+            }
+          : {}),
+        ...(agreedTotal !== null && agreedTotal !== linesTotal
+          ? { agreedTotal, ...(saleReason.trim() ? { saleDiscountReason: saleReason } : {}) }
+          : {}),
         lines: lines.map((l) => ({
           inventoryBatchId: l.lotId,
           qty: l.qty,
@@ -225,11 +263,21 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
           ...(l.reason.trim() ? { discountReason: l.reason } : {}),
         })),
       });
-      setDone({ number: result.number, total, soldOn: result.soldOn });
+      setDone({
+        number: result.number,
+        total,
+        soldOn: result.soldOn,
+        ...(isCredit && creditCustomer ? { credit: { customer: creditCustomer.name, balance } } : {}),
+      });
       // The form may stay open past midnight: "today" per the server.
       setToday(result.recordedOn);
       setLines([]);
       setCustomer("");
+      setCreditCustomer(null);
+      setPaidNow(0);
+      setPaidNowMethod("cash");
+      setAgreed(null);
+      setSaleReason("");
       setPayment("cash");
       setAttempted(false);
     } catch (e) {
@@ -257,9 +305,16 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
       {done ? (
         <p role="status" className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
           <CheckCircle2 className="size-5 shrink-0 text-primary" aria-hidden />
-          {done.soldOn === today
-            ? t("recorded", { number: done.number, total: money(done.total) })
-            : t("recordedOn", { number: done.number, total: money(done.total), date: longDay(done.soldOn) })}
+          {done.credit
+            ? t("recordedCredit", {
+                number: done.number,
+                total: money(done.total),
+                customer: done.credit.customer,
+                balance: money(done.credit.balance),
+              })
+            : done.soldOn === today
+              ? t("recorded", { number: done.number, total: money(done.total) })
+              : t("recordedOn", { number: done.number, total: money(done.total), date: longDay(done.soldOn) })}
         </p>
       ) : null}
 
@@ -506,6 +561,47 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         </section>
       ) : null}
 
+      {lines.length > 0 ? (
+        <section className="flex flex-col gap-3 rounded-lg border border-border p-3" aria-label={t("totalToPayLabel")}>
+          <p className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{t("linesTotalLabel")}</span>
+            <span className="tabular-nums">{money(linesTotal)}</span>
+          </p>
+          <div className="flex flex-col gap-1">
+            <Label htmlFor="sale-total" required>
+              {t("totalToPayLabel")}
+            </Label>
+            <MoneyInput
+              id="sale-total"
+              currency="USD"
+              valueMinor={total}
+              onCommit={(value) => setAgreed(value === null || value === linesTotal ? null : { value, linesTotal })}
+              aria-invalid={(attempted && total > linesTotal) || undefined}
+              className="h-11"
+              required
+            />
+            <span className="text-xs text-muted-foreground">{t("totalToPayHint")}</span>
+          </div>
+          {discounted ? (
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="sale-discount-reason" required>
+                {t("saleDiscountReasonLabel")}
+              </Label>
+              <Input
+                id="sale-discount-reason"
+                value={saleReason}
+                onChange={(e) => setSaleReason(e.target.value)}
+                placeholder={t("saleDiscountReasonPlaceholder")}
+                maxLength={300}
+                aria-invalid={(attempted && !saleReason.trim()) || undefined}
+                required
+                className="h-11"
+              />
+            </div>
+          ) : null}
+        </section>
+      ) : null}
+
       <fieldset className="flex flex-col gap-2">
         <legend className="mb-2 text-sm font-medium">
           {t("paymentLabel")} <span className="text-destructive">*</span>
@@ -532,20 +628,79 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         </div>
       </fieldset>
 
-      <div className="flex flex-col gap-2">
-        <Label htmlFor="sale-customer" required={payment === "credit"}>
-          {t("customerLabel")}
-        </Label>
-        <Input
-          id="sale-customer"
-          value={customer}
-          onChange={(e) => setCustomer(e.target.value)}
-          maxLength={120}
-          required={payment === "credit"}
-          placeholder={payment === "credit" ? t("customerRequired") : t("customerOptional")}
-          className="h-11"
-        />
-      </div>
+      {isCredit ? (
+        <section className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <span className="text-sm font-medium">
+              {t("customerLabel")} <span className="text-destructive">*</span>
+            </span>
+            <CustomerPicker
+              service={service}
+              value={creditCustomer}
+              onChange={setCreditCustomer}
+              invalid={attempted && !creditCustomer}
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="sale-paid-now" required>
+                {t("paidNowLabel")}
+              </Label>
+              <MoneyInput
+                id="sale-paid-now"
+                currency="USD"
+                valueMinor={paidNow}
+                onCommit={setPaidNow}
+                aria-invalid={(attempted && (paidNow ?? 0) > total) || undefined}
+                className="h-11"
+                required
+              />
+              <span className="text-xs text-muted-foreground">{t("paidNowHint")}</span>
+            </div>
+            {(paidNow ?? 0) > 0 ? (
+              <fieldset className="flex flex-col gap-1">
+                <legend className="mb-1 text-sm font-medium">{t("paidNowMethodLabel")}</legend>
+                <div role="radiogroup" className="grid grid-cols-2 gap-2">
+                  {COLLECTION_METHODS.map((method) => (
+                    <label
+                      key={method}
+                      className={cn(
+                        "flex min-h-11 cursor-pointer items-center justify-center rounded-md border px-2 text-center text-sm font-medium",
+                        paidNowMethod === method ? "border-primary bg-primary text-primary-foreground" : "border-border",
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="paid-now-method"
+                        className="sr-only"
+                        checked={paidNowMethod === method}
+                        onChange={() => setPaidNowMethod(method)}
+                      />
+                      {t(`payments.${method}`)}
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
+          </div>
+          <p className="flex justify-between rounded-md bg-muted/40 px-3 py-2 text-sm">
+            <span className="font-medium">{t("balanceLabel")}</span>
+            <span className={cn("font-semibold tabular-nums", balance < 0 && "text-destructive")}>{money(Math.max(balance, 0))}</span>
+          </p>
+        </section>
+      ) : (
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="sale-customer">{t("customerLabel")}</Label>
+          <Input
+            id="sale-customer"
+            value={customer}
+            onChange={(e) => setCustomer(e.target.value)}
+            maxLength={120}
+            placeholder={t("customerOptional")}
+            className="h-11"
+          />
+        </div>
+      )}
 
       {error ? (
         <p className="text-sm text-destructive" role="alert">
@@ -558,6 +713,11 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{t("itemsCount", { count: lines.reduce((s, l) => s + l.qty, 0) })}</p>
             <p className="text-xl font-semibold tabular-nums">{money(total)}</p>
+            {isCredit && lines.length > 0 ? (
+              <p className="text-xs text-muted-foreground tabular-nums">
+                {t("balanceLabel")} {money(Math.max(balance, 0))}
+              </p>
+            ) : null}
             {attempted && blocker ? (
               <p className="text-xs text-destructive" role="alert">
                 {blocker}
