@@ -15,6 +15,7 @@ export const APPROVAL_TYPES = [
   "stock_batch",
   "distribution",
   "withdrawal",
+  "credit_payment_reversal",
 ] as const;
 
 export const approvalTypeValidator = v.union(
@@ -26,6 +27,7 @@ export const approvalTypeValidator = v.union(
   v.literal("stock_batch"),
   v.literal("distribution"),
   v.literal("withdrawal"),
+  v.literal("credit_payment_reversal"),
 );
 export type ApprovalType = Infer<typeof approvalTypeValidator>;
 

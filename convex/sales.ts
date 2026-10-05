@@ -18,6 +18,7 @@ import {
   saleTimestamp,
 } from "./lib/sales";
 import { productDetails } from "./lib/products";
+import { applySalePayment, collectionMethodValidator, saleBalance, splitDiscount } from "./lib/credit";
 
 /**
  * Sales (convex/lib/sales.ts). sales.create records a sale; its scope is
@@ -100,8 +101,18 @@ export const create = authedMutation({
     // The business day it was sold (YYYY-MM-DD); missing = today. Up to
     // MAX_BACKDATE_DAYS back, for sales recorded late.
     soldOn: v.optional(v.string()),
-    customerName: v.optional(v.string()),
     paymentMethod: paymentMethodValidator,
+    // Optional for cash / mobile money sales (credit sales use customerId).
+    customerName: v.optional(v.string()),
+    // Credit sales: the customer (customers.create adds a new one), what
+    // they paid now (cents, 0 or more) and how.
+    customerId: v.optional(v.id("customers")),
+    paidNow: v.optional(v.number()),
+    paidNowMethod: v.optional(collectionMethodValidator),
+    // The total the customer agreed to pay (cents); missing = the lines'
+    // sum. Lower than that is a whole-sale discount and needs a reason.
+    agreedTotal: v.optional(v.number()),
+    saleDiscountReason: v.optional(v.string()),
     lines: v.array(
       v.object({
         inventoryBatchId: v.id("inventoryBatches"),
@@ -150,11 +161,16 @@ export const create = authedMutation({
     if (new Set(args.lines.map((l) => l.inventoryBatchId)).size !== args.lines.length) {
       throw new ConvexError("Each lot can appear only once.");
     }
-    const customerName = args.customerName?.trim() || undefined;
-    if (customerName && customerName.length > 120) throw new ConvexError("Customer name is too long.");
-    if (args.paymentMethod === "credit" && !customerName) {
-      throw new ConvexError("A credit sale needs the customer's name.");
+    const isCredit = args.paymentMethod === "credit";
+    const customer = isCredit && args.customerId ? await ctx.db.get("customers", args.customerId) : null;
+    if (isCredit && (!customer || customer.businessUnitId !== unit._id)) {
+      throw new ConvexError("A credit sale needs the customer.");
     }
+    if (!isCredit && (args.customerId || args.paidNow !== undefined)) {
+      throw new ConvexError("Only a credit sale has a customer and a part payment.");
+    }
+    const customerName = customer ? customer.name : args.customerName?.trim() || undefined;
+    if (customerName && customerName.length > 120) throw new ConvexError("Customer name is too long.");
 
     const lines = [];
     for (const line of args.lines) {
@@ -178,8 +194,30 @@ export const create = authedMutation({
       lines.push({ line, lot, product, described, discountReason, batchNumber: batch?.number ?? null });
     }
 
+    // The agreed total: the lines' sum, or less (a whole-sale discount,
+    // with a reason), split over the lines for per-product revenue.
+    const linesTotal = lines.reduce((s, l) => s + l.line.unitPrice * l.line.qty, 0);
+    const totalAmount = args.agreedTotal ?? linesTotal;
+    if (!Number.isSafeInteger(totalAmount) || totalAmount < 0) throw new ConvexError("The total must be whole cents from 0.");
+    if (totalAmount > linesTotal) throw new ConvexError("The total to pay can't be more than the lines' total.");
+    const saleDiscountReason = totalAmount < linesTotal ? args.saleDiscountReason?.trim() || undefined : undefined;
+    if (totalAmount < linesTotal && !saleDiscountReason) {
+      throw new ConvexError({ code: "SALE_DISCOUNT_REASON" as const, message: "Say why the total is lower than the lines' total." });
+    }
+    if (saleDiscountReason && saleDiscountReason.length > 300) throw new ConvexError("The discount reason is too long.");
+    const shares = splitDiscount(
+      lines.map((l) => l.line.unitPrice * l.line.qty),
+      linesTotal - totalAmount,
+    );
+
+    // Credit: what the customer paid now (0 up to the total), and how.
+    const paidNow = isCredit ? (args.paidNow ?? 0) : 0;
+    if (!Number.isSafeInteger(paidNow) || paidNow < 0 || paidNow > totalAmount) {
+      throw new ConvexError("What was paid now must be from 0 up to the total.");
+    }
+    if (paidNow > 0 && !args.paidNowMethod) throw new ConvexError("Say how the customer paid now.");
+
     // 3. Record the sale with each line's cost snapshot.
-    const totalAmount = lines.reduce((s, l) => s + l.line.unitPrice * l.line.qty, 0);
     const totalCost = lines.reduce((s, l) => s + l.lot.unitCost * l.line.qty, 0);
     const number = await nextSequenceNumber(ctx, unit._id, "sale", "SALE");
     const createdAt = when.createdAt;
@@ -188,10 +226,14 @@ export const create = authedMutation({
       number,
       locationId: location._id,
       soldBy: ctx.user._id,
+      ...(customer ? { customerId: customer._id } : {}),
       ...(customerName ? { customerName } : {}),
       paymentMethod: args.paymentMethod,
       currency: "USD",
       totalAmount,
+      linesTotal,
+      ...(saleDiscountReason ? { saleDiscountReason } : {}),
+      ...(customer ? { amountPaid: 0, creditStatus: totalAmount > 0 ? ("open" as const) : ("settled" as const) } : {}),
       totalCost,
       status: "completed",
       createdAt,
@@ -203,7 +245,7 @@ export const create = authedMutation({
     // (the mutation is one transaction). Concurrent sales of the last unit
     // are serialized by Convex: the loser re-runs, sees 0 and fails here.
     const from = await getOrCreateHolder(ctx, unit._id, { type: "location", refId: location._id });
-    for (const { line, lot, product, discountReason } of lines) {
+    for (const [i, { line, lot, product, discountReason }] of lines.entries()) {
       await ctx.db.insert("saleItems", {
         saleId,
         productId: lot.productId,
@@ -214,6 +256,7 @@ export const create = authedMutation({
         ...(product?.suggestedPrice !== undefined ? { suggestedPriceSnapshot: product.suggestedPrice } : {}),
         currency: "USD",
         ...(discountReason ? { discountReason } : {}),
+        ...(shares[i] > 0 ? { saleDiscountShare: shares[i] } : {}),
       });
       try {
         await applyMovement(ctx, {
@@ -245,11 +288,12 @@ export const create = authedMutation({
       unit._id,
       saleEvents(
         { locationId: location._id, createdAt },
-        lines.map(({ line, lot }) => ({
+        lines.map(({ line, lot }, i) => ({
           productId: lot.productId,
           qty: line.qty,
           unitPrice: line.unitPrice,
           unitCostSnapshot: lot.unitCost,
+          saleDiscountShare: shares[i],
         })),
       ),
     );
@@ -277,11 +321,36 @@ export const create = authedMutation({
           unitPrice: line.unitPrice,
           discountReason: discountReason ?? null,
         })),
+        linesTotal,
         totalAmount,
+        saleDiscountReason: saleDiscountReason ?? null,
         currency: "USD",
         status: "completed",
       },
     });
+
+    // Credit: the customer now owes the total, less what they paid now.
+    if (customer) {
+      await ctx.db.patch("customers", customer._id, { balance: customer.balance + totalAmount });
+      await ctx.audit({
+        action: "update",
+        entityTable: "customers",
+        entityId: customer._id,
+        businessUnitId: unit._id,
+        before: { name: customer.name, balanceAmount: customer.balance, currency: "USD" },
+        after: { name: customer.name, balanceAmount: customer.balance + totalAmount, currency: "USD", sale: number },
+      });
+      if (paidNow > 0) {
+        await applySalePayment(ctx, {
+          sale: (await ctx.db.get("sales", saleId))!,
+          amount: paidNow,
+          method: args.paidNowMethod!,
+          kind: "at_sale",
+          paidAt: createdAt,
+          actorId: ctx.user._id,
+        });
+      }
+    }
     return { saleId, number, soldOn: businessDayOf(createdAt), recordedOn: businessDayOf(recordedAt) };
   },
 });
@@ -367,8 +436,19 @@ export const list = authedQuery({
             };
           }),
         );
+        // Credit sales: what's still owed, and every payment so far.
+        const payments = sale.creditStatus
+          ? (
+              await ctx.db
+                .query("salePayments")
+                .withIndex("by_saleId", (q) => q.eq("saleId", sale._id))
+                .take(100)
+            ).map((p) => ({ _id: p._id, amount: p.amount, method: p.method, kind: p.kind, paidAt: p.paidAt }))
+          : [];
         return {
           ...sale,
+          balance: sale.creditStatus ? saleBalance(sale) : null,
+          payments,
           locationName: location?.name ?? null,
           soldByName: seller?.name || seller?.email || null,
           lines,
