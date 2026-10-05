@@ -565,3 +565,22 @@ test("the buyer can add to a requisition with lines; only approved requisitions 
     s.as(s.manager).mutation(api.stockBatches.addExtraItem, { batchId, productId: s.p2, qtyPurchased: 1, requisitionId }),
   ).rejects.toThrow(/stock\.create/);
 });
+
+test("requisitions.get shows how each line was purchased, for the PDF", async () => {
+  const s = await setup();
+  const reqA = await s.approvedRequisition([[s.p1, 10], [s.p2, 5]]);
+  const before = await s.as(s.chief).query(api.requisitions.get, { requisitionId: reqA.requisitionId });
+  expect(before!.items.map((i) => i.purchases)).toEqual([[], []]);
+
+  const b = await buildMixedBatch(s);
+  const detail = await s.as(s.chief).query(api.requisitions.get, { requisitionId: b.reqA.requisitionId });
+  expect(detail!.items.map((i) => [i.productName, i.resolution, i.purchases])).toEqual([
+    ["P1", "purchased", [{ batchNumber: "BATCH-00001", batchStatus: "purchased", status: "purchased", qtyPurchased: 10, reason: null }]],
+    ["P2", "partial", [{ batchNumber: "BATCH-00001", batchStatus: "purchased", status: "purchased", qtyPurchased: 3, reason: "Supplier only had 3" }]],
+  ]);
+  const reqB = await s.as(s.chief).query(api.requisitions.get, { requisitionId: b.reqB.requisitionId });
+  expect(reqB!.items.map((i) => [i.productName, i.purchases.map((p) => [p.status, p.reason])])).toEqual([
+    ["P3", [["not_purchased", "Discontinued"]]],
+    ["P4", []],
+  ]);
+});
