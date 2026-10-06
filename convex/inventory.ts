@@ -55,6 +55,7 @@ export async function stockRows(ctx: AuthedQueryCtx, levels: Doc<"stockLevels">[
         lengthInches: product?.lengthInches ?? null,
         colourName: details.colourName,
         sizeName: details.sizeName,
+        suggestedPrice: product?.suggestedPrice ?? null,
       });
     }
     rows.push({

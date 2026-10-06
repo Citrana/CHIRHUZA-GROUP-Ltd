@@ -121,8 +121,15 @@ test("only convex/lib/inventory.ts writes stock levels, movements or product sto
 test("the overview's three views agree", async () => {
   const { s, lots, business, shop } = await received();
   await move(s, { type: "distribute", inventoryBatchId: lots[0]._id, fromHolderId: business, toHolderId: shop, qty: 2 });
+  await s.as(s.sales).mutation(api.products.setSuggestedPrice, { productId: s.p1, price: 900 });
   const overview = await s.as(s.chief).query(api.inventory.overview, { businessUnitKey: "hair" });
   const total = (xs: { qty: number }[]) => xs.reduce((sum, x) => sum + x.qty, 0);
+  // Each product carries its selling price (for the stock PDF's valuation).
+  expect(overview.byProduct.map((p) => [p.product.name, p.product.suggestedPrice])).toEqual([
+    ["New closure", null],
+    ["P1", 900],
+    ["P2", null],
+  ]);
   expect(total(overview.byProduct)).toBe(16);
   expect(total(overview.byLot)).toBe(16);
   expect(total(overview.byHolder)).toBe(16);
@@ -136,7 +143,7 @@ test("groupStock ignores empty levels", () => {
     qty,
     holder: { id: "h" as Id<"holders">, type: "business" as const, name: "business" },
     lot: { id: "l" as Id<"inventoryBatches">, batchNumber: "BATCH-1", unitCost: 100, receivedQty: 5, createdAt: 1 },
-    product: { id: "p" as Id<"products">, name: "P", sku: "S", lengthInches: null, sizeName: null, colourName: null },
+    product: { id: "p" as Id<"products">, name: "P", sku: "S", lengthInches: null, sizeName: null, colourName: null, suggestedPrice: null },
   });
   expect(groupStock([row(0)])).toEqual({ byProduct: [], byLot: [], byHolder: [] });
   expect(groupStock([row(5)]).byProduct[0]).toMatchObject({ qty: 5, value: 500 });

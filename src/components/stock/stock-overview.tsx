@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, MapPin, User } from "lucide-react";
+import { Building2, Download, MapPin, User } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,6 +12,9 @@ import { formatMoney } from "../../../convex/lib/money";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { ProductStockReport } from "@/components/stock/product-stock-report";
+import { Button } from "@/components/ui/button";
+import { renderPdf } from "@/lib/pdf/document";
+import { stockPdfContent } from "@/lib/stock-pdf";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +91,11 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const [view, setView] = useState<View>("product");
   const counts = useQuery(api.inventory.statusCounts, canView ? { businessUnitKey: service } : "skip");
   const overview = useQuery(api.inventory.overview, canView ? { businessUnitKey: service } : "skip");
+  // The stock report PDF is built in the browser from `overview` (nothing stored).
+  const tUnits = useTranslations("BusinessUnits");
+  const me = useQuery(api.users.getCurrentUser);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
 
   if (canView === undefined) return null;
   if (!canView) {
@@ -163,14 +171,46 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const totalQty = overview?.byHolder.reduce((s, h) => s + h.qty, 0) ?? 0;
   const totalValue = overview?.byHolder.reduce((s, h) => s + h.value, 0) ?? 0;
 
+  async function downloadPdf() {
+    if (!overview) return;
+    setPdfBusy(true);
+    setPdfError(false);
+    try {
+      const content = stockPdfContent(overview, {
+        t: (key, values) => t(key as Parameters<typeof t>[0], values),
+        locale,
+        serviceKey: service,
+        serviceName: tUnits(service),
+        downloadedBy: me?.name || me?.email || "-",
+        now: Date.now(),
+      });
+      await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {overview?.scope === "own_location" ? t("subtitleOwn") : t("subtitle")}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {overview?.scope === "own_location" ? t("subtitleOwn") : t("subtitle")}
+          </p>
+        </div>
+        <Button variant="outline" className="min-h-11" disabled={!overview || pdfBusy} onClick={downloadPdf}>
+          <Download aria-hidden />
+          {pdfBusy ? t("pdf.preparing") : t("pdf.download")}
+        </Button>
       </div>
+      {pdfError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {t("pdf.error")}
+        </p>
+      ) : null}
 
       {overview ? (
         <section className="grid grid-cols-2 gap-3 sm:max-w-xl" aria-label={t("totalsLabel")}>
