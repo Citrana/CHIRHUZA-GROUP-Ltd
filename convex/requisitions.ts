@@ -175,6 +175,23 @@ export const get = authedQuery({
       rawItems.map(async (item) => {
         const product = await ctx.db.get("products", item.productId);
         const details = await productDetails(ctx, product);
+        // How purchasing went for this line: the batch line(s) that took it.
+        const batchLines = await ctx.db
+          .query("stockBatchItems")
+          .withIndex("by_requisitionItemId", (q) => q.eq("requisitionItemId", item._id))
+          .take(10);
+        const purchases = await Promise.all(
+          batchLines.map(async (line) => {
+            const batch = await ctx.db.get("stockBatches", line.batchId);
+            return {
+              batchNumber: batch?.number ?? null,
+              batchStatus: batch?.status ?? null,
+              status: line.status,
+              qtyPurchased: line.qtyPurchased,
+              reason: line.reason ?? null,
+            };
+          }),
+        );
         return {
           ...item,
           productName: product?.name ?? null,
@@ -182,6 +199,7 @@ export const get = authedQuery({
           lengthInches: product?.lengthInches ?? null,
           colourName: details.colourName,
           sizeName: details.sizeName,
+          purchases,
         };
       }),
     );

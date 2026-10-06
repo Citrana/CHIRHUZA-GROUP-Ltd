@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, MapPin, User } from "lucide-react";
+import { Building2, ChevronDown, Download, MapPin, User } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -12,6 +12,11 @@ import { formatMoney } from "../../../convex/lib/money";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { ProductStockReport } from "@/components/stock/product-stock-report";
+import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
+import { renderPdf } from "@/lib/pdf/document";
+import { stockSellingValue } from "@/lib/stock-value";
+import { stockPdfContent } from "@/lib/stock-pdf";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -88,6 +93,15 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const [view, setView] = useState<View>("product");
   const counts = useQuery(api.inventory.statusCounts, canView ? { businessUnitKey: service } : "skip");
   const overview = useQuery(api.inventory.overview, canView ? { businessUnitKey: service } : "skip");
+  // The stock report PDF is built in the browser from `overview` (nothing stored).
+  const tUnits = useTranslations("BusinessUnits");
+  const me = useQuery(api.users.getCurrentUser);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
+  // The card values stock at selling prices; products without one are listed on demand.
+  const tProducts = useTranslations("Products");
+  const canSetPrice = useCan("products.set_price");
+  const [showUnpriced, setShowUnpriced] = useState(false);
 
   if (canView === undefined) return null;
   if (!canView) {
@@ -161,16 +175,52 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   ];
 
   const totalQty = overview?.byHolder.reduce((s, h) => s + h.qty, 0) ?? 0;
-  const totalValue = overview?.byHolder.reduce((s, h) => s + h.value, 0) ?? 0;
+  const selling = overview ? stockSellingValue(overview.byProduct) : { value: 0, unpriced: [] };
+  const productLabel = (p: (typeof selling.unpriced)[number]) =>
+    [p.name ?? "—", p.lengthInches !== null ? tProducts("inches", { inches: p.lengthInches }) : null, p.sizeName, p.colourName]
+      .filter(Boolean)
+      .join(" · ");
+
+  async function downloadPdf() {
+    if (!overview) return;
+    setPdfBusy(true);
+    setPdfError(false);
+    try {
+      const content = stockPdfContent(overview, {
+        t: (key, values) => t(key as Parameters<typeof t>[0], values),
+        locale,
+        serviceKey: service,
+        serviceName: tUnits(service),
+        downloadedBy: me?.name || me?.email || "-",
+        now: Date.now(),
+      });
+      await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {overview?.scope === "own_location" ? t("subtitleOwn") : t("subtitle")}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {overview?.scope === "own_location" ? t("subtitleOwn") : t("subtitle")}
+          </p>
+        </div>
+        <Button variant="outline" className="min-h-11" disabled={!overview || pdfBusy} onClick={downloadPdf}>
+          <Download aria-hidden />
+          {pdfBusy ? t("pdf.preparing") : t("pdf.download")}
+        </Button>
       </div>
+      {pdfError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {t("pdf.error")}
+        </p>
+      ) : null}
 
       {overview ? (
         <section className="grid grid-cols-2 gap-3 sm:max-w-xl" aria-label={t("totalsLabel")}>
@@ -180,8 +230,43 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
           </div>
           <div className="rounded-lg border border-border p-3">
             <p className="text-xs text-muted-foreground">{t("stockValue")}</p>
-            <p className="text-lg font-semibold tabular-nums">{money(totalValue)}</p>
+            <p className="text-lg font-semibold tabular-nums">{money(selling.value)}</p>
+            {selling.unpriced.length > 0 ? (
+              <button
+                type="button"
+                aria-expanded={showUnpriced}
+                aria-controls="unpriced-products"
+                onClick={() => setShowUnpriced((open) => !open)}
+                className="mt-1 inline-flex min-h-11 items-center gap-1 text-left text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
+              >
+                {t("unpricedNote", { count: selling.unpriced.length })}
+                <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showUnpriced && "rotate-180")} aria-hidden />
+              </button>
+            ) : null}
           </div>
+          {showUnpriced && selling.unpriced.length > 0 ? (
+            <div id="unpriced-products" className="col-span-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+              <ul className="flex flex-col divide-y divide-border text-sm">
+                {selling.unpriced.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block font-medium">{productLabel(p)}</span>
+                      <span className="block text-xs text-muted-foreground">{p.sku}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{t("unpricedInStock", { count: p.qty })}</span>
+                  </li>
+                ))}
+              </ul>
+              {canSetPrice ? (
+                <Link
+                  href={`/${service}/products/prices`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {t("setPrices")}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
           {counts ? (
             <button
               type="button"

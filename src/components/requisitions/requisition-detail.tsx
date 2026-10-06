@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowLeft, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Download, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -28,6 +28,8 @@ import {
 import { ProductPickerDialog } from "@/components/requisitions/product-picker-dialog";
 import { RequisitionStatusBadge } from "@/components/requisitions/requisition-status-badge";
 import { TEXTAREA_CLASS } from "@/components/requisitions/new-requisition-dialog";
+import { renderPdf } from "@/lib/pdf/document";
+import { requisitionPdfContent } from "@/lib/requisition-pdf";
 
 type Detail = NonNullable<FunctionReturnType<typeof api.requisitions.get>>;
 type Item = Detail["items"][number];
@@ -109,6 +111,11 @@ export function RequisitionDetail({
   const [editNote, setEditNote] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  // The PDF is built in the browser from this page's data (nothing stored).
+  const tUnits = useTranslations("BusinessUnits");
+  const me = useQuery(api.users.getCurrentUser);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
 
   const back = (
     <Link
@@ -229,6 +236,26 @@ export function RequisitionDetail({
       : []),
   ];
 
+  async function downloadPdf() {
+    if (!requisition) return;
+    setPdfBusy(true);
+    setPdfError(false);
+    try {
+      const content = requisitionPdfContent(requisition, {
+        t: (key, values) => t(key as Parameters<typeof t>[0], values),
+        locale,
+        serviceName: tUnits(service),
+        downloadedBy: me?.name || me?.email || "-",
+        now: Date.now(),
+      });
+      await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {back}
@@ -256,27 +283,38 @@ export function RequisitionDetail({
             <dd className="whitespace-pre-wrap">{requisition.note ?? "—"}</dd>
           </dl>
         </div>
-        {canEdit ? (
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                setEditLocation(requisition.locationId);
-                setEditNote(requisition.note ?? "");
-                setError(false);
-                setEditOpen(true);
-              }}
-            >
-              <Pencil aria-hidden />
-              {t("editDetails")}
-            </Button>
-            <Button disabled={!requisition.canSubmit || busy} onClick={() => setSubmitOpen(true)}>
-              <Send aria-hidden />
-              {requisition.status === "rejected" ? t("resubmit") : t("submit")}
-            </Button>
-          </div>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="min-h-11" disabled={pdfBusy} onClick={downloadPdf}>
+            <Download aria-hidden />
+            {pdfBusy ? t("pdf.preparing") : t("pdf.download")}
+          </Button>
+          {canEdit ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setEditLocation(requisition.locationId);
+                  setEditNote(requisition.note ?? "");
+                  setError(false);
+                  setEditOpen(true);
+                }}
+              >
+                <Pencil aria-hidden />
+                {t("editDetails")}
+              </Button>
+              <Button disabled={!requisition.canSubmit || busy} onClick={() => setSubmitOpen(true)}>
+                <Send aria-hidden />
+                {requisition.status === "rejected" ? t("resubmit") : t("submit")}
+              </Button>
+            </>
+          ) : null}
+        </div>
       </div>
+      {pdfError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {t("pdf.error")}
+        </p>
+      ) : null}
 
       {requisition.status === "rejected" && requisition.approval ? (
         <div className="rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm">
