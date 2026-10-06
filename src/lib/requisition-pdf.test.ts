@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import en from "../../messages/en.json";
-import { pdfSafe, requisitionPdfContent, type RequisitionForPdf, type Translate } from "./requisition-pdf";
+import { pdfSafe, type PdfDocument, type Translate } from "./pdf/document";
+import { requisitionPdfContent, type RequisitionForPdf } from "./requisition-pdf";
 
 /** The real English "Requisitions" messages, with simple {placeholder} filling. */
 const t: Translate = (key, values = {}) => {
@@ -41,8 +42,24 @@ function requisition(overrides: Partial<RequisitionForPdf> = {}): RequisitionFor
   } as unknown as RequisitionForPdf;
 }
 
-const content = (r: RequisitionForPdf) =>
-  requisitionPdfContent(r, { t, locale: "en", serviceName: "Hair", downloadedBy: "Aline", now: AT });
+/**
+ * The document flattened as the requisition PDF had it before the shared
+ * builder (details, table rows, empty text), with pdfSafe applied as
+ * renderPdf does.
+ */
+const content = (r: RequisitionForPdf) => {
+  const doc: PdfDocument = requisitionPdfContent(r, { t, locale: "en", serviceName: "Hair", downloadedBy: "Aline", now: AT });
+  const [details, products] = doc.sections;
+  return {
+    fileName: doc.fileName,
+    brand: doc.brand,
+    title: doc.title,
+    details: details.details!.map(([label, value]) => [pdfSafe(label), pdfSafe(value)]),
+    body: (products.table?.body ?? []).map((row) => row.map(pdfSafe)),
+    emptyText: products.emptyText ?? null,
+    footer: pdfSafe(doc.footer),
+  };
+};
 
 test("a draft: details in Lubumbashi time, not submitted, no decision", () => {
   const c = content(requisition());
@@ -134,9 +151,4 @@ test("an empty requisition says the buyer chooses the products", () => {
   const c = content(requisition({ items: [] }));
   expect(c.body).toEqual([]);
   expect(c.emptyText).toMatch(/buyer chooses/);
-});
-
-test("pdfSafe keeps accents and swaps characters the PDF font can't draw", () => {
-  expect(pdfSafe("Réquisition · Créée — “ok” 14″ …")).toBe('Réquisition · Créée - "ok" 14" ...');
-  expect(pdfSafe("10:15 AM")).toBe("10:15 AM");
 });

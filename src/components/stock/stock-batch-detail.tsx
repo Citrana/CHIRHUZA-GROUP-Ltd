@@ -3,6 +3,7 @@
 import { useState } from "react";
 import {
   ArrowLeft,
+  Download,
   Lock,
   PackageCheck,
   Paperclip,
@@ -22,6 +23,8 @@ import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
 import { BUSINESS_TIME_ZONE } from "../../../convex/lib/time";
 import { Link } from "@/i18n/navigation";
+import { renderPdf } from "@/lib/pdf/document";
+import { batchPdfContent } from "@/lib/batch-pdf";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { Button } from "@/components/ui/button";
@@ -145,6 +148,12 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
   const [reopenReason, setReopenReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The PDF is built in the browser from this page's data (nothing stored).
+  const tRequisitions = useTranslations("Requisitions");
+  const tUnits = useTranslations("BusinessUnits");
+  const me = useQuery(api.users.getCurrentUser);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
 
   const back = (
     <Link
@@ -341,6 +350,27 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
   const lastRejected =
     draft && batch.approval?.status === "rejected" && batch.approval.kind === "approve" ? batch.approval : null;
 
+  async function downloadPdf() {
+    if (!batch) return;
+    setPdfBusy(true);
+    setPdfError(false);
+    try {
+      const content = batchPdfContent(batch, {
+        t: (key, values) => t(key as Parameters<typeof t>[0], values),
+        tRequisitions: (key, values) => tRequisitions(key as Parameters<typeof tRequisitions>[0], values),
+        locale,
+        serviceName: tUnits(service),
+        downloadedBy: me?.name || me?.email || "-",
+        now: Date.now(),
+      });
+      await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
       {back}
@@ -357,6 +387,10 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
           {!draft && batch.description ? <p className="mt-1 whitespace-pre-wrap text-sm">{batch.description}</p> : null}
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" className="min-h-11" disabled={pdfBusy} onClick={downloadPdf}>
+            <Download aria-hidden />
+            {pdfBusy ? t("pdf.preparing") : t("pdf.download")}
+          </Button>
           {editing ? (
             <Button disabled={busy} onClick={() => setPurchaseOpen(true)}>
               <Lock aria-hidden />
@@ -389,6 +423,12 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
           ) : null}
         </div>
       </div>
+
+      {pdfError ? (
+        <p className="text-sm text-destructive" role="alert">
+          {t("pdf.error")}
+        </p>
+      ) : null}
 
       {pending ? (
         <p className="rounded-md bg-muted/50 p-3 text-sm text-muted-foreground">
