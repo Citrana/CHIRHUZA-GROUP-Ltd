@@ -28,7 +28,8 @@ import {
 import { ProductPickerDialog } from "@/components/requisitions/product-picker-dialog";
 import { RequisitionStatusBadge } from "@/components/requisitions/requisition-status-badge";
 import { TEXTAREA_CLASS } from "@/components/requisitions/new-requisition-dialog";
-import { downloadRequisitionPdf, requisitionPdfContent } from "@/lib/requisition-pdf";
+import { renderPdf } from "@/lib/pdf/document";
+import { requisitionPdfContent } from "@/lib/requisition-pdf";
 
 type Detail = NonNullable<FunctionReturnType<typeof api.requisitions.get>>;
 type Item = Detail["items"][number];
@@ -247,7 +248,7 @@ export function RequisitionDetail({
         downloadedBy: me?.name || me?.email || "-",
         now: Date.now(),
       });
-      await downloadRequisitionPdf(content, (page, pages) => t("pdf.page", { page, pages }));
+      await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
     } catch {
       setPdfError(true);
     } finally {
