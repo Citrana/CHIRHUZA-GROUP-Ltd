@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, Download, MapPin, User } from "lucide-react";
+import { Building2, ChevronDown, Download, MapPin, User } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -13,7 +13,9 @@ import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { ProductStockReport } from "@/components/stock/product-stock-report";
 import { Button } from "@/components/ui/button";
+import { Link } from "@/i18n/navigation";
 import { renderPdf } from "@/lib/pdf/document";
+import { stockSellingValue } from "@/lib/stock-value";
 import { stockPdfContent } from "@/lib/stock-pdf";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
@@ -96,6 +98,10 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const me = useQuery(api.users.getCurrentUser);
   const [pdfBusy, setPdfBusy] = useState(false);
   const [pdfError, setPdfError] = useState(false);
+  // The card values stock at selling prices; products without one are listed on demand.
+  const tProducts = useTranslations("Products");
+  const canSetPrice = useCan("products.set_price");
+  const [showUnpriced, setShowUnpriced] = useState(false);
 
   if (canView === undefined) return null;
   if (!canView) {
@@ -169,7 +175,11 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   ];
 
   const totalQty = overview?.byHolder.reduce((s, h) => s + h.qty, 0) ?? 0;
-  const totalValue = overview?.byHolder.reduce((s, h) => s + h.value, 0) ?? 0;
+  const selling = overview ? stockSellingValue(overview.byProduct) : { value: 0, unpriced: [] };
+  const productLabel = (p: (typeof selling.unpriced)[number]) =>
+    [p.name ?? "—", p.lengthInches !== null ? tProducts("inches", { inches: p.lengthInches }) : null, p.sizeName, p.colourName]
+      .filter(Boolean)
+      .join(" · ");
 
   async function downloadPdf() {
     if (!overview) return;
@@ -220,8 +230,43 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
           </div>
           <div className="rounded-lg border border-border p-3">
             <p className="text-xs text-muted-foreground">{t("stockValue")}</p>
-            <p className="text-lg font-semibold tabular-nums">{money(totalValue)}</p>
+            <p className="text-lg font-semibold tabular-nums">{money(selling.value)}</p>
+            {selling.unpriced.length > 0 ? (
+              <button
+                type="button"
+                aria-expanded={showUnpriced}
+                aria-controls="unpriced-products"
+                onClick={() => setShowUnpriced((open) => !open)}
+                className="mt-1 inline-flex min-h-11 items-center gap-1 text-left text-xs font-medium text-amber-700 hover:underline dark:text-amber-400"
+              >
+                {t("unpricedNote", { count: selling.unpriced.length })}
+                <ChevronDown className={cn("size-3.5 shrink-0 transition-transform", showUnpriced && "rotate-180")} aria-hidden />
+              </button>
+            ) : null}
           </div>
+          {showUnpriced && selling.unpriced.length > 0 ? (
+            <div id="unpriced-products" className="col-span-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+              <ul className="flex flex-col divide-y divide-border text-sm">
+                {selling.unpriced.map((p) => (
+                  <li key={p.id} className="flex items-center justify-between gap-3 py-2">
+                    <span className="min-w-0">
+                      <span className="block font-medium">{productLabel(p)}</span>
+                      <span className="block text-xs text-muted-foreground">{p.sku}</span>
+                    </span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{t("unpricedInStock", { count: p.qty })}</span>
+                  </li>
+                ))}
+              </ul>
+              {canSetPrice ? (
+                <Link
+                  href={`/${service}/products/prices`}
+                  className="mt-2 inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
+                >
+                  {t("setPrices")}
+                </Link>
+              ) : null}
+            </div>
+          ) : null}
           {counts ? (
             <button
               type="button"

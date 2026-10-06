@@ -3,6 +3,7 @@ import type { api } from "../../convex/_generated/api";
 import { formatMoney } from "../../convex/lib/money";
 import { BUSINESS_TIME_ZONE, businessDayOf } from "../../convex/lib/time";
 import type { PdfDocument, Translate } from "@/lib/pdf/document";
+import { stockSellingValue } from "./stock-value";
 
 export type StockOverviewForPdf = FunctionReturnType<typeof api.inventory.overview>;
 type Holder = StockOverviewForPdf["byHolder"][number]["holder"];
@@ -37,10 +38,11 @@ export function stockPdfContent(
   // products that have one; their cost gives the potential margin).
   const units = overview.byProduct.reduce((s, p) => s + p.qty, 0);
   const costValue = overview.byProduct.reduce((s, p) => s + p.value, 0);
-  const priced = overview.byProduct.filter((p) => p.product.suggestedPrice !== null);
-  const sellingValue = priced.reduce((s, p) => s + p.qty * p.product.suggestedPrice!, 0);
-  const pricedCost = priced.reduce((s, p) => s + p.value, 0);
-  const unpriced = overview.byProduct.length - priced.length;
+  const { value: sellingValue, unpriced: unpricedProducts } = stockSellingValue(overview.byProduct);
+  const pricedCost = overview.byProduct
+    .filter((p) => p.product.suggestedPrice !== null)
+    .reduce((s, p) => s + p.value, 0);
+  const unpriced = unpricedProducts.length;
 
   const summary: Array<[string, string]> = [
     [t("pdf.unitsOnHand"), String(units)],
