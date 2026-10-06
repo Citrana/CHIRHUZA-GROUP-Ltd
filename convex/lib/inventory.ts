@@ -369,6 +369,8 @@ export type StockRow = {
     lengthInches: number | null;
     sizeName: string | null;
     colourName: string | null;
+    /** The selling price per unit (cents), if one is set. */
+    suggestedPrice: number | null;
   };
 };
 
