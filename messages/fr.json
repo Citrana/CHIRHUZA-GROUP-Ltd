@@ -896,7 +896,10 @@
     "businessHolder": "Entreprise (non attribué)",
     "totalsLabel": "Totaux",
     "unitsOnHand": "Unités en stock",
-    "stockValue": "Valeur du stock (coût d'achat)",
+    "stockValue": "Valeur du stock (prix de vente)",
+    "unpricedNote": "{count, plural, one {# produit sans prix de vente non compté} other {# produits sans prix de vente non comptés}}",
+    "unpricedInStock": "{count} en stock",
+    "setPrices": "Fixer les prix",
     "viewLabel": "Affichage",
     "views": {
       "product": "Par produit",
@@ -921,7 +924,7 @@
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
     "receivedCount": "{count} reçus",
     "empty": "Aucun stock pour l'instant. Le stock apparaît dès qu'un lot d'achat est réceptionné.",
-    "valueHint": "Valeur = unités en stock × coût unitaire d'achat. Les dépenses du voyage sont comptées à part.",
+    "valueHint": "Dans les tableaux, la valeur est le nombre d'unités × le coût d'achat unitaire. Les dépenses de voyage sont à part.",
     "report": {
       "all": "Tous",
       "statuses": {

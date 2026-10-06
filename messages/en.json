@@ -896,7 +896,10 @@
     "businessHolder": "Business (unassigned)",
     "totalsLabel": "Totals",
     "unitsOnHand": "Units on hand",
-    "stockValue": "Stock value (purchase cost)",
+    "stockValue": "Stock value (selling prices)",
+    "unpricedNote": "{count, plural, one {# product without a selling price not included} other {# products without a selling price not included}}",
+    "unpricedInStock": "{count} in stock",
+    "setPrices": "Set prices",
     "viewLabel": "View",
     "views": {
       "product": "By product",
@@ -921,7 +924,7 @@
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
     "receivedCount": "{count} received",
     "empty": "No stock on hand yet. Stock appears once a purchase batch is received.",
-    "valueHint": "Value is units on hand × the purchase unit cost. Trip expenses are kept separately.",
+    "valueHint": "In the tables, value is units on hand × the purchase unit cost. Trip expenses are kept separately.",
     "report": {
       "all": "All",
       "statuses": {
