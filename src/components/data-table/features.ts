@@ -22,6 +22,8 @@ export type DataTableColumnMeta = {
   hideBelow?: "sm" | "md" | "lg";
   /** Extra classes for this column's cells (header and body). */
   className?: string;
+  /** Right-align the column (numbers): header label and cells line up on the right. */
+  align?: "right";
 };
 
 /**

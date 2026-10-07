@@ -79,6 +79,11 @@ export type DataTableProps<TData extends RowData> = {
   onRowClick?: (row: TData) => void;
   /** On phones (< md), show these cards instead of the table. */
   renderCard?: (row: TData) => ReactNode;
+  /**
+   * Show the sort arrows only on the sorted column and when hovering or
+   * focusing a sortable header (quieter headers for dense numeric tables).
+   */
+  sortIconsOnHover?: boolean;
   className?: string;
 };
 
@@ -109,6 +114,7 @@ export function DataTable<TData extends RowData>({
   renderExpanded,
   onRowClick,
   renderCard,
+  sortIconsOnHover = false,
   className,
 }: DataTableProps<TData>) {
   const t = useTranslations("DataTable");
@@ -299,6 +305,7 @@ export function DataTable<TData extends RowData>({
                       }
                       className={cn(
                         "p-3 text-left font-medium whitespace-nowrap",
+                        meta?.align === "right" && "text-right",
                         meta?.hideBelow && HIDE_BELOW[meta.hideBelow],
                         meta?.className,
                       )}
@@ -307,16 +314,33 @@ export function DataTable<TData extends RowData>({
                         <button
                           type="button"
                           onClick={header.column.getToggleSortingHandler()}
-                          className="-mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-foreground"
+                          className={cn(
+                            "group/sort -mx-1 inline-flex items-center gap-1 rounded px-1 hover:text-foreground",
+                            // Quiet headers: the icon sits outside the label, so the label lines up with its column.
+                            sortIconsOnHover && "relative",
+                          )}
                         >
                           {flexRender(header.column.columnDef.header, header.getContext())}
-                          {sorted === "asc" ? (
-                            <ArrowUp className="size-3.5" aria-hidden />
-                          ) : sorted === "desc" ? (
-                            <ArrowDown className="size-3.5" aria-hidden />
-                          ) : (
-                            <ArrowUpDown className="size-3.5 opacity-50" aria-hidden />
-                          )}
+                          {(() => {
+                            const place = sortIconsOnHover
+                              ? cn("absolute top-1/2 -translate-y-1/2", meta?.align === "right" ? "right-full mr-0.5" : "left-full ml-0.5")
+                              : undefined;
+                            return sorted === "asc" ? (
+                              <ArrowUp className={cn("size-3.5", place)} aria-hidden />
+                            ) : sorted === "desc" ? (
+                              <ArrowDown className={cn("size-3.5", place)} aria-hidden />
+                            ) : (
+                              <ArrowUpDown
+                                className={cn(
+                                  "size-3.5 opacity-50",
+                                  place,
+                                  sortIconsOnHover &&
+                                    "opacity-0 group-hover/sort:opacity-50 group-focus-visible/sort:opacity-50",
+                                )}
+                                aria-hidden
+                              />
+                            );
+                          })()}
                         </button>
                       ) : (
                         flexRender(header.column.columnDef.header, header.getContext())
@@ -360,6 +384,7 @@ export function DataTable<TData extends RowData>({
                             key={cell.id}
                             className={cn(
                               "p-3 align-middle",
+                              meta?.align === "right" && "text-right",
                               meta?.hideBelow && HIDE_BELOW[meta.hideBelow],
                               meta?.className,
                             )}

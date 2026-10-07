@@ -12,6 +12,7 @@ import {
   resolveRange,
 } from "./lib/analytics";
 import { productDetails } from "./lib/products";
+import { findHolder } from "./lib/inventory";
 
 /**
  * Analytics queries (analytics.view). They read ONLY the rollups in
@@ -185,6 +186,51 @@ export const getProductSales = authedQuery({
       totals: { unitsSold: sum("unitsSold"), revenue: sum("revenue"), cost: sum("cost"), margin: sum("margin") },
       truncated,
     };
+  },
+});
+
+const MAX_UNSOLD_SHOWN = 50;
+
+/**
+ * Dead stock for a range: products with stock on hand (at the location, or
+ * anywhere for all locations) that sold nothing in the range, most units
+ * held first. Stock comes from productStock / the location's stock levels,
+ * sales from the dailyStats rollups - raw sales are never read.
+ */
+export const getUnsoldProducts = authedQuery({
+  args: { ...commonArgs, limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const s = await scopeOf(ctx, args);
+    const held = new Map<Id<"products">, number>();
+    if (s.locationKey === ALL) {
+      for (const status of ["in_stock", "low"] as const) {
+        const rows = await ctx.db
+          .query("productStock")
+          .withIndex("by_businessUnitId_and_status", (q) => q.eq("businessUnitId", s.unitId).eq("status", status))
+          .take(MAX_STATS_ROWS);
+        for (const row of rows) if (row.onHand > 0) held.set(row.productId, row.onHand);
+      }
+    } else {
+      const holder = await findHolder(ctx, s.unitId, { type: "location", refId: s.locationKey as Id<"locations"> });
+      if (holder) {
+        const levels = await ctx.db
+          .query("stockLevels")
+          .withIndex("by_holderId", (q) => q.eq("holderId", holder._id))
+          .take(MAX_STATS_ROWS);
+        for (const level of levels) {
+          if (level.qtyOnHand > 0) held.set(level.productId, (held.get(level.productId) ?? 0) + level.qtyOnHand);
+        }
+      }
+    }
+    const { totals } = await productTotals(ctx, s);
+    const unsold = [...held.entries()]
+      .filter(([productId]) => !totals.has(productId))
+      .sort((a, b) => b[1] - a[1]);
+    const shown = unsold.slice(0, Math.min(Math.max(args.limit ?? 5, 1), MAX_UNSOLD_SHOWN));
+    const products = await Promise.all(
+      shown.map(async ([productId, onHand]) => ({ ...(await describeProduct(ctx, productId)), onHand })),
+    );
+    return { products, total: unsold.length };
   },
 });
 

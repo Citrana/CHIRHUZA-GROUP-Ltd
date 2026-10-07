@@ -23,6 +23,8 @@
   --color-chart-3: var(--chart-3);
   --color-chart-2: var(--chart-2);
   --color-chart-1: var(--chart-1);
+  --color-chart-cost-1: var(--chart-cost-1);
+  --color-chart-cost-2: var(--chart-cost-2);
   --color-ring: var(--ring);
   --color-input: var(--input);
   --color-border: var(--border);
@@ -73,6 +75,9 @@
   --chart-3: #6b8f6e;
   --chart-4: #a3c98a;
   --chart-5: #c8e6a0;
+  /* Warm tones for costs (expenses, payroll) in Analytics. */
+  --chart-cost-1: #b8643a;
+  --chart-cost-2: #7a4a2a;
   --radius: 0.625rem;
   --sidebar: #14231a;
   --sidebar-foreground: #f7f5ec;
@@ -108,6 +113,8 @@
   --chart-3: #6b8f6e;
   --chart-4: #3e5c43;
   --chart-5: #1a2e22;
+  --chart-cost-1: #e0956a;
+  --chart-cost-2: #c98a5c;
   --sidebar: #0f1a13;
   --sidebar-foreground: #f7f5ec;
   --sidebar-primary: #c8e6a0;
