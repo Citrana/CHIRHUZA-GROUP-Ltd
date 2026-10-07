@@ -1394,7 +1394,8 @@
     "lists": {
       "mostSold": "Les plus vendus",
       "leastSold": "Les moins vendus",
-      "bestMargin": "Meilleure marge"
+      "bestMargin": "Meilleurs contributeurs au bénéfice",
+      "noSales": "Stock invendu"
     },
     "productsSold": {
       "title": "Produits vendus",
@@ -1419,7 +1420,8 @@
         "cost": "Coût (USD)",
         "margin": "Marge (USD)",
         "marginPct": "Marge %"
-      }
+      },
+      "belowAverageHint": "Les produits sous la marge globale de la période ({pct}) sont mis en évidence"
     },
     "pieces": "{count, plural, one {# pièce} other {# pièces}}",
     "noSales": "Aucune vente sur cette période.",
@@ -1427,8 +1429,38 @@
     "charts": {
       "sales": "Ventes dans le temps",
       "expenses": "Dépenses dans le temps",
-      "payroll": "Paie dans le temps"
+      "payroll": "Paie dans le temps",
+      "costs": "Coûts dans le temps"
     },
-    "footnote": "Marge = prix de vente − coût d'achat du lot (les dépenses de voyage ne sont pas réparties sur les produits). Dates à l'heure de Lubumbashi (UTC+2) ; les semaines commencent le lundi. USD."
+    "footnote": "Marge = prix de vente − coût d'achat du lot (les dépenses de voyage ne sont pas réparties sur les produits). Dates à l'heure de Lubumbashi (UTC+2) ; les semaines commencent le lundi. USD.",
+    "loss": "Perte",
+    "vsPrevious": "vs {range}",
+    "deltaUp": "En hausse de {pct} % par rapport à {range}",
+    "deltaDown": "En baisse de {pct} % par rapport à {range}",
+    "monthToDate": "{month} (mois en cours)",
+    "insightsLabel": "Points clés",
+    "insights": {
+      "noSalesPeriod": "Aucune vente sur cette période",
+      "noSalesSince": "Aucune vente depuis le {date}",
+      "negativeMargin": "La marge est négative sur cette période",
+      "costShare": "Dépenses et paie ont pris {pct} % de la marge",
+      "netUp": "Bénéfice net en hausse de {pct} % par rapport à la période précédente",
+      "netDown": "Bénéfice net en baisse de {pct} % par rapport à la période précédente",
+      "salesUp": "Ventes en hausse de {pct} % par rapport à la période précédente",
+      "salesDown": "Ventes en baisse de {pct} % par rapport à la période précédente",
+      "topShare": "{product} a rapporté {pct} % du chiffre d'affaires"
+    },
+    "unsold": {
+      "inStock": "{count} en stock",
+      "more": "+{count} de plus",
+      "none": "Chaque produit en stock s'est vendu au moins une fois."
+    },
+    "legend": {
+      "noSales": "Aucune vente"
+    },
+    "chartLabels": {
+      "sales": "Ventes et marge, {range}",
+      "costs": "Dépenses et paie, {range}"
+    }
   }
 }
