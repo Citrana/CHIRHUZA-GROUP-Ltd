@@ -484,3 +484,86 @@ test("listUsers includes each user's location name", async () => {
     "Kenya Shop",
   );
 });
+
+/** A user created through createUser (so they have a real password account). */
+async function createdUser(t: Awaited<ReturnType<typeof setup>>, adminId: Awaited<ReturnType<typeof insertUserWithRole>>, email: string) {
+  const { password } = await t.withIdentity({ subject: adminId }).action(api.users.createUser, {
+    name: "Forgetful",
+    email,
+    roleId: await getRoleId(t, "sales_agent"),
+    locationId: await insertLocation(t),
+  });
+  const user = await t.run((ctx) =>
+    ctx.db
+      .query("users")
+      .filter((q) => q.eq(q.field("email"), email))
+      .unique(),
+  );
+  return { userId: user!._id, password };
+}
+
+const signIn = (t: Awaited<ReturnType<typeof setup>>, email: string, password: string) =>
+  t.action(api.auth.signIn, { provider: "password", params: { email, password, flow: "signIn" } });
+
+test("resetPassword: a new one-time password, old one refused, sessions ended, forced change, audited without the password", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin-reset@example.com" });
+  const { userId, password: oldPassword } = await createdUser(t, adminId, "forgot@example.com");
+
+  // The user had chosen their own password and has an open session.
+  await t.withIdentity({ subject: userId }).action(api.users.changePassword, { newPassword: "my-own-password" });
+  expect((await signIn(t, "forgot@example.com", "my-own-password")).tokens).toBeTruthy();
+  const sessionsBefore = await t.run((ctx) =>
+    ctx.db.query("authSessions").filter((q) => q.eq(q.field("userId"), userId)).collect(),
+  );
+  expect(sessionsBefore.length).toBeGreaterThan(0);
+
+  const { password } = await t.withIdentity({ subject: adminId }).action(api.users.resetPassword, { userId });
+  expect(password).toHaveLength(16);
+  expect(password).not.toBe(oldPassword);
+
+  // Every session of that user is gone; the old password no longer works.
+  const sessionsAfter = await t.run((ctx) =>
+    ctx.db.query("authSessions").filter((q) => q.eq(q.field("userId"), userId)).collect(),
+  );
+  expect(sessionsAfter).toEqual([]);
+  await expect(signIn(t, "forgot@example.com", "my-own-password")).rejects.toThrow();
+  expect((await signIn(t, "forgot@example.com", password)).tokens).toBeTruthy();
+  expect((await t.run((ctx) => ctx.db.get("users", userId)))!.mustChangePassword).toBe(true);
+
+  // Audited by the admin, and the password appears nowhere in the log.
+  const entries = await t.run((ctx) => ctx.db.query("auditLogs").collect());
+  const reset = entries.find((e) => e.entityId === userId && (e.after as { passwordReset?: boolean } | undefined)?.passwordReset);
+  expect(reset).toMatchObject({ actorId: adminId, action: "update", entityTable: "users", after: { mustChangePassword: true } });
+  expect(JSON.stringify(entries)).not.toContain(password);
+
+  // The user then chooses their own password, which clears the flag.
+  await t.withIdentity({ subject: userId }).action(api.users.changePassword, { newPassword: "brand-new-password" });
+  expect((await t.run((ctx) => ctx.db.get("users", userId)))!.mustChangePassword).toBe(false);
+});
+
+test("resetPassword is refused without users.manage, on your own account, and on a Super Admin without roles.manage", async () => {
+  const t = await setup();
+  const adminId = await insertUserWithRole(t, "super_admin", { email: "admin-r2@example.com" });
+  const { userId } = await createdUser(t, adminId, "victim@example.com");
+
+  const chiefId = await insertUserWithRole(t, "chief_admin", { email: "chief-r2@example.com" });
+  await expect(t.withIdentity({ subject: chiefId }).action(api.users.resetPassword, { userId })).rejects.toThrow(/users\.manage/);
+  await expect(t.withIdentity({ subject: adminId }).action(api.users.resetPassword, { userId: adminId })).rejects.toThrow(
+    /your own account/,
+  );
+
+  // A role with users.manage but not roles.manage can't reset a Super Admin.
+  const otherAdminId = await insertUserWithRole(t, "super_admin", { email: "admin-r3@example.com" });
+  await t.run(async (ctx) => {
+    const roleId = await ctx.db.insert("roles", { key: "user_manager", name: "User manager", description: "", isSystem: false });
+    const permission = (await ctx.db.query("permissions").collect()).find((p) => p.key === "users.manage")!;
+    await ctx.db.insert("rolePermissions", { roleId, permissionId: permission._id, scope: "all_locations" });
+    await ctx.db.patch("users", chiefId, { roleId });
+  });
+  await expect(t.withIdentity({ subject: chiefId }).action(api.users.resetPassword, { userId: otherAdminId })).rejects.toThrow(
+    /roles\.manage/,
+  );
+  // ...but can reset an ordinary user.
+  await expect(t.withIdentity({ subject: chiefId }).action(api.users.resetPassword, { userId })).resolves.toHaveProperty("password");
+});

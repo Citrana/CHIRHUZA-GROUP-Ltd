@@ -73,6 +73,7 @@ needed.
 | `renderExpanded` | `(row) => ReactNode` | off | Makes rows clickable. A click, Enter or Space toggles this detail view under the row. |
 | `onRowClick` | `(row) => void` | off | Makes rows clickable (click, Enter or Space) and calls this instead, e.g. to open a detail drawer (see the Approvals page). Takes precedence over `renderExpanded`, so use one or the other. |
 | `renderCard` | `(row) => ReactNode` | off | On phones (below `md`) renders one card per row instead of the table. |
+| `sortIconsOnHover` | `boolean` | `false` | Shows the sort arrows only on the sorted column and when a sortable header is hovered or focused. For dense numeric tables (e.g. Analytics' Products sold). |
 | `className` | `string` | none | Classes for the outer wrapper. |
 
 ## Columns
@@ -120,6 +121,10 @@ const columns: DataTableColumn<UserRow>[] = [
   screens. Use it for secondary columns (email, IDs, addresses).
 - **`meta.className`** adds classes to that column's header and body
   cells (alignment, `whitespace-nowrap`, widths).
+- **`meta.align: "right"`** right-aligns a column (numbers): the header
+  label and the cells line up on the right. With the table's
+  `sortIconsOnHover`, the sort icon sits outside the label so it never
+  shifts it.
 
 ## Pagination
 

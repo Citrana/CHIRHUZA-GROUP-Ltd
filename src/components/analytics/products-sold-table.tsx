@@ -12,6 +12,19 @@ import { Button } from "@/components/ui/button";
 import { downloadCsv } from "@/lib/csv";
 
 type Report = FunctionReturnType<typeof api.analytics.getProductSales>;
+
+/**
+ * The margin %, highlighted (amber) only when it's below the period's
+ * overall margin % - the products pulling the average down.
+ */
+function MarginPct({ value, label, below }: { value: number | null; label: string; below: boolean }) {
+  if (value === null) return <span className="text-muted-foreground">—</span>;
+  return below ? (
+    <span className="rounded bg-amber-500/10 px-1.5 py-0.5 font-medium text-amber-800 dark:text-amber-300">{label}</span>
+  ) : (
+    <span>{label}</span>
+  );
+}
 type Row = Report["rows"][number];
 
 /**
@@ -46,6 +59,10 @@ export function ProductsSoldTable({
     (r) => !query || label(r).toLowerCase().includes(query) || (r.sku ?? "").toLowerCase().includes(query),
   );
 
+  // The period's overall margin %: rows below it are highlighted.
+  const overallPct =
+    report && report.totals.revenue > 0 ? Math.round((report.totals.margin / report.totals.revenue) * 1000) / 10 : null;
+
   const columns: DataTableColumn<Row>[] = [
     {
       id: "product",
@@ -59,14 +76,20 @@ export function ProductsSoldTable({
         </span>
       ),
     },
-    { id: "units", accessorFn: (r) => r.unitsSold, header: t("unitsHeader"), enableSorting: true, meta: { className: "tabular-nums font-medium" } },
+    {
+      id: "units",
+      accessorFn: (r) => r.unitsSold,
+      header: t("unitsHeader"),
+      enableSorting: true,
+      meta: { align: "right", className: "tabular-nums font-medium" },
+    },
     {
       id: "revenue",
       accessorFn: (r) => r.revenue,
       header: t("revenueHeader"),
       enableSorting: true,
       cell: ({ row }) => money(row.original.revenue),
-      meta: { className: "tabular-nums whitespace-nowrap" },
+      meta: { align: "right", className: "tabular-nums whitespace-nowrap" },
     },
     {
       id: "cost",
@@ -74,7 +97,7 @@ export function ProductsSoldTable({
       header: t("costHeader"),
       enableSorting: true,
       cell: ({ row }) => money(row.original.cost),
-      meta: { hideBelow: "lg", className: "tabular-nums whitespace-nowrap text-muted-foreground" },
+      meta: { hideBelow: "lg", align: "right", className: "tabular-nums whitespace-nowrap text-foreground/80" },
     },
     {
       id: "margin",
@@ -82,15 +105,23 @@ export function ProductsSoldTable({
       header: t("marginHeader"),
       enableSorting: true,
       cell: ({ row }) => money(row.original.margin),
-      meta: { hideBelow: "sm", className: "tabular-nums whitespace-nowrap" },
+      meta: { hideBelow: "sm", align: "right", className: "tabular-nums whitespace-nowrap" },
     },
     {
       id: "marginPct",
       accessorFn: (r) => r.marginPct ?? -Infinity,
-      header: t("marginPctHeader"),
+      header: () => (
+        <span title={overallPct !== null ? t("belowAverageHint", { pct: pct(overallPct) }) : undefined}>{t("marginPctHeader")}</span>
+      ),
       enableSorting: true,
-      cell: ({ row }) => pct(row.original.marginPct),
-      meta: { hideBelow: "md", className: "tabular-nums whitespace-nowrap text-muted-foreground" },
+      cell: ({ row }) => (
+        <MarginPct
+          value={row.original.marginPct}
+          label={pct(row.original.marginPct)}
+          below={overallPct !== null && row.original.marginPct !== null && row.original.marginPct < overallPct}
+        />
+      ),
+      meta: { hideBelow: "md", align: "right", className: "tabular-nums whitespace-nowrap" },
     },
   ];
 
@@ -126,6 +157,7 @@ export function ProductsSoldTable({
           </Button>
         }
         initialSorting={[{ id: "units", desc: true }]}
+        sortIconsOnHover
         renderCard={(r) => (
           <div className="flex items-start justify-between gap-3">
             <span className="min-w-0">

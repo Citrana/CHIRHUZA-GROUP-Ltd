@@ -241,6 +241,36 @@ test("getProductSales access: analytics.view required; own_location viewers see 
   ]);
 });
 
+test("getUnsoldProducts: in stock but nothing sold in the range, per location, scoped", async () => {
+  const { s, other, today, yesterday } = await scenario();
+  const unsold = (range: object, locationId?: Id<"locations">, who = s.chief) =>
+    s.as(who).query(api.analytics.getUnsoldProducts, {
+      businessUnitKey: "hair",
+      range: range as { preset: "today" },
+      ...(locationId ? { locationId } : {}),
+    });
+  const names = (r: Awaited<ReturnType<typeof unsold>>) => r.products.map((p) => [p.name, p.onHand]);
+
+  // All locations, today: P1 and P2 sold; the extra closure (still at the business) didn't.
+  const all = await unsold({ from: today, to: today });
+  expect(names(all)).toEqual([["New closure", 3]]);
+  expect(all.total).toBe(1);
+  // Goma Shop sold both today; yesterday only P1 (P2 sat there: 2 left now).
+  expect(names(await unsold({ from: today, to: today }, s.shop))).toEqual([]);
+  expect(names(await unsold({ from: yesterday, to: yesterday }, s.shop))).toEqual([["P2", 2]]);
+  // Other Shop sold P1 today, nothing yesterday.
+  expect(names(await unsold({ from: yesterday, to: yesterday }, other))).toEqual([["P1", 1]]);
+
+  // analytics.view required; own_location viewers get their own shop.
+  await expect(unsold({ preset: "today" }, undefined, s.agent)).rejects.toThrow(/analytics\.view/);
+  await s.t.run(async (ctx) => {
+    const roleId = (await ctx.db.get("users", s.agent))!.roleId!;
+    const permission = (await ctx.db.query("permissions").collect()).find((p) => p.key === "analytics.view")!;
+    await ctx.db.insert("rolePermissions", { roleId, permissionId: permission._id, scope: "own_location" });
+  });
+  expect(names(await unsold({ from: yesterday, to: yesterday }, other, s.agent))).toEqual([["P2", 2]]);
+});
+
 test("only convex/lib/analytics.ts writes the rollup tables", () => {
   const sources = import.meta.glob("./**/*.ts", { query: "?raw", import: "default", eager: true });
   const writes = /\.(insert|patch|replace|delete)\(\s*["'`](dailyStats|dailyFinance)["'`]/;

@@ -133,7 +133,16 @@
       "selectLocation": "Select a location",
       "locationRequiredHint": "Required for this role.",
       "locationChangeError": "Could not change the location.",
-      "searchPlaceholder": "Search by name or email…"
+      "searchPlaceholder": "Search by name or email…",
+      "resetPassword": "Reset password",
+      "resetConfirmTitle": "Reset {name}'s password?",
+      "resetConfirmText": "A new password will be created. They'll be signed out on every device and must choose their own password at their next sign-in.",
+      "resetConfirm": "Reset password",
+      "resetting": "Resetting…",
+      "cancel": "Cancel",
+      "resetDoneTitle": "New password for {name}",
+      "resetDoneWarning": "This password is shown only once. Share it with {name} in person or by phone — they'll choose their own when they sign in.",
+      "resetError": "Could not reset the password. Please try again."
     },
     "roles": {
       "title": "Roles",
@@ -364,7 +373,8 @@
       "customer": "Customer",
       "method": "Paid with",
       "paidOn": "Paid on",
-      "reversed": "Reversed"
+      "reversed": "Reversed",
+      "passwordReset": "Password reset"
     }
   },
   "Approvals": {
@@ -1384,7 +1394,8 @@
     "lists": {
       "mostSold": "Most sold",
       "leastSold": "Least sold",
-      "bestMargin": "Best margin"
+      "bestMargin": "Top profit contributors",
+      "noSales": "Unsold stock"
     },
     "productsSold": {
       "title": "Products sold",
@@ -1409,7 +1420,8 @@
         "cost": "Cost (USD)",
         "margin": "Margin (USD)",
         "marginPct": "Margin %"
-      }
+      },
+      "belowAverageHint": "Products below the period's overall margin ({pct}) are highlighted"
     },
     "pieces": "{count, plural, one {# piece} other {# pieces}}",
     "noSales": "No sales in this period.",
@@ -1417,8 +1429,41 @@
     "charts": {
       "sales": "Sales over time",
       "expenses": "Expenses over time",
-      "payroll": "Payroll over time"
+      "payroll": "Payroll over time",
+      "costs": "Costs over time"
     },
-    "footnote": "Margin = sale price − purchase cost of the lot (trip expenses aren't spread into product costs). Dates are in Lubumbashi time (UTC+2); weeks start on Monday. USD."
+    "footnote": "Margin = sale price − purchase cost of the lot (trip expenses aren't spread into product costs). Dates are in Lubumbashi time (UTC+2); weeks start on Monday. USD.",
+    "loss": "Loss",
+    "vsPrevious": "vs {range}",
+    "deltaUp": "Up {pct}% vs {range}",
+    "deltaDown": "Down {pct}% vs {range}",
+    "monthToDate": "{month} (month to date)",
+    "insightsLabel": "Highlights",
+    "insights": {
+      "noSalesPeriod": "No sales in this period",
+      "noSalesSince": "No sales since {date}",
+      "negativeMargin": "Margin is negative this period",
+      "costShare": "Expenses and payroll took {pct}% of the margin",
+      "netUp": "Net profit up {pct}% vs previous period",
+      "netDown": "Net profit down {pct}% vs previous period",
+      "salesUp": "Sales up {pct}% vs previous period",
+      "salesDown": "Sales down {pct}% vs previous period",
+      "topShare": "{product} brought {pct}% of revenue"
+    },
+    "unsold": {
+      "inStock": "{count} in stock",
+      "more": "+{count} more",
+      "none": "Every product in stock sold at least once."
+    },
+    "legend": {
+      "noSales": "No sales"
+    },
+    "chartLabels": {
+      "sales": "Sales and margin, {range}",
+      "costs": "Expenses and payroll, {range}"
+    },
+    "showNetProfit": "Show net profit",
+    "hideNetProfit": "Hide net profit",
+    "hiddenValue": "Hidden"
   }
 }
