@@ -9,6 +9,7 @@ import { DataTable } from "@/components/data-table/data-table";
 import { Badge } from "@/components/ui/badge";
 import { CreateUserDialog } from "@/components/admin/create-user-dialog";
 import { UserStatusButton } from "@/components/admin/user-status-button";
+import { ResetPasswordButton } from "@/components/admin/reset-password-button";
 import { UserRoleSelect } from "@/components/admin/user-role-select";
 import { UserLocationSelect } from "@/components/admin/user-location-select";
 import { useRoleText } from "@/components/admin/use-role-text";
@@ -103,7 +104,12 @@ export function UsersAdminPanel() {
       id: "actions",
       header: () => <span className="sr-only">{t("actionsHeader")}</span>,
       cell: ({ row }) =>
-        isSelf(row.original) ? null : <UserStatusButton user={row.original} />,
+        isSelf(row.original) ? null : (
+          <span className="inline-flex flex-wrap justify-end gap-2">
+            <ResetPasswordButton user={row.original} />
+            <UserStatusButton user={row.original} />
+          </span>
+        ),
       meta: { className: "text-right" },
     },
   ];
@@ -145,7 +151,8 @@ export function UsersAdminPanel() {
               {locationCell(user)}
             </div>
             {isSelf(user) ? null : (
-              <div>
+              <div className="flex flex-wrap gap-2">
+                <ResetPasswordButton user={user} />
                 <UserStatusButton user={user} />
               </div>
             )}

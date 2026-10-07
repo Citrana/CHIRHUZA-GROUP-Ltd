@@ -133,7 +133,16 @@
       "selectLocation": "Choisissez un site",
       "locationRequiredHint": "Obligatoire pour ce rôle.",
       "locationChangeError": "Impossible de modifier le site.",
-      "searchPlaceholder": "Rechercher par nom ou e-mail…"
+      "searchPlaceholder": "Rechercher par nom ou e-mail…",
+      "resetPassword": "Réinitialiser le mot de passe",
+      "resetConfirmTitle": "Réinitialiser le mot de passe de {name} ?",
+      "resetConfirmText": "Un nouveau mot de passe sera créé. La personne sera déconnectée de tous ses appareils et devra choisir son propre mot de passe à sa prochaine connexion.",
+      "resetConfirm": "Réinitialiser",
+      "resetting": "Réinitialisation…",
+      "cancel": "Annuler",
+      "resetDoneTitle": "Nouveau mot de passe pour {name}",
+      "resetDoneWarning": "Ce mot de passe n'est affiché qu'une seule fois. Communiquez-le à {name} en personne ou par téléphone — la personne choisira le sien en se connectant.",
+      "resetError": "Impossible de réinitialiser le mot de passe. Veuillez réessayer."
     },
     "roles": {
       "title": "Rôles",
@@ -364,7 +373,8 @@
       "customer": "Client",
       "method": "Payé par",
       "paidOn": "Payé le",
-      "reversed": "Annulé"
+      "reversed": "Annulé",
+      "passwordReset": "Mot de passe réinitialisé"
     }
   },
   "Approvals": {
