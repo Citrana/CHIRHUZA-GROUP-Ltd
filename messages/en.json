@@ -133,7 +133,16 @@
       "selectLocation": "Select a location",
       "locationRequiredHint": "Required for this role.",
       "locationChangeError": "Could not change the location.",
-      "searchPlaceholder": "Search by name or email…"
+      "searchPlaceholder": "Search by name or email…",
+      "resetPassword": "Reset password",
+      "resetConfirmTitle": "Reset {name}'s password?",
+      "resetConfirmText": "A new password will be created. They'll be signed out on every device and must choose their own password at their next sign-in.",
+      "resetConfirm": "Reset password",
+      "resetting": "Resetting…",
+      "cancel": "Cancel",
+      "resetDoneTitle": "New password for {name}",
+      "resetDoneWarning": "This password is shown only once. Share it with {name} in person or by phone — they'll choose their own when they sign in.",
+      "resetError": "Could not reset the password. Please try again."
     },
     "roles": {
       "title": "Roles",
@@ -364,7 +373,8 @@
       "customer": "Customer",
       "method": "Paid with",
       "paidOn": "Paid on",
-      "reversed": "Reversed"
+      "reversed": "Reversed",
+      "passwordReset": "Password reset"
     }
   },
   "Approvals": {

@@ -1,5 +1,5 @@
 import { v, ConvexError } from "convex/values";
-import { createAccount, modifyAccountCredentials } from "@convex-dev/auth/server";
+import { createAccount, invalidateSessions, modifyAccountCredentials } from "@convex-dev/auth/server";
 import {
   query,
   action,
@@ -332,5 +332,65 @@ export const changePassword = action({
     await ctx.runMutation(internal.users.clearMustChangePassword, {
       userId: user._id,
     });
+  },
+});
+
+/**
+ * Records a password reset done by an admin: forces the user to choose a
+ * new password at their next sign-in, and audits it (actor = the admin).
+ * The password itself is never logged.
+ */
+export const markPasswordReset = internalMutation({
+  args: { userId: v.id("users"), actorId: v.id("users") },
+  handler: async (ctx, { userId, actorId }) => {
+    const user = await ctx.db.get("users", userId);
+    if (!user) return;
+    await ctx.db.patch("users", userId, { mustChangePassword: true });
+    await logAudit(ctx, {
+      actorId,
+      action: "update",
+      entityTable: "users",
+      entityId: userId,
+      before: { name: user.name, email: user.email, mustChangePassword: user.mustChangePassword },
+      after: { name: user.name, email: user.email, mustChangePassword: true, passwordReset: true },
+    });
+  },
+});
+
+/**
+ * The Super Admin resets a user who forgot their password: a new strong
+ * password replaces the old one, every session of that user is signed out,
+ * and they must choose their own password at the next sign-in. The new
+ * password is returned once (to share in person or by phone) and never
+ * stored in plaintext. Not for your own account (use changePassword);
+ * resetting a Super Admin also needs roles.manage.
+ */
+export const resetPassword = authedAction({
+  args: { userId: v.id("users") },
+  handler: async (ctx, { userId }) => {
+    await ctx.requirePermission("users.manage");
+    if (userId === ctx.user._id) {
+      throw new ConvexError("Use Change password for your own account.");
+    }
+    const target: Doc<"users"> | null = await ctx.runQuery(internal.users.getUserByIdInternal, { userId });
+    if (!target) {
+      throw new ConvexError("User not found.");
+    }
+    if (target.roleId) {
+      const role = await ctx.runQuery(internal.rbac.getRoleByIdInternal, { roleId: target.roleId });
+      // Taking over a Super Admin's account is a privilege matter.
+      if (role?.key === SUPER_ADMIN_ROLE_KEY) {
+        await ctx.requirePermission("roles.manage");
+      }
+    }
+    const password = generateStrongPassword();
+    await modifyAccountCredentials(ctx, {
+      provider: "password",
+      account: { id: target.email, secret: password },
+    });
+    // The old password and every open session stop working now.
+    await invalidateSessions(ctx, { userId: target._id });
+    await ctx.runMutation(internal.users.markPasswordReset, { userId: target._id, actorId: ctx.user._id });
+    return { password };
   },
 });
