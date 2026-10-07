@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Eye, EyeOff } from "lucide-react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
@@ -88,6 +89,7 @@ function StatCard({
   dot,
   variant,
   badge,
+  conceal,
   className,
 }: {
   label: string;
@@ -101,9 +103,20 @@ function StatCard({
   dot?: string;
   variant?: "anchor";
   badge?: string;
+  /** Start blurred, with an eye to show / hide the figure (labels for the eye). */
+  conceal?: { show: string; hide: string; hidden: string };
   className?: string;
 }) {
   const anchor = variant === "anchor";
+  // Concealed figures start hidden on every visit (privacy on shared screens).
+  const [shown, setShown] = useState(false);
+  const hidden = Boolean(conceal) && !shown;
+  const blur = conceal
+    ? cn(
+        "transition-[filter,opacity] duration-300 ease-out motion-reduce:transition-none",
+        hidden ? "pointer-events-none select-none opacity-60 blur-[10px]" : "opacity-100 blur-0",
+      )
+    : undefined;
   return (
     <div
       className={cn(
@@ -116,26 +129,54 @@ function StatCard({
         <p className={cn("flex items-center gap-1.5 text-xs", anchor ? "text-primary-foreground/80" : "text-muted-foreground")}>
           {dot ? <span className="inline-block size-2 rounded-full" style={{ background: dot }} aria-hidden /> : null}
           {label}
+          {conceal ? (
+            <button
+              type="button"
+              onClick={() => setShown((v) => !v)}
+              aria-pressed={shown}
+              aria-label={shown ? conceal.hide : conceal.show}
+              className={cn(
+                "-my-3 inline-flex size-11 items-center justify-center rounded-full",
+                anchor
+                  ? "text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
+                  : "text-muted-foreground hover:bg-muted",
+                "focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-current",
+              )}
+            >
+              {shown ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
+            </button>
+          ) : null}
         </p>
         {sparkline && !loading ? (
-          <Sparkline values={sparkline.values} color={anchor ? "var(--primary-foreground)" : sparkline.color} className="shrink-0" />
+          <span className={blur} aria-hidden={hidden || undefined}>
+            <Sparkline values={sparkline.values} color={anchor ? "var(--primary-foreground)" : sparkline.color} className="shrink-0" />
+          </span>
         ) : null}
       </div>
       {loading ? (
         <Skeleton className={cn("mt-1 w-24", anchor ? "h-10 bg-primary-foreground/20" : "h-7")} />
       ) : (
-        <p
-          className={cn(
-            "flex flex-wrap items-center gap-2 font-semibold tabular-nums",
-            anchor ? "text-3xl sm:text-4xl" : "text-lg sm:text-xl",
-            tone === "negative" && !anchor && "text-destructive",
-          )}
+        // Tapping the blurred figure also reveals it (hiding again is the eye's job).
+        <div
+          className={cn("flex flex-col gap-1", hidden && "cursor-pointer")}
+          onClick={hidden ? () => setShown(true) : undefined}
         >
-          {value}
-          {badge ? <span className="rounded-full bg-amber-300 px-2 py-0.5 text-xs font-semibold text-primary">{badge}</span> : null}
-        </p>
+          {hidden ? <span className="sr-only">{conceal!.hidden}</span> : null}
+          <div className={cn("flex flex-col gap-1", blur)} aria-hidden={hidden || undefined}>
+            <p
+              className={cn(
+                "flex flex-wrap items-center gap-2 font-semibold tabular-nums",
+                anchor ? "text-3xl sm:text-4xl" : "text-lg sm:text-xl",
+                tone === "negative" && !anchor && "text-destructive",
+              )}
+            >
+              {value}
+              {badge ? <span className="rounded-full bg-amber-300 px-2 py-0.5 text-xs font-semibold text-primary">{badge}</span> : null}
+            </p>
+            {delta ? <DeltaBadge delta={delta} anchor={anchor} /> : null}
+          </div>
+        </div>
       )}
-      {delta && !loading ? <DeltaBadge delta={delta} anchor={anchor} /> : null}
       {hint ? <p className={cn("text-xs", anchor ? "text-primary-foreground/70" : "text-muted-foreground")}>{hint}</p> : null}
     </div>
   );
@@ -415,6 +456,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             label={t("cards.netProfit")}
             value={summary ? money(summary.netProfit) : ""}
             badge={summary && summary.netProfit < 0 ? t("loss") : undefined}
+            conceal={{ show: t("showNetProfit"), hide: t("hideNetProfit"), hidden: t("hiddenValue") }}
             hint={t("netProfitHint")}
             loading={loading}
             delta={deltaFor("netProfit")}
