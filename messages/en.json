@@ -28,7 +28,8 @@
     "openMenu": "Open menu",
     "account": "Account",
     "administration": "Administration",
-    "backToService": "Back to {service}"
+    "backToService": "Back to {service}",
+    "admin": "Admin"
   },
   "ServicePicker": {
     "title": "Choose a service",
@@ -53,6 +54,72 @@
     "serviceUnavailable": "{service} is coming soon.",
     "backToServices": "Back to services",
     "accessDenied": "You don't have access to this module."
+  },
+  "Home": {
+    "greeting": {
+      "morning": "Good morning, {name}",
+      "afternoon": "Good afternoon, {name}",
+      "evening": "Good evening, {name}"
+    },
+    "subtitle": "{service} · {date}",
+    "attentionTitle": "Needs attention",
+    "attention": {
+      "outOfStock": "Out of stock",
+      "lowStock": "Low stock",
+      "credit": "Customers owe money",
+      "products": "Products to confirm",
+      "requisitions": "Requisitions ready to buy",
+      "reviewApprovals": "Review pending approvals",
+      "recordSales": "Record today's sales",
+      "receiveStock": "Update stock for a recent purchase"
+    },
+    "metrics": {
+      "approvals": "{count} waiting",
+      "nothingWaiting": "Nothing waiting",
+      "salesToday": "{amount} today",
+      "salesMonth": "{amount} this month",
+      "products": "{count, plural, one {# product} other {# products}}",
+      "requisitionsOpen": "{count} open",
+      "unitsOnHand": "{count, plural, one {# unit on hand} other {# units on hand}}",
+      "paidThisMonth": "{amount} paid this month",
+      "withdrawalsMonth": "{amount} this month",
+      "pending": "{count} pending",
+      "notAvailable": "Not available yet"
+    },
+    "allCaughtUp": "All caught up",
+    "allCaughtUpHint": "Nothing needs your attention right now.",
+    "quotes": {
+      "q1": "Small daily gains make big years.",
+      "q2": "A happy customer comes back with a friend.",
+      "q3": "What gets counted gets cared for.",
+      "q4": "Good stock sells itself; good service sells it twice.",
+      "q5": "Record it today, thank yourself tomorrow.",
+      "q6": "Every sale starts with a smile.",
+      "q7": "Know your numbers, grow your business.",
+      "q8": "Consistency beats intensity.",
+      "q9": "Clear books, clear mind.",
+      "q10": "Listen to customers; they tell you what to stock.",
+      "q11": "A tidy shop is an open invitation.",
+      "q12": "Margins are made when buying, not only when selling.",
+      "q13": "Do the small things well and the big things follow.",
+      "q14": "Today's effort is tomorrow's stock.",
+      "q15": "Trust is built one honest sale at a time.",
+      "q16": "Plan the week, win the day.",
+      "q17": "Cash in hand beats promises on paper.",
+      "q18": "A team that knows the goal moves faster.",
+      "q19": "Quality is remembered long after the price is forgotten.",
+      "q20": "Fix the leak before you fill the bucket.",
+      "q21": "Serve the customer in front of you.",
+      "q22": "Good records turn guesses into decisions.",
+      "q23": "Start early, finish strong.",
+      "q24": "Your best advert is a satisfied customer.",
+      "q25": "Slow-moving stock is money asleep.",
+      "q26": "Ask for feedback; it's free advice.",
+      "q27": "Discipline is choosing what you want most over what you want now.",
+      "q28": "Little by little, the bird builds its nest.",
+      "q29": "A promise kept is the best receipt.",
+      "q30": "Grow at the pace you can serve well."
+    }
   },
   "Modules": {
     "analytics": "Analytics",

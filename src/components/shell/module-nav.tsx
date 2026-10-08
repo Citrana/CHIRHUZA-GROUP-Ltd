@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeftRight, House, Settings } from "lucide-react";
+import { House, Settings } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
@@ -8,6 +8,10 @@ import { useVisibleModules } from "@/lib/use-visible-modules";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { PendingApprovalsBadge } from "@/components/approvals/pending-approvals-badge";
+
+/** The current page: a light sage fill, dark text and a left accent bar. */
+const ACTIVE =
+  "bg-secondary text-secondary-foreground before:absolute before:inset-y-2 before:left-0 before:w-[3px] before:rounded-full before:bg-primary";
 
 /**
  * The shell's module menu: Home plus every module the user has a
@@ -22,7 +26,6 @@ export function ModuleNav({
 }) {
   const t = useTranslations("Shell");
   const tModules = useTranslations("Modules");
-  const tHeader = useTranslations("AppHeader");
   const pathname = usePathname();
   const modules = useVisibleModules();
   const tNav = useTranslations("Nav");
@@ -55,53 +58,37 @@ export function ModuleNav({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
-              active
-                ? "bg-primary text-primary-foreground"
-                : "text-foreground hover:bg-muted",
+              "relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm font-medium transition-colors",
+              active ? ACTIVE : "text-foreground hover:bg-muted",
             )}
           >
             <Icon className="size-4 shrink-0" aria-hidden />
             {label}
             {key === "approvals" ? (
-              <PendingApprovalsBadge
-                service={service}
-                className={cn(
-                  "ml-auto",
-                  active && "bg-primary-foreground text-primary",
-                )}
-              />
+              <PendingApprovalsBadge service={service} className="ml-auto" />
             ) : null}
           </Link>
         );
       })}
-      {/* Bottom group: settings (if allowed), then switch service. */}
-      <div className="mt-auto flex flex-col gap-1 border-t border-border pt-2">
-        {canManageProductSettings ? (
+      {/* Bottom: product settings (if allowed). Switching service is in the header. */}
+      {canManageProductSettings ? (
+        <div className="mt-auto flex flex-col gap-1 border-t border-border pt-2">
           <Link
             href={settingsHref}
             onClick={onNavigate}
             aria-current={settingsActive ? "page" : undefined}
             className={cn(
-              "flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
+              "relative flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm transition-colors",
               settingsActive
-                ? "bg-primary font-medium text-primary-foreground"
+                ? cn(ACTIVE, "font-medium")
                 : "text-muted-foreground hover:bg-muted hover:text-foreground",
             )}
           >
             <Settings className="size-4 shrink-0" aria-hidden />
             {tNav("productSettings")}
           </Link>
-        ) : null}
-        <Link
-          href="/"
-          onClick={onNavigate}
-          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeftRight className="size-4 shrink-0" aria-hidden />
-          {tHeader("switchService")}
-        </Link>
-      </div>
+        </div>
+      ) : null}
     </nav>
   );
 }

@@ -7,6 +7,7 @@ import { authedMutation, authedQuery, type PermissionMap } from "./lib/rbac";
 import {
   canDecide,
   canSeeApproval,
+  countDecidable,
   insertApproval,
 } from "./lib/approvals";
 import {
@@ -228,28 +229,14 @@ export const get = authedQuery({
   },
 });
 
-const PENDING_COUNT_LIMIT = 500;
-
-/**
- * How many pending approvals in this service the user can decide - the
- * sidebar badge. Bounded; if pending volume ever grows past the limit,
- * switch to a counter (e.g. @convex-dev/aggregate).
- */
+/** How many pending approvals in this service the user can decide - the sidebar badge. */
 export const pendingCount = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator },
   returns: v.number(),
   handler: async (ctx, { businessUnitKey }) => {
     const unit = await getBusinessUnitByKey(ctx, businessUnitKey);
     if (!unit) return 0;
-    const pending = await ctx.db
-      .query("approvals")
-      .withIndex("by_businessUnitId_and_status", (q) =>
-        q.eq("businessUnitId", unit._id).eq("status", "pending"),
-      )
-      .take(PENDING_COUNT_LIMIT);
-    return pending.filter((a) =>
-      canDecide(ctx.user, ctx.permissions, a, ctx.isSuperAdmin),
-    ).length;
+    return await countDecidable(ctx, unit._id);
   },
 });
 

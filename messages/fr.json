@@ -28,7 +28,8 @@
     "openMenu": "Ouvrir le menu",
     "account": "Compte",
     "administration": "Administration",
-    "backToService": "Retour à {service}"
+    "backToService": "Retour à {service}",
+    "admin": "Administration"
   },
   "ServicePicker": {
     "title": "Choisissez un service",
@@ -53,6 +54,72 @@
     "serviceUnavailable": "{service} sera bientôt disponible.",
     "backToServices": "Retour aux services",
     "accessDenied": "Vous n'avez pas accès à ce module."
+  },
+  "Home": {
+    "greeting": {
+      "morning": "Bonjour, {name}",
+      "afternoon": "Bon après-midi, {name}",
+      "evening": "Bonsoir, {name}"
+    },
+    "subtitle": "{service} · {date}",
+    "attentionTitle": "À traiter",
+    "attention": {
+      "outOfStock": "Produits épuisés",
+      "lowStock": "Stock bas",
+      "credit": "Les clients doivent de l'argent",
+      "products": "Produits à confirmer",
+      "requisitions": "Réquisitions prêtes à l'achat",
+      "reviewApprovals": "Examiner les approbations en attente",
+      "recordSales": "Enregistrer les ventes du jour",
+      "receiveStock": "Mettre à jour le stock d'un achat récent"
+    },
+    "metrics": {
+      "approvals": "{count} en attente",
+      "nothingWaiting": "Rien en attente",
+      "salesToday": "{amount} aujourd'hui",
+      "salesMonth": "{amount} ce mois",
+      "products": "{count, plural, one {# produit} other {# produits}}",
+      "requisitionsOpen": "{count} ouverte(s)",
+      "unitsOnHand": "{count, plural, one {# unité en stock} other {# unités en stock}}",
+      "paidThisMonth": "{amount} payés ce mois",
+      "withdrawalsMonth": "{amount} ce mois",
+      "pending": "{count} en attente",
+      "notAvailable": "Pas encore disponible"
+    },
+    "allCaughtUp": "Tout est à jour",
+    "allCaughtUpHint": "Rien ne demande votre attention pour le moment.",
+    "quotes": {
+      "q1": "Les petits gains de chaque jour font les grandes années.",
+      "q2": "Un client satisfait revient avec un ami.",
+      "q3": "Ce qu'on compte, on en prend soin.",
+      "q4": "Un bon stock se vend seul ; un bon service le vend deux fois.",
+      "q5": "Notez-le aujourd'hui, remerciez-vous demain.",
+      "q6": "Chaque vente commence par un sourire.",
+      "q7": "Connaissez vos chiffres, faites grandir votre entreprise.",
+      "q8": "La régularité vaut mieux que l'intensité.",
+      "q9": "Comptes clairs, esprit clair.",
+      "q10": "Écoutez les clients : ils vous disent quoi stocker.",
+      "q11": "Une boutique bien rangée est une invitation.",
+      "q12": "La marge se gagne à l'achat, pas seulement à la vente.",
+      "q13": "Faites bien les petites choses, les grandes suivront.",
+      "q14": "L'effort d'aujourd'hui est le stock de demain.",
+      "q15": "La confiance se construit une vente honnête à la fois.",
+      "q16": "Planifiez la semaine, gagnez la journée.",
+      "q17": "L'argent en main vaut mieux que des promesses sur papier.",
+      "q18": "Une équipe qui connaît le but avance plus vite.",
+      "q19": "On se souvient de la qualité bien après avoir oublié le prix.",
+      "q20": "Réparez la fuite avant de remplir le seau.",
+      "q21": "Servez le client qui est devant vous.",
+      "q22": "De bons registres transforment les suppositions en décisions.",
+      "q23": "Commencez tôt, finissez fort.",
+      "q24": "Votre meilleure publicité est un client satisfait.",
+      "q25": "Le stock qui ne bouge pas, c'est de l'argent qui dort.",
+      "q26": "Demandez des avis : ce sont des conseils gratuits.",
+      "q27": "La discipline, c'est préférer ce qu'on veut le plus à ce qu'on veut tout de suite.",
+      "q28": "Petit à petit, l'oiseau fait son nid.",
+      "q29": "Une promesse tenue est le meilleur reçu.",
+      "q30": "Grandissez au rythme où vous pouvez bien servir."
+    }
   },
   "Modules": {
     "analytics": "Analyses",
