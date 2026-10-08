@@ -4,15 +4,17 @@ import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
-import type { PermissionKey, Scope } from "../../../convex/lib/permissions";
+import type { PermissionKey, PermissionModule, Scope } from "../../../convex/lib/permissions";
 import { Link } from "@/i18n/navigation";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useRoleText } from "@/components/admin/use-role-text";
 import { useCan } from "@/lib/use-can";
 
-type PermissionModule = keyof ReturnType<typeof useModuleLabels>;
-
-function useModuleLabels() {
+/**
+ * Section names for every permission module. Typed against the catalog's
+ * modules, so adding a module without its name here is a compile error.
+ */
+function useModuleLabels(): Record<PermissionModule, string> {
   const t = useTranslations("PermissionModules");
   return {
     sales: t("sales"),
@@ -23,6 +25,8 @@ function useModuleLabels() {
     approvals: t("approvals"),
     analytics: t("analytics"),
     admin: t("admin"),
+    products: t("products"),
+    withdrawals: t("withdrawals"),
   };
 }
 
