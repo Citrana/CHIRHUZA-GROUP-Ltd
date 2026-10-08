@@ -17,6 +17,7 @@ import type * as credit from "../credit.js";
 import type * as customers from "../customers.js";
 import type * as distributions from "../distributions.js";
 import type * as healthCheck from "../healthCheck.js";
+import type * as home from "../home.js";
 import type * as http from "../http.js";
 import type * as inventory from "../inventory.js";
 import type * as lib_analytics from "../lib/analytics.js";
@@ -69,6 +70,7 @@ declare const fullApi: ApiFromModules<{
   customers: typeof customers;
   distributions: typeof distributions;
   healthCheck: typeof healthCheck;
+  home: typeof home;
   http: typeof http;
   inventory: typeof inventory;
   "lib/analytics": typeof lib_analytics;

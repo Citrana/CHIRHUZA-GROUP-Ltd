@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { Eye, EyeOff } from "lucide-react";
 import { useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
@@ -17,6 +16,7 @@ import { ANALYTICS_COLORS, ChartLegend, CostsChart, SalesChart, Sparkline } from
 import { ProductsSoldTable } from "@/components/analytics/products-sold-table";
 import { percentChange, previousRange } from "@/lib/analytics-compare";
 import { analyticsInsights } from "@/lib/analytics-insights";
+import { ConcealToggle, useConcealed } from "@/components/ui/concealable";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -109,14 +109,7 @@ function StatCard({
 }) {
   const anchor = variant === "anchor";
   // Concealed figures start hidden on every visit (privacy on shared screens).
-  const [shown, setShown] = useState(false);
-  const hidden = Boolean(conceal) && !shown;
-  const blur = conceal
-    ? cn(
-        "transition-[filter,opacity] duration-300 ease-out motion-reduce:transition-none",
-        hidden ? "pointer-events-none select-none opacity-60 blur-[10px]" : "opacity-100 blur-0",
-      )
-    : undefined;
+  const { shown, hidden, toggle, reveal, blurClass: blur } = useConcealed(Boolean(conceal));
   return (
     <div
       className={cn(
@@ -130,21 +123,16 @@ function StatCard({
           {dot ? <span className="inline-block size-2 rounded-full" style={{ background: dot }} aria-hidden /> : null}
           {label}
           {conceal ? (
-            <button
-              type="button"
-              onClick={() => setShown((v) => !v)}
-              aria-pressed={shown}
-              aria-label={shown ? conceal.hide : conceal.show}
-              className={cn(
-                "-my-3 inline-flex size-11 items-center justify-center rounded-full",
+            <ConcealToggle
+              shown={shown}
+              onToggle={toggle}
+              labels={conceal}
+              className={
                 anchor
                   ? "text-primary-foreground/80 hover:bg-primary-foreground/10 hover:text-primary-foreground"
-                  : "text-muted-foreground hover:bg-muted",
-                "focus-visible:outline-2 focus-visible:outline-offset-[-6px] focus-visible:outline-current",
-              )}
-            >
-              {shown ? <EyeOff className="size-4" aria-hidden /> : <Eye className="size-4" aria-hidden />}
-            </button>
+                  : "text-muted-foreground hover:bg-muted"
+              }
+            />
           ) : null}
         </p>
         {sparkline && !loading ? (
@@ -159,7 +147,7 @@ function StatCard({
         // Tapping the blurred figure also reveals it (hiding again is the eye's job).
         <div
           className={cn("flex flex-col gap-1", hidden && "cursor-pointer")}
-          onClick={hidden ? () => setShown(true) : undefined}
+          onClick={hidden ? reveal : undefined}
         >
           {hidden ? <span className="sr-only">{conceal!.hidden}</span> : null}
           <div className={cn("flex flex-col gap-1", blur)} aria-hidden={hidden || undefined}>

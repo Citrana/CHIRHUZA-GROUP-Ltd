@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import type { MutationCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id, TableNames } from "../_generated/dataModel";
 import { logAudit } from "./audit";
 import { isPermissionKey, type PermissionKey } from "./permissions";
@@ -77,6 +77,25 @@ export function canDecide(
     approval.status === "pending" &&
     hasDeciderRights(user, permissions, approval, isSuperAdmin)
   );
+}
+
+const PENDING_COUNT_LIMIT = 500;
+
+/**
+ * How many pending approvals of a business unit the user can decide
+ * ("waiting on me"): the sidebar badge and the Home briefing. Bounded; if
+ * pending volume ever grows past the limit, switch to a counter (e.g.
+ * @convex-dev/aggregate).
+ */
+export async function countDecidable(
+  ctx: QueryCtx & { user: Doc<"users">; permissions: PermissionMap; isSuperAdmin: boolean },
+  businessUnitId: Id<"businessUnits">,
+): Promise<number> {
+  const pending = await ctx.db
+    .query("approvals")
+    .withIndex("by_businessUnitId_and_status", (q) => q.eq("businessUnitId", businessUnitId).eq("status", "pending"))
+    .take(PENDING_COUNT_LIMIT);
+  return pending.filter((a) => canDecide(ctx.user, ctx.permissions, a, ctx.isSuperAdmin)).length;
 }
 
 /** view_all sees everything; others their own requests + what they may decide. */
