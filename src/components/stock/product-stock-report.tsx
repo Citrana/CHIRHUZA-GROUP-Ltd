@@ -42,7 +42,12 @@ export function ProductStockReport({ service }: { service: BusinessUnitKey }) {
   const convex = useConvex();
   const withPhotos = PRODUCT_PROFILES[service].attributes.photo;
   // Opens on what we have: products in stock first.
-  const [status, setStatus] = useState<Status | "">("in_stock");
+  // Opens on "In stock", or on the status a link asks for (Home's "2 low" →
+  // ?status=low). Rendered on the client only (behind the auth gate).
+  const [status, setStatus] = useState<Status | "">(() => {
+    const wanted = typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("status");
+    return wanted && (STATUSES as readonly string[]).includes(wanted) ? (wanted as Status) : "in_stock";
+  });
   const [search, setSearch] = useState("");
   const [downloading, setDownloading] = useState(false);
   const counts = useQuery(api.inventory.statusCounts, { businessUnitKey: service });

@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/sheet";
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LogoutButton } from "@/components/logout-button";
-import { AdminLinks } from "@/components/shell/admin-links";
+import { AdminLinks, AdminMenu } from "@/components/shell/admin-links";
 import { useLastService } from "@/lib/service-store";
 
 /**
@@ -81,7 +81,7 @@ export function AppHeader({
 
         <div className="ml-auto hidden items-center gap-4 xl:flex">
           {serviceLink}
-          <AdminLinks className="flex items-center gap-4" />
+          <AdminMenu />
           <LocaleSwitcher />
           <LogoutButton />
         </div>
@@ -109,6 +109,7 @@ export function AppHeader({
                 className="flex flex-col gap-4"
                 linkClassName="text-base"
                 onNavigate={closeAccount}
+                title={t("administration")}
               />
               <LocaleSwitcher />
               <div>
