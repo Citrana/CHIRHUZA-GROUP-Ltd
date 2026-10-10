@@ -171,6 +171,9 @@ export function batchPdfContent(
     const tot = selling.totals;
     const notReceived = t("pdf.sellingNotReceived");
     const amountPcs = (cents: number, qty: number) => `${money(cents)} · ${qty}`;
+    // Positive: sold below today's price; negative: above.
+    const signed = (cents: number) =>
+      cents === 0 ? money(0) : t(cents > 0 ? "pdf.sellingBelow" : "pdf.sellingAbove", { amount: money(Math.abs(cents)) });
     const sellingName = (p: { name: string | null; lengthInches: number | null; sizeName: string | null; colourName: string | null }) =>
       [p.name ?? "-", p.lengthInches !== null ? `${p.lengthInches}"` : null, p.sizeName, p.colourName].filter(Boolean).join(" · ");
     sections.push({
@@ -179,7 +182,12 @@ export function batchPdfContent(
         [t("pdf.sellingExpected"), amountPcs(tot.expected, tot.purchased)],
         [t("pdf.sellingSold"), selling.received ? amountPcs(tot.soldAmount, tot.soldQty) : notReceived],
         [t("pdf.sellingRemaining"), selling.received ? amountPcs(tot.remainingValue, tot.remaining) : notReceived],
-        ...(selling.received ? [[t("pdf.sellingDamaged"), String(tot.damagedOrMissing)] as [string, string]] : []),
+        ...(selling.received
+          ? [
+              [t("pdf.sellingDamaged"), amountPcs(tot.damagedValue, tot.damagedOrMissing)] as [string, string],
+              [t("pdf.sellingDifferences"), signed(tot.priceDifference)] as [string, string],
+            ]
+          : []),
       ],
     });
     if (selling.unpriced.length > 0) {
@@ -207,6 +215,37 @@ export function batchPdfContent(
         widths: { 1: 18, 2: 20, 3: 22, 4: 26, 5: 26 },
       },
     });
+    const differing = selling.saleLines.filter((l) => l.difference !== null && l.difference !== 0);
+    if (differing.length > 0) {
+      const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
+      sections.push({
+        title: t("pdf.sellingDifferencesTitle"),
+        table: {
+          head: [
+            t("pdf.sellingDateHeader"),
+            t("pdf.productHeader"),
+            t("pdf.sellingQtyHeader"),
+            t("pdf.sellingTodayHeader"),
+            t("pdf.sellingSoldForHeader"),
+            t("pdf.sellingDifferenceHeader"),
+            t("pdf.sellingReasonHeader"),
+          ],
+          body: differing.map((l) => [
+            `${day.format(l.createdAt)}\n${l.saleNumber} · ${l.locationName}`,
+            sellingName(l),
+            String(l.qty),
+            l.todayPrice === null ? "-" : money(l.todayPrice),
+            money(l.amount),
+            signed(l.difference ?? 0),
+            [l.discountReason, l.saleDiscountReason !== null ? t("pdf.sellingWholeSale", { reason: l.saleDiscountReason }) : null]
+              .filter(Boolean)
+              .join(" · ") || t("pdf.sellingNoReason"),
+          ]),
+          rightAlign: [2, 3, 4, 5],
+          widths: { 2: 12, 3: 20, 4: 20, 5: 24 },
+        },
+      });
+    }
   }
 
   if (b.requisitions.length > 0) {

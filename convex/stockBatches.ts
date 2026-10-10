@@ -15,7 +15,7 @@ import {
   requireBusinessUnit,
 } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
-import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
+import { applyMovement, businessHolderRef, getOrCreateHolder, holderName } from "./lib/inventory";
 import { applyRollupEvent, expenseEvent } from "./lib/analytics";
 import {
   batchItemStatusValidator,
@@ -354,8 +354,11 @@ const MAX_LOT_SALE_LINES = 5000;
  * expected value (purchased units x the product's current selling price),
  * what was actually sold from its lot (pieces and money, discounts
  * included, completed sales only), and what remains anywhere (pieces and
- * value at the selling price). Products without a selling price are
- * listed apart and left out of the values.
+ * value at the selling price, per holder too). Products without a selling
+ * price are listed apart and left out of the values. Price differences
+ * (sold pieces at today's price minus what they brought in) explain the
+ * gap, so expected = sold + differences + remaining + damaged/missing.
+ * Individual sale lines are listed only for sales.view holders (in scope).
  *
  * Sold figures read the lot's sale lines through an index (bounded): the
  * analytics rollups have no per-lot breakdown, and this is a per-batch
@@ -369,58 +372,122 @@ export const sellingReport = authedQuery({
     const batch = batchId ? await ctx.db.get("stockBatches", batchId) : null;
     if (!batch) return null;
 
+    // Sale numbers, shops and reasons are sales data: listed only for
+    // sales.view holders, within their scope. Totals stay complete.
+    const salesScope = ctx.permissions.get("sales.view") ?? null;
+    const canSeeSale = (sale: Doc<"sales">) =>
+      salesScope === "all_locations" || (salesScope === "own_location" && sale.locationId === ctx.user.locationId);
+    const locationNames = new Map<Id<"locations">, string>();
+    const locationName = async (id: Id<"locations">) => {
+      if (!locationNames.has(id)) locationNames.set(id, (await ctx.db.get("locations", id))?.name ?? "—");
+      return locationNames.get(id)!;
+    };
+
     const purchased = (await itemsOf(ctx, batch._id)).filter((item) => item.status === "purchased");
-    const lines = await Promise.all(
+    const perItem = await Promise.all(
       purchased.map(async (item) => {
         const product = await ctx.db.get("products", item.productId);
         const details = await productDetails(ctx, product);
         const price = product?.suggestedPrice ?? null;
+        const label = {
+          name: product?.name ?? null,
+          sku: product?.sku ?? null,
+          lengthInches: product?.lengthInches ?? null,
+          colourName: details.colourName,
+          sizeName: details.sizeName,
+        };
         const lot = await ctx.db
           .query("inventoryBatches")
           .withIndex("by_sourceStockBatchItemId", (q) => q.eq("sourceStockBatchItemId", item._id))
           .first();
         let sold = { qty: 0, amount: 0 };
         let remaining = 0;
+        const saleLines = [];
+        const levels: { holderId: Id<"holders">; qty: number; value: number }[] = [];
         if (lot) {
-          const saleLines = await ctx.db
+          const lotSaleLines = await ctx.db
             .query("saleItems")
             .withIndex("by_inventoryBatchId", (q) => q.eq("inventoryBatchId", lot._id))
             .take(MAX_LOT_SALE_LINES);
-          for (const line of saleLines) {
+          for (const line of lotSaleLines) {
             const sale = await ctx.db.get("sales", line.saleId);
             if (sale?.status !== "completed") continue;
-            sold = {
-              qty: sold.qty + line.qty,
-              amount: sold.amount + line.unitPrice * line.qty - (line.saleDiscountShare ?? 0),
-            };
+            const share = line.saleDiscountShare ?? 0;
+            const amount = line.unitPrice * line.qty - share;
+            sold = { qty: sold.qty + line.qty, amount: sold.amount + amount };
+            if (!canSeeSale(sale)) continue;
+            saleLines.push({
+              saleItemId: line._id,
+              saleId: sale._id,
+              saleNumber: sale.number,
+              createdAt: sale.createdAt,
+              locationName: await locationName(sale.locationId),
+              itemId: item._id,
+              ...label,
+              qty: line.qty,
+              unitPrice: line.unitPrice,
+              saleDiscountShare: share,
+              amount,
+              priceAtSale: line.suggestedPriceSnapshot ?? null,
+              todayPrice: price,
+              // Positive: sold below today's selling price.
+              difference: price === null ? null : line.qty * price - amount,
+              discountReason: line.discountReason ?? null,
+              saleDiscountReason: share > 0 ? (sale.saleDiscountReason ?? null) : null,
+            });
           }
-          const levels = await ctx.db
+          const lotLevels = await ctx.db
             .query("stockLevels")
             .withIndex("by_inventoryBatchId_and_holderId", (q) => q.eq("inventoryBatchId", lot._id))
             .take(500);
-          remaining = levels.reduce((t, l) => t + l.qtyOnHand, 0);
+          for (const level of lotLevels) {
+            if (level.qtyOnHand === 0) continue;
+            remaining += level.qtyOnHand;
+            levels.push({ holderId: level.holderId, qty: level.qtyOnHand, value: price === null ? 0 : level.qtyOnHand * price });
+          }
         }
-        return {
+        const damaged = lot ? (item.qtyDamaged ?? 0) : null;
+        const damagedOrMissing = lot ? item.qtyPurchased - lot.receivedQty : null;
+        const line = {
           itemId: item._id,
           productId: item.productId,
-          name: product?.name ?? null,
-          sku: product?.sku ?? null,
-          lengthInches: product?.lengthInches ?? null,
-          colourName: details.colourName,
-          sizeName: details.sizeName,
+          ...label,
           price,
           purchased: item.qtyPurchased,
           expected: price === null ? null : item.qtyPurchased * price,
           // Only once the batch is received (the lot exists).
           received: lot ? lot.receivedQty : null,
-          damagedOrMissing: lot ? item.qtyPurchased - lot.receivedQty : null,
+          damagedOrMissing,
+          damaged,
+          missing: damagedOrMissing === null || damaged === null ? null : damagedOrMissing - damaged,
+          receiveReason: item.receiveReason ?? null,
+          // What the damaged / missing pieces would have sold for.
+          damagedValue: damagedOrMissing !== null && price !== null ? damagedOrMissing * price : null,
           sold: lot ? sold : null,
+          // Sold pieces at today's price minus what they brought in
+          // (positive: sold below today's price).
+          priceDifference: lot && price !== null ? sold.qty * price - sold.amount : null,
           remaining: lot ? remaining : null,
           remainingValue: lot && price !== null ? remaining * price : null,
         };
+        return { line, saleLines, levels };
       }),
     );
+    const lines = perItem.map((p) => p.line);
     lines.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "") || (a.sku ?? "").localeCompare(b.sku ?? ""));
+    const saleLines = perItem.flatMap((p) => p.saleLines).sort((a, b) => b.createdAt - a.createdAt);
+    const byHolder = new Map<Id<"holders">, { qty: number; value: number }>();
+    for (const level of perItem.flatMap((p) => p.levels)) {
+      const entry = byHolder.get(level.holderId) ?? { qty: 0, value: 0 };
+      byHolder.set(level.holderId, { qty: entry.qty + level.qty, value: entry.value + level.value });
+    }
+    const remainingByHolder = await Promise.all(
+      [...byHolder].map(async ([holderId, { qty, value }]) => {
+        const holder = await ctx.db.get("holders", holderId);
+        return { holderId, type: holder?.type ?? "business", name: holder ? await holderName(ctx, holder) : "—", qty, value };
+      }),
+    );
+    remainingByHolder.sort((a, b) => b.qty - a.qty);
 
     const sum = (pick: (l: (typeof lines)[number]) => number | null) => lines.reduce((t, l) => t + (pick(l) ?? 0), 0);
     const received = lines.some((l) => l.received !== null);
@@ -431,6 +498,9 @@ export const sellingReport = authedQuery({
       received,
       currency: "USD" as const,
       lines,
+      saleLines,
+      saleLinesHidden: salesScope === null,
+      remainingByHolder,
       totals: {
         purchased: sum((l) => l.purchased),
         expected: sum((l) => l.expected),
@@ -439,6 +509,8 @@ export const sellingReport = authedQuery({
         remaining: sum((l) => l.remaining),
         remainingValue: sum((l) => l.remainingValue),
         damagedOrMissing: sum((l) => l.damagedOrMissing),
+        damagedValue: sum((l) => l.damagedValue),
+        priceDifference: sum((l) => l.priceDifference),
       },
       unpriced: [...unpriced.values()].map((l) => ({
         productId: l.productId,

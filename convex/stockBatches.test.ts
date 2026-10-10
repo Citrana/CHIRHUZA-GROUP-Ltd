@@ -13,7 +13,7 @@ import {
   receiveAll,
   setupStock,
 } from "./lib/stock.test.utils";
-import { getRoleId } from "./lib/test.utils";
+import { getRoleId, insertLocation, insertUserWithRole } from "./lib/test.utils";
 
 const modules = import.meta.glob("./**/*.*s");
 const setup = () => setupStock(modules);
@@ -617,7 +617,7 @@ test("sellingReport: expected at selling prices, sold so far, remaining; unprice
   }
   await s.as(s.manager).mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId });
 
-  // 6 of P1 go to the shop; the agent sells 2 at $5, 1 at $4 (discount), and one sale is voided.
+  // 6 of P1 go to the shop; the agent sells 2 at $5, 1 at $4 (discount), 1 at $7 (above), and one sale is voided.
   const p1Lot = (await s.t.run((ctx) =>
     ctx.db.query("inventoryBatches").withIndex("by_sourceStockBatchItemId", (q) => q.eq("sourceStockBatchItemId", b.i1._id)).unique(),
   ))!._id;
@@ -642,6 +642,7 @@ test("sellingReport: expected at selling prices, sold so far, remaining; unprice
     });
   await sell(500, 2);
   await sell(400, 1, "Loyal customer");
+  await sell(700, 1, "Gift wrapping");
   const { saleId: voided } = await sell(500, 1);
   await s.t.run((ctx) => ctx.db.patch("sales", voided, { status: "voided" }));
 
@@ -651,21 +652,62 @@ test("sellingReport: expected at selling prices, sold so far, remaining; unprice
     after.lines.map((l) => [l.name, l.purchased, l.received, l.damagedOrMissing, l.sold, l.remaining, l.remainingValue]),
   ).toEqual([
     ["New closure", 3, 3, 0, { qty: 0, amount: 0 }, 3, null],
-    // 8 received; 4 left the stock (the voided sale's piece too), only completed sales count as sold.
-    ["P1", 10, 8, 2, { qty: 3, amount: 1400 }, 4, 2000],
+    // 8 received; 5 left the stock (the voided sale's piece too), only completed sales count as sold.
+    ["P1", 10, 8, 2, { qty: 4, amount: 2100 }, 3, 1500],
     ["P2", 3, 3, 0, { qty: 0, amount: 0 }, 3, 4500],
   ]);
   expect(after.totals).toEqual({
     purchased: 16,
     expected: 9500,
-    soldQty: 3,
-    soldAmount: 1400,
-    remaining: 10,
-    remainingValue: 6500,
+    soldQty: 4,
+    soldAmount: 2100,
+    remaining: 9,
+    remainingValue: 6000,
     damagedOrMissing: 2,
+    // 2 damaged Bob 12" at the $5.00 selling price.
+    damagedValue: 1000,
+    // 4 sold x $5.00 - $21.00: $1 below on one, $2 above on another.
+    priceDifference: -100,
   });
   expect(after.unpriced.map((p) => p.name)).toEqual(["New closure"]);
+  const p1Line = after.lines.find((l) => l.name === "P1")!;
+  expect([p1Line.damaged, p1Line.missing, p1Line.receiveReason]).toEqual([2, 0, "Torn"]);
+
+  // Each completed sale line, with its difference from today's price and its reason.
+  expect(
+    after.saleLines
+      .map((l) => [l.qty, l.unitPrice, l.amount, l.priceAtSale, l.todayPrice, l.difference, l.discountReason, l.locationName])
+      .sort((a, b) => Number(a[1]) - Number(b[1])),
+  ).toEqual([
+    [1, 400, 400, 500, 500, 100, "Loyal customer", "Goma Shop"],
+    [2, 500, 1000, 500, 500, 0, null, "Goma Shop"],
+    [1, 700, 700, 500, 500, -200, "Gift wrapping", "Goma Shop"],
+  ]);
+  expect(after.saleLinesHidden).toBe(false);
+  // Remaining per holder: 2 in the business stock, 1 at the shop (P1), plus the other lots' units.
+  expect(after.remainingByHolder.map((h) => [h.type, h.qty])).toEqual([["business", 8], ["location", 1]]);
+
+  // Without sales.view (the buyer): totals only, no individual sales.
+  const buyerView = (await s.as(s.inventory).query(api.stockBatches.sellingReport, { batchId: b.batchId }))!;
+  expect(buyerView.saleLinesHidden).toBe(true);
+  expect(buyerView.saleLines).toEqual([]);
+  expect(buyerView.totals).toEqual(after.totals);
+
 
   // Same permission as the batch page.
   await expect(s.as(s.agent).query(api.stockBatches.sellingReport, { batchId: b.batchId })).rejects.toThrow(/stock\.view/);
+
+  // A sales agent (sales.view at own_location) given stock.view sees only sales at the caller's shop.
+  const other = await insertLocation(s.t, { name: "Lubumbashi Shop" });
+  const stockView = await s.t.run(
+    async (ctx) => (await ctx.db.query("permissions").withIndex("by_key", (q) => q.eq("key", "stock.view")).unique())!._id,
+  );
+  const seller = await insertUserWithRole(s.t, "sales_agent", { email: "seller2@x.com", locationId: other });
+  await s.t.run(async (ctx) => {
+    const roleId = (await ctx.db.get("users", seller))!.roleId!;
+    await ctx.db.insert("rolePermissions", { roleId, permissionId: stockView, scope: "own_location" });
+  });
+  const sellerView = (await s.as(seller).query(api.stockBatches.sellingReport, { batchId: b.batchId }))!;
+  expect(sellerView.saleLinesHidden).toBe(false);
+  expect(sellerView.saleLines).toEqual([]);
 });
