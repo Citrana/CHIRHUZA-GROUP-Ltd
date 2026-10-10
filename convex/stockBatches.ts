@@ -347,6 +347,111 @@ export const get = authedQuery({
   },
 });
 
+const MAX_LOT_SALE_LINES = 5000;
+
+/**
+ * What a batch is worth at selling prices: for each purchased line, the
+ * expected value (purchased units x the product's current selling price),
+ * what was actually sold from its lot (pieces and money, discounts
+ * included, completed sales only), and what remains anywhere (pieces and
+ * value at the selling price). Products without a selling price are
+ * listed apart and left out of the values.
+ *
+ * Sold figures read the lot's sale lines through an index (bounded): the
+ * analytics rollups have no per-lot breakdown, and this is a per-batch
+ * report, not an Analytics chart.
+ */
+export const sellingReport = authedQuery({
+  args: { batchId: v.string() },
+  handler: async (ctx, args) => {
+    await ctx.requirePermission("stock.view");
+    const batchId = ctx.db.normalizeId("stockBatches", args.batchId);
+    const batch = batchId ? await ctx.db.get("stockBatches", batchId) : null;
+    if (!batch) return null;
+
+    const purchased = (await itemsOf(ctx, batch._id)).filter((item) => item.status === "purchased");
+    const lines = await Promise.all(
+      purchased.map(async (item) => {
+        const product = await ctx.db.get("products", item.productId);
+        const details = await productDetails(ctx, product);
+        const price = product?.suggestedPrice ?? null;
+        const lot = await ctx.db
+          .query("inventoryBatches")
+          .withIndex("by_sourceStockBatchItemId", (q) => q.eq("sourceStockBatchItemId", item._id))
+          .first();
+        let sold = { qty: 0, amount: 0 };
+        let remaining = 0;
+        if (lot) {
+          const saleLines = await ctx.db
+            .query("saleItems")
+            .withIndex("by_inventoryBatchId", (q) => q.eq("inventoryBatchId", lot._id))
+            .take(MAX_LOT_SALE_LINES);
+          for (const line of saleLines) {
+            const sale = await ctx.db.get("sales", line.saleId);
+            if (sale?.status !== "completed") continue;
+            sold = {
+              qty: sold.qty + line.qty,
+              amount: sold.amount + line.unitPrice * line.qty - (line.saleDiscountShare ?? 0),
+            };
+          }
+          const levels = await ctx.db
+            .query("stockLevels")
+            .withIndex("by_inventoryBatchId_and_holderId", (q) => q.eq("inventoryBatchId", lot._id))
+            .take(500);
+          remaining = levels.reduce((t, l) => t + l.qtyOnHand, 0);
+        }
+        return {
+          itemId: item._id,
+          productId: item.productId,
+          name: product?.name ?? null,
+          sku: product?.sku ?? null,
+          lengthInches: product?.lengthInches ?? null,
+          colourName: details.colourName,
+          sizeName: details.sizeName,
+          price,
+          purchased: item.qtyPurchased,
+          expected: price === null ? null : item.qtyPurchased * price,
+          // Only once the batch is received (the lot exists).
+          received: lot ? lot.receivedQty : null,
+          damagedOrMissing: lot ? item.qtyPurchased - lot.receivedQty : null,
+          sold: lot ? sold : null,
+          remaining: lot ? remaining : null,
+          remainingValue: lot && price !== null ? remaining * price : null,
+        };
+      }),
+    );
+    lines.sort((a, b) => (a.name ?? "").localeCompare(b.name ?? "") || (a.sku ?? "").localeCompare(b.sku ?? ""));
+
+    const sum = (pick: (l: (typeof lines)[number]) => number | null) => lines.reduce((t, l) => t + (pick(l) ?? 0), 0);
+    const received = lines.some((l) => l.received !== null);
+    const unpriced = new Map<string, (typeof lines)[number]>();
+    for (const l of lines) if (l.price === null) unpriced.set(l.productId, l);
+    return {
+      number: batch.number,
+      received,
+      currency: "USD" as const,
+      lines,
+      totals: {
+        purchased: sum((l) => l.purchased),
+        expected: sum((l) => l.expected),
+        soldQty: sum((l) => l.sold?.qty ?? null),
+        soldAmount: sum((l) => l.sold?.amount ?? null),
+        remaining: sum((l) => l.remaining),
+        remainingValue: sum((l) => l.remainingValue),
+        damagedOrMissing: sum((l) => l.damagedOrMissing),
+      },
+      unpriced: [...unpriced.values()].map((l) => ({
+        productId: l.productId,
+        name: l.name,
+        sku: l.sku,
+        lengthInches: l.lengthInches,
+        colourName: l.colourName,
+        sizeName: l.sizeName,
+      })),
+    };
+  },
+});
+
 /**
  * Lines the batch builder may add: pending lines of APPROVED (or already
  * purchasing) requisitions of the service that aren't in any batch yet.

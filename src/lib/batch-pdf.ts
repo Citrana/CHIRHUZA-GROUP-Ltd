@@ -5,6 +5,7 @@ import { BUSINESS_TIME_ZONE } from "../../convex/lib/time";
 import type { PdfDocument, PdfSection, Translate } from "@/lib/pdf/document";
 
 export type BatchForPdf = NonNullable<FunctionReturnType<typeof api.stockBatches.get>>;
+export type SellingForPdf = NonNullable<FunctionReturnType<typeof api.stockBatches.sellingReport>>;
 type Item = BatchForPdf["items"][number];
 
 /**
@@ -17,7 +18,16 @@ type Item = BatchForPdf["items"][number];
  */
 export function batchPdfContent(
   b: BatchForPdf,
-  opts: { t: Translate; tRequisitions: Translate; locale: string; serviceName: string; downloadedBy: string; now: number },
+  opts: {
+    t: Translate;
+    tRequisitions: Translate;
+    locale: string;
+    serviceName: string;
+    downloadedBy: string;
+    now: number;
+    /** The batch's value at selling prices (stockBatches.sellingReport), when loaded. */
+    selling?: SellingForPdf;
+  },
 ): PdfDocument {
   const { t, tRequisitions, locale } = opts;
   const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: BUSINESS_TIME_ZONE });
@@ -155,6 +165,50 @@ export function batchPdfContent(
         }
       : { emptyText: t("pdf.noExpenses") }),
   });
+  // Value at selling prices: expected, sold so far, remaining.
+  const selling = opts.selling;
+  if (selling && selling.lines.length > 0) {
+    const tot = selling.totals;
+    const notReceived = t("pdf.sellingNotReceived");
+    const amountPcs = (cents: number, qty: number) => `${money(cents)} · ${qty}`;
+    const sellingName = (p: { name: string | null; lengthInches: number | null; sizeName: string | null; colourName: string | null }) =>
+      [p.name ?? "-", p.lengthInches !== null ? `${p.lengthInches}"` : null, p.sizeName, p.colourName].filter(Boolean).join(" · ");
+    sections.push({
+      title: t("pdf.sellingTitle"),
+      details: [
+        [t("pdf.sellingExpected"), amountPcs(tot.expected, tot.purchased)],
+        [t("pdf.sellingSold"), selling.received ? amountPcs(tot.soldAmount, tot.soldQty) : notReceived],
+        [t("pdf.sellingRemaining"), selling.received ? amountPcs(tot.remainingValue, tot.remaining) : notReceived],
+        ...(selling.received ? [[t("pdf.sellingDamaged"), String(tot.damagedOrMissing)] as [string, string]] : []),
+      ],
+    });
+    if (selling.unpriced.length > 0) {
+      sections.push({ emptyText: t("pdf.sellingUnpriced", { names: selling.unpriced.map(sellingName).join(", ") }) });
+    }
+    sections.push({
+      table: {
+        head: [
+          t("pdf.productHeader"),
+          t("pdf.purchasedHeader"),
+          t("pdf.sellingPriceHeader"),
+          t("pdf.sellingExpectedHeader"),
+          t("pdf.sellingSoldHeader"),
+          t("pdf.sellingRemainingHeader"),
+        ],
+        body: selling.lines.map((l) => [
+          [sellingName(l), l.sku].filter(Boolean).join("\n"),
+          String(l.purchased),
+          l.price === null ? "-" : money(l.price),
+          l.expected === null ? "-" : money(l.expected),
+          l.sold === null ? notReceived : amountPcs(l.sold.amount, l.sold.qty),
+          l.remaining === null ? notReceived : l.remainingValue === null ? String(l.remaining) : amountPcs(l.remainingValue, l.remaining),
+        ]),
+        rightAlign: [1, 2, 3, 4, 5],
+        widths: { 1: 18, 2: 20, 3: 22, 4: 26, 5: 26 },
+      },
+    });
+  }
+
   if (b.requisitions.length > 0) {
     sections.push({
       title: t("pdf.requisitionsTitle"),

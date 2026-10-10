@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import { MAX_RECEIPT_BYTES, receiptProblem } from "./lib/stockBatches";
+import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
 import {
   PAGE,
   arrivedMixedBatch,
@@ -583,4 +584,88 @@ test("requisitions.get shows how each line was purchased, for the PDF", async ()
     ["P3", [["not_purchased", "Discontinued"]]],
     ["P4", []],
   ]);
+});
+
+test("sellingReport: expected at selling prices, sold so far, remaining; unpriced products listed", async () => {
+  const s = await setup();
+  const b = await arrivedMixedBatch(s);
+  await s.as(s.sales).mutation(api.products.setSuggestedPrice, { productId: s.p1, price: 500 });
+  await s.as(s.sales).mutation(api.products.setSuggestedPrice, { productId: s.p2, price: 1500 });
+  const report = () => s.as(s.chief).query(api.stockBatches.sellingReport, { batchId: b.batchId });
+
+  // Before receiving: expected is known, nothing received / sold / remaining yet.
+  const before = (await report())!;
+  expect(before.received).toBe(false);
+  expect(before.lines.map((l) => [l.name, l.purchased, l.expected, l.sold, l.remaining])).toEqual([
+    ["New closure", 3, null, null, null],
+    ["P1", 10, 5000, null, null],
+    ["P2", 3, 4500, null, null],
+  ]);
+
+  // Receive: 2 of P1 damaged.
+  const items = await s.t.run((ctx) =>
+    ctx.db.query("stockBatchItems").withIndex("by_batchId", (q) => q.eq("batchId", b.batchId)).collect(),
+  );
+  for (const item of items.filter((i) => i.status === "purchased")) {
+    const damaged = item._id === b.i1._id ? 2 : 0;
+    await s.as(s.manager).mutation(api.stockBatches.setReceiveCount, {
+      itemId: item._id,
+      qtyReceived: item.qtyPurchased - damaged,
+      qtyDamaged: damaged,
+      ...(damaged ? { reason: "Torn" } : {}),
+    });
+  }
+  await s.as(s.manager).mutation(api.stockBatches.confirmReceipt, { batchId: b.batchId });
+
+  // 6 of P1 go to the shop; the agent sells 2 at $5, 1 at $4 (discount), and one sale is voided.
+  const p1Lot = (await s.t.run((ctx) =>
+    ctx.db.query("inventoryBatches").withIndex("by_sourceStockBatchItemId", (q) => q.eq("sourceStockBatchItemId", b.i1._id)).unique(),
+  ))!._id;
+  await s.t.run(async (ctx) => {
+    const business = await getOrCreateHolder(ctx, s.hairId, businessHolderRef(s.hairId));
+    await applyMovement(ctx, {
+      type: "distribute",
+      inventoryBatchId: p1Lot,
+      fromHolderId: business,
+      toHolderId: await getOrCreateHolder(ctx, s.hairId, { type: "location", refId: s.shop }),
+      qty: 6,
+      refTable: "test",
+      refId: "setup",
+      actorId: s.chief,
+    });
+  });
+  const sell = (unitPrice: number, qty: number, discountReason?: string) =>
+    s.as(s.agent).mutation(api.sales.create, {
+      businessUnitKey: "hair",
+      paymentMethod: "cash",
+      lines: [{ inventoryBatchId: p1Lot, qty, unitPrice, ...(discountReason ? { discountReason } : {}) }],
+    });
+  await sell(500, 2);
+  await sell(400, 1, "Loyal customer");
+  const { saleId: voided } = await sell(500, 1);
+  await s.t.run((ctx) => ctx.db.patch("sales", voided, { status: "voided" }));
+
+  const after = (await report())!;
+  expect(after.received).toBe(true);
+  expect(
+    after.lines.map((l) => [l.name, l.purchased, l.received, l.damagedOrMissing, l.sold, l.remaining, l.remainingValue]),
+  ).toEqual([
+    ["New closure", 3, 3, 0, { qty: 0, amount: 0 }, 3, null],
+    // 8 received; 4 left the stock (the voided sale's piece too), only completed sales count as sold.
+    ["P1", 10, 8, 2, { qty: 3, amount: 1400 }, 4, 2000],
+    ["P2", 3, 3, 0, { qty: 0, amount: 0 }, 3, 4500],
+  ]);
+  expect(after.totals).toEqual({
+    purchased: 16,
+    expected: 9500,
+    soldQty: 3,
+    soldAmount: 1400,
+    remaining: 10,
+    remainingValue: 6500,
+    damagedOrMissing: 2,
+  });
+  expect(after.unpriced.map((p) => p.name)).toEqual(["New closure"]);
+
+  // Same permission as the batch page.
+  await expect(s.as(s.agent).query(api.stockBatches.sellingReport, { batchId: b.batchId })).rejects.toThrow(/stock\.view/);
 });
