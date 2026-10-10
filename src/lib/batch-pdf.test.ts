@@ -174,7 +174,11 @@ test("the selling-value section: totals, warning for unpriced products, per-prod
       { itemId: "a", productId: "x", ...product("Wig Cap", "HAIR-00018", null), price: null, purchased: 30, expected: null, received: 30, damagedOrMissing: 0, sold: { qty: 5, amount: 1500 }, remaining: 25, remainingValue: null },
       { itemId: "b", productId: "y", ...product("Bob", "HAIR-00001", 12), price: 6000, purchased: 10, expected: 60000, received: 9, damagedOrMissing: 1, sold: { qty: 4, amount: 23000 }, remaining: 5, remainingValue: 30000 },
     ],
-    totals: { purchased: 40, expected: 60000, soldQty: 9, soldAmount: 24500, remaining: 30, remainingValue: 30000, damagedOrMissing: 1 },
+    totals: { purchased: 40, expected: 60000, soldQty: 9, soldAmount: 24500, remaining: 30, remainingValue: 30000, damagedOrMissing: 1, damagedValue: 6000, priceDifference: 1000 },
+    saleLines: [
+      { saleNumber: "SALE-00002", createdAt: AT, locationName: "Goma Shop", ...product("Bob", "HAIR-00001", 12), qty: 2, amount: 11000, todayPrice: 6000, difference: 1000, discountReason: "Loyal customer", saleDiscountReason: null },
+      { saleNumber: "SALE-00001", createdAt: AT, locationName: "Goma Shop", ...product("Bob", "HAIR-00001", 12), qty: 2, amount: 12000, todayPrice: 6000, difference: 0, discountReason: null, saleDiscountReason: null },
+    ],
     unpriced: [{ productId: "x", ...product("Wig Cap", "HAIR-00018", null) }],
   } as unknown as SellingForPdf;
   const c = render(batch({ status: "received" }), selling);
@@ -183,12 +187,18 @@ test("the selling-value section: totals, warning for unpriced products, per-prod
     ["Expected at selling prices", "$600.00 · 40"],
     ["Sold so far", "$245.00 · 9"],
     ["Remaining", "$300.00 · 30"],
-    ["Damaged / missing", "1"],
+    ["Damaged / missing", "$60.00 · 1"],
+    ["Price differences", "$10.00 below"],
   ]);
   expect(c.sections[at + 1].emptyText).toBe("No selling price (not included): Wig Cap");
   expect(c.sections[at + 2].body).toEqual([
     ["Wig Cap\nHAIR-00018", "30", "-", "-", "$15.00 · 5", "25"],
     ['Bob · 12" · 1B\nHAIR-00001', "10", "$60.00", "$600.00", "$230.00 · 4", "$300.00 · 5"],
+  ]);
+  // Only the sale sold at another price is listed, with its reason.
+  expect(c.sections[at + 3].title).toBe("Sales at another price than today's");
+  expect(c.sections[at + 3].body).toEqual([
+    ["Oct 3, 2026\nSALE-00002 · Goma Shop", 'Bob · 12" · 1B', "2", "$60.00", "$110.00", "$10.00 below", "Loyal customer"],
   ]);
   // Without the report, no such section.
   expect(render(batch()).sections.some((s) => s.title === "Selling value")).toBe(false);
