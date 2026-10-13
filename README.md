@@ -128,6 +128,29 @@ pnpm exec tsc --noEmit -p convex   # Convex function types
 pnpm test
 ```
 
+## Backups
+
+All backups are kept in **`~/Documents/Business management/`**, outside the
+project folder, so they never end up in git. Run these from the project
+folder; each creates a dated `.zip` with every table and uploaded file
+(e.g. `chiruza-prod-backup-2026-10-08.zip`).
+
+```bash
+# Production (real data) - before releases, and weekly
+npx convex export --prod --include-file-storage --path "$HOME/Documents/Business management/chiruza-prod-backup-$(date +%F).zip"
+
+# Dev (test data)
+npx convex export --include-file-storage --path "$HOME/Documents/Business management/chiruza-dev-backup-$(date +%F).zip"
+```
+
+Keep the quotes: the folder name has a space. Store a copy off this laptop
+too. To restore into **dev** only (`--replace-all` wipes the deployment
+first; never run it with `--prod` unless you mean to replace production):
+
+```bash
+npx convex import --replace-all -y "$HOME/Documents/Business management/<backup>.zip"
+```
+
 ## Branching & commits
 
 `pnpm install` sets up git hooks automatically (via Husky). Every commit

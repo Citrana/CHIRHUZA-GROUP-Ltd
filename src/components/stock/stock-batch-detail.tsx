@@ -25,6 +25,7 @@ import { BUSINESS_TIME_ZONE } from "../../../convex/lib/time";
 import { Link } from "@/i18n/navigation";
 import { renderPdf } from "@/lib/pdf/document";
 import { batchPdfContent } from "@/lib/batch-pdf";
+import { BatchSellingReport } from "@/components/stock/batch-selling-report";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,7 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
   const t = useTranslations("StockBatches");
   const locale = useLocale();
   const batch = useQuery(api.stockBatches.get, { batchId });
+  const selling = useQuery(api.stockBatches.sellingReport, { batchId });
   const markPurchased = useMutation(api.stockBatches.markPurchased);
   const submitForApproval = useMutation(api.stockBatches.submitForApproval);
   const requestReopen = useMutation(api.stockBatches.requestReopen);
@@ -362,6 +364,7 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
         serviceName: tUnits(service),
         downloadedBy: me?.name || me?.email || "-",
         now: Date.now(),
+        ...(selling ? { selling } : {}),
       });
       await renderPdf(content, (page, pages) => t("pdf.page", { page, pages }));
     } catch {
@@ -456,6 +459,8 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
         </div>
       </section>
       {draft ? <p className="-mt-3 text-xs text-muted-foreground">{t("totalsPreviewHint")}</p> : null}
+
+      {selling && selling.lines.length > 0 ? <BatchSellingReport report={selling} service={service} /> : null}
 
       {draft ? (
         <section className="flex flex-col gap-3">

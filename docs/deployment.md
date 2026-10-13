@@ -128,7 +128,7 @@ npx convex env set --prod SITE_URL 'https://chirhuza-group-ltd.vercel.app'
   - in the Convex dashboard (Production → **Settings → Backup & Restore**), click **Backup Now**, and turn on scheduled backups if the plan offers them;
   - also keep a weekly copy off the laptop:
     ```sh
-    npx convex export --prod --include-file-storage --path chiruza-prod-backup-$(date +%F).zip
+    npx convex export --prod --include-file-storage --path "$HOME/Documents/Business management/chiruza-prod-backup-$(date +%F).zip"
     ```
 - [ ] Add security headers before wider use (`docs/improvements.md`, 3.1).
 - [ ] Decide on a `main` release branch (section 3).
@@ -186,7 +186,7 @@ All test data was removed from dev. Kept:
 Everything else was emptied, including file storage. A backup taken first is at `../chiruza-dev-backup-2026-10-02.zip` (next to the repo folder).
 
 **Method, to repeat it:**
-1. `npx convex export --include-file-storage --path backup.zip`
+1. `npx convex export --include-file-storage --path "$HOME/Documents/Business management/chiruza-dev-backup-$(date +%F).zip"`
 2. Filter the tables to keep into a new zip.
 3. `npx convex import --replace-all -y clean.zip`
 
@@ -199,4 +199,4 @@ Some releases need commands on prod. Settings (`env set`) go **before** the merg
 | Release | Before merging into `main` | After the deploy is Ready |
 |---|---|---|
 | Products sold report | — | — |
-| Credit sales (customers, agreed total, part payments, repayments) | Backup: `npx convex export --prod --include-file-storage --path chiruza-prod-backup-$(date +%F).zip` | `npx convex run --prod credit:backfillLegacyCredit` (rerun while it says `"more": true`). Earlier credit sales get a customer and count as unpaid. |
+| Credit sales (customers, agreed total, part payments, repayments) | Backup (see README → Backups): `npx convex export --prod --include-file-storage --path "$HOME/Documents/Business management/chiruza-prod-backup-$(date +%F).zip"` | `npx convex run --prod credit:backfillLegacyCredit` (rerun while it says `"more": true`). Earlier credit sales get a customer and count as unpaid. |

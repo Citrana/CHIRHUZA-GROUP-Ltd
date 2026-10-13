@@ -5,6 +5,7 @@ import { BUSINESS_TIME_ZONE } from "../../convex/lib/time";
 import type { PdfDocument, PdfSection, Translate } from "@/lib/pdf/document";
 
 export type BatchForPdf = NonNullable<FunctionReturnType<typeof api.stockBatches.get>>;
+export type SellingForPdf = NonNullable<FunctionReturnType<typeof api.stockBatches.sellingReport>>;
 type Item = BatchForPdf["items"][number];
 
 /**
@@ -17,7 +18,16 @@ type Item = BatchForPdf["items"][number];
  */
 export function batchPdfContent(
   b: BatchForPdf,
-  opts: { t: Translate; tRequisitions: Translate; locale: string; serviceName: string; downloadedBy: string; now: number },
+  opts: {
+    t: Translate;
+    tRequisitions: Translate;
+    locale: string;
+    serviceName: string;
+    downloadedBy: string;
+    now: number;
+    /** The batch's value at selling prices (stockBatches.sellingReport), when loaded. */
+    selling?: SellingForPdf;
+  },
 ): PdfDocument {
   const { t, tRequisitions, locale } = opts;
   const when = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short", timeZone: BUSINESS_TIME_ZONE });
@@ -155,6 +165,89 @@ export function batchPdfContent(
         }
       : { emptyText: t("pdf.noExpenses") }),
   });
+  // Value at selling prices: expected, sold so far, remaining.
+  const selling = opts.selling;
+  if (selling && selling.lines.length > 0) {
+    const tot = selling.totals;
+    const notReceived = t("pdf.sellingNotReceived");
+    const amountPcs = (cents: number, qty: number) => `${money(cents)} · ${qty}`;
+    // Positive: sold below today's price; negative: above.
+    const signed = (cents: number) =>
+      cents === 0 ? money(0) : t(cents > 0 ? "pdf.sellingBelow" : "pdf.sellingAbove", { amount: money(Math.abs(cents)) });
+    const sellingName = (p: { name: string | null; lengthInches: number | null; sizeName: string | null; colourName: string | null }) =>
+      [p.name ?? "-", p.lengthInches !== null ? `${p.lengthInches}"` : null, p.sizeName, p.colourName].filter(Boolean).join(" · ");
+    sections.push({
+      title: t("pdf.sellingTitle"),
+      details: [
+        [t("pdf.sellingExpected"), amountPcs(tot.expected, tot.purchased)],
+        [t("pdf.sellingSold"), selling.received ? amountPcs(tot.soldAmount, tot.soldQty) : notReceived],
+        [t("pdf.sellingRemaining"), selling.received ? amountPcs(tot.remainingValue, tot.remaining) : notReceived],
+        ...(selling.received
+          ? [
+              [t("pdf.sellingDamaged"), amountPcs(tot.damagedValue, tot.damagedOrMissing)] as [string, string],
+              [t("pdf.sellingDifferences"), signed(tot.priceDifference)] as [string, string],
+            ]
+          : []),
+      ],
+    });
+    if (selling.unpriced.length > 0) {
+      sections.push({ emptyText: t("pdf.sellingUnpriced", { names: selling.unpriced.map(sellingName).join(", ") }) });
+    }
+    sections.push({
+      table: {
+        head: [
+          t("pdf.productHeader"),
+          t("pdf.purchasedHeader"),
+          t("pdf.sellingPriceHeader"),
+          t("pdf.sellingExpectedHeader"),
+          t("pdf.sellingSoldHeader"),
+          t("pdf.sellingRemainingHeader"),
+        ],
+        body: selling.lines.map((l) => [
+          [sellingName(l), l.sku].filter(Boolean).join("\n"),
+          String(l.purchased),
+          l.price === null ? "-" : money(l.price),
+          l.expected === null ? "-" : money(l.expected),
+          l.sold === null ? notReceived : amountPcs(l.sold.amount, l.sold.qty),
+          l.remaining === null ? notReceived : l.remainingValue === null ? String(l.remaining) : amountPcs(l.remainingValue, l.remaining),
+        ]),
+        rightAlign: [1, 2, 3, 4, 5],
+        widths: { 1: 18, 2: 20, 3: 22, 4: 26, 5: 26 },
+      },
+    });
+    const differing = selling.saleLines.filter((l) => l.difference !== null && l.difference !== 0);
+    if (differing.length > 0) {
+      const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
+      sections.push({
+        title: t("pdf.sellingDifferencesTitle"),
+        table: {
+          head: [
+            t("pdf.sellingDateHeader"),
+            t("pdf.productHeader"),
+            t("pdf.sellingQtyHeader"),
+            t("pdf.sellingTodayHeader"),
+            t("pdf.sellingSoldForHeader"),
+            t("pdf.sellingDifferenceHeader"),
+            t("pdf.sellingReasonHeader"),
+          ],
+          body: differing.map((l) => [
+            `${day.format(l.createdAt)}\n${l.saleNumber} · ${l.locationName}`,
+            sellingName(l),
+            String(l.qty),
+            l.todayPrice === null ? "-" : money(l.todayPrice),
+            money(l.amount),
+            signed(l.difference ?? 0),
+            [l.discountReason, l.saleDiscountReason !== null ? t("pdf.sellingWholeSale", { reason: l.saleDiscountReason }) : null]
+              .filter(Boolean)
+              .join(" · ") || t("pdf.sellingNoReason"),
+          ]),
+          rightAlign: [2, 3, 4, 5],
+          widths: { 2: 12, 3: 20, 4: 20, 5: 24 },
+        },
+      });
+    }
+  }
+
   if (b.requisitions.length > 0) {
     sections.push({
       title: t("pdf.requisitionsTitle"),
