@@ -1270,10 +1270,13 @@
     "costAndMargin": "cost {cost} · margin",
     "discountReasonShown": "Price reason: {reason}",
     "pieces": "{count, plural, one {# piece} other {# pieces}}",
-    "fromLabel": "From",
-    "toLabel": "To",
     "allLocations": "All locations",
-    "resetFilters": "Reset",
+    "creditStatusLabel": "Credit",
+    "creditStatus": {
+      "all": "All sales",
+      "open": "Still owes",
+      "settled": "Settled"
+    },
     "empty": "No sales match these filters.",
     "timeZoneNote": "Dates are in Lubumbashi time (UTC+2). Margin = price − purchase cost of the lot.",
     "suggestedHint": "Suggested: {price}",
@@ -1328,6 +1331,26 @@
       "reversal": "Correction"
     },
     "creditLink": "Credit"
+  },
+  "Filters": {
+    "button": "Filters",
+    "title": "Filters",
+    "apply": "Apply",
+    "clear": "Clear",
+    "removeFilter": "Remove filter: {name}",
+    "presetsLabel": "Quick dates",
+    "presets": {
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "week": "This week",
+      "month": "This month",
+      "lastMonth": "Last month"
+    },
+    "fromLabel": "From",
+    "toLabel": "To",
+    "dateRangeChip": "{from} – {to}",
+    "fromChip": "From {date}",
+    "toChip": "Until {date}"
   },
   "Credit": {
     "title": "Credit",
