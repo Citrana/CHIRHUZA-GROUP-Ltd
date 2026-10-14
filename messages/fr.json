@@ -1418,6 +1418,48 @@
     "editDriverTitle": "Modifier {name}",
     "driverHint": "Les chauffeurs ne sont pas des utilisateurs de l'application : juste un nom et un téléphone. La paie est fixée sur chaque contrat."
   },
+  "Contracts": {
+    "tabs": {
+      "label": "Contrats",
+      "contracts": "Contrats",
+      "clients": "Clients"
+    },
+    "title": "Contrats",
+    "comingNext": "Les contrats arrivent bientôt. En attendant, enregistrez vos clients dans l'onglet Clients."
+  },
+  "Clients": {
+    "title": "Clients",
+    "subtitle": "Les entreprises et les personnes qui louent nos véhicules, enregistrées une fois pour tous les contrats.",
+    "accessDenied": "Vous n'avez pas accès aux clients.",
+    "add": "Ajouter un client",
+    "empty": "Aucun client pour l'instant.",
+    "searchPlaceholder": "Rechercher par nom, contact, téléphone ou e-mail",
+    "noMatch": "Aucun client enregistré ne correspond. Ajoutez-en un nouveau.",
+    "change": "Changer",
+    "edit": "Modifier {name}",
+    "kinds": {
+      "company": "Entreprise",
+      "person": "Particulier"
+    },
+    "kindLabel": "Type",
+    "companyNameLabel": "Nom de l'entreprise",
+    "personNameLabel": "Nom complet",
+    "nameHeader": "Client",
+    "contactLabel": "Personne de contact",
+    "phoneLabel": "Téléphone",
+    "emailLabel": "E-mail",
+    "addressLabel": "Adresse",
+    "noteLabel": "Note",
+    "owesHeader": "Doit",
+    "owes": "Doit {amount}",
+    "newTitle": "Ajouter un client",
+    "editTitle": "Modifier {name}",
+    "hint": "Enregistré une fois, puis choisi pour chaque nouveau contrat. Seul le nom est obligatoire.",
+    "missingFields": "Remplissez les champs obligatoires.",
+    "saveError": "Enregistrement impossible. Réessayez.",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer"
+  },
   "Credit": {
     "title": "Crédit",
     "subtitle": "Les clients qui doivent encore de l'argent, et ce qu'ils ont payé.",

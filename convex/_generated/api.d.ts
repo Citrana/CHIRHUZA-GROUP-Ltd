@@ -14,6 +14,7 @@ import type * as auditLogs from "../auditLogs.js";
 import type * as auth from "../auth.js";
 import type * as businessUnits from "../businessUnits.js";
 import type * as cars from "../cars.js";
+import type * as clients from "../clients.js";
 import type * as credit from "../credit.js";
 import type * as customers from "../customers.js";
 import type * as distributions from "../distributions.js";
@@ -70,6 +71,7 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   businessUnits: typeof businessUnits;
   cars: typeof cars;
+  clients: typeof clients;
   credit: typeof credit;
   customers: typeof customers;
   distributions: typeof distributions;

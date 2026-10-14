@@ -1418,6 +1418,48 @@
     "editDriverTitle": "Edit {name}",
     "driverHint": "Drivers are not app users: just a name and a phone. Pay is set on each contract."
   },
+  "Contracts": {
+    "tabs": {
+      "label": "Contracts",
+      "contracts": "Contracts",
+      "clients": "Clients"
+    },
+    "title": "Contracts",
+    "comingNext": "Contracts come next. Save your clients in the Clients tab meanwhile."
+  },
+  "Clients": {
+    "title": "Clients",
+    "subtitle": "Companies and people who hire our cars, saved once for every contract.",
+    "accessDenied": "You don't have access to the clients.",
+    "add": "Add client",
+    "empty": "No clients yet.",
+    "searchPlaceholder": "Search by name, contact, phone or email",
+    "noMatch": "No saved client matches. Add a new one.",
+    "change": "Change",
+    "edit": "Edit {name}",
+    "kinds": {
+      "company": "Company",
+      "person": "Person"
+    },
+    "kindLabel": "Type",
+    "companyNameLabel": "Company name",
+    "personNameLabel": "Full name",
+    "nameHeader": "Client",
+    "contactLabel": "Contact person",
+    "phoneLabel": "Phone",
+    "emailLabel": "Email",
+    "addressLabel": "Address",
+    "noteLabel": "Note",
+    "owesHeader": "Owes",
+    "owes": "Owes {amount}",
+    "newTitle": "Add a client",
+    "editTitle": "Edit {name}",
+    "hint": "Saved once, then picked for each new contract. Only the name is required.",
+    "missingFields": "Fill in the required fields.",
+    "saveError": "Couldn't save. Try again.",
+    "saving": "Saving…",
+    "save": "Save"
+  },
   "Credit": {
     "title": "Credit",
     "subtitle": "Customers who still owe money, and what they paid.",

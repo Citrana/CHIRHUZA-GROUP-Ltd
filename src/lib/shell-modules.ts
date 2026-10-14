@@ -36,14 +36,7 @@ export const SHELL_MODULES = [
   { key: "requisitions", permissionModule: "requisition", icon: ClipboardList, group: "inventory", services: SHOP_SERVICES },
   { key: "stock", permissionModule: "stock", icon: Warehouse, group: "inventory", services: SHOP_SERVICES },
   { key: "cars", permissionModule: "transport", icon: CarFront, group: "fleet", services: ["transport"] },
-  {
-    key: "contracts",
-    permissionModule: "transport",
-    icon: FileSignature,
-    group: "fleet",
-    services: ["transport"],
-    comingSoon: true,
-  },
+  { key: "contracts", permissionModule: "transport", icon: FileSignature, group: "fleet", services: ["transport"] },
   { key: "sales", permissionModule: "sales", icon: ShoppingCart, group: "money", services: SHOP_SERVICES },
   // Not built yet: Home shows it dimmed, "Not available yet".
   { key: "expenses", permissionModule: "expenses", icon: Receipt, group: "money", comingSoon: true },

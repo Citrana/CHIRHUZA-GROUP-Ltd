@@ -60,3 +60,22 @@ export function checkDayRate(cents: number): number {
   if (!Number.isSafeInteger(cents) || cents < 0) throw new ConvexError("The day rate must be whole cents from 0.");
   return cents;
 }
+
+// ------------------------------------------------------------------ clients
+
+/** A client is a company or a private person. */
+export const CLIENT_KINDS = ["company", "person"] as const;
+export const clientKindValidator = v.union(v.literal("company"), v.literal("person"));
+export type ClientKind = Infer<typeof clientKindValidator>;
+
+export const MAX_CLIENT_NAME_LENGTH = 120;
+export const MAX_PHONE_LENGTH = 30;
+export const MAX_EMAIL_LENGTH = 120;
+export const MAX_ADDRESS_LENGTH = 200;
+
+/** A plain email shape check (something@domain.tld), lowercased. */
+export function cleanEmail(value: string | undefined): string | undefined {
+  const email = cleanText(value, { label: "Email", max: MAX_EMAIL_LENGTH })?.toLowerCase();
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new ConvexError("The email address isn't valid.");
+  return email;
+}

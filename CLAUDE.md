@@ -258,6 +258,11 @@ this repo, now and later — do not relax them for convenience.
   and a phone. Their pay per day is set on each contract, never on the
   driver. Cars are never deleted (`retired`), drivers become
   `inactive`.
+- Clients (`clients.ts`) are companies or people (`kind`), saved once per
+  service (one per name, `nameKey`) and picked for each contract
+  (`ClientPicker`; a duplicate name picks the existing client). Only the
+  name is required. `balance` is what they owe across contracts. Never
+  deleted. Managed at `/transport/contracts/clients`.
 - Permissions: module `transport` (`transport.view`,
   `transport.fleet.manage`, `transport.contracts.manage`,
   `transport.driver_pay.request` / `.approve`). The Chief Admin holds them

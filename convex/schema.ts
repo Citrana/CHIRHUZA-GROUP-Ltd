@@ -13,7 +13,7 @@ import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
 import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
-import { carStatusValidator, driverStatusValidator } from "./lib/transport";
+import { carStatusValidator, clientKindValidator, driverStatusValidator } from "./lib/transport";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -545,6 +545,30 @@ export default defineSchema({
     createdBy: v.id("users"),
     createdAt: v.number(),
   }).index("by_businessUnitId_and_name", ["businessUnitId", "name"]),
+
+  // Transport clients: companies or people who hire cars, saved once and
+  // picked for each contract. One client per name and service (nameKey:
+  // lowercased, single spaces). `balance` (USD cents) is what they owe
+  // across their contracts. Never deleted.
+  clients: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    kind: clientKindValidator,
+    name: v.string(),
+    nameKey: v.string(),
+    contactName: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    email: v.optional(v.string()),
+    address: v.optional(v.string()),
+    note: v.optional(v.string()),
+    // Name, contact, phone and email, for the search.
+    searchText: v.string(),
+    balance: v.number(),
+    currency: usdValidator,
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_businessUnitId_and_nameKey", ["businessUnitId", "nameKey"])
+    .searchIndex("search_text", { searchField: "searchText", filterFields: ["businessUnitId"] }),
 
   // Payroll (convex/lib/payroll.ts): salary payments, approved by the Chief
   // Admin (approval type "payroll"). USD cents; a period is a month.
