@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
-import { formatMoney } from "../../../convex/lib/money";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { DriverDialog } from "@/components/fleet/driver-dialog";
@@ -17,10 +16,9 @@ import { useCan } from "@/lib/use-can";
 
 type DriverRow = FunctionReturnType<typeof api.drivers.list>[number];
 
-/** The drivers, their pay per day and the car each drives; add / edit for transport.fleet.manage. */
+/** The drivers and the car each drives; add / edit for transport.fleet.manage. */
 export function DriversPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Fleet");
-  const locale = useLocale();
   const canView = useCan("transport.view");
   const canManage = useCan("transport.fleet.manage");
   const drivers = useQuery(api.drivers.list, canView ? { businessUnitKey: service } : "skip");
@@ -29,7 +27,6 @@ export function DriversPanel({ service }: { service: BusinessUnitKey }) {
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
 
-  const money = (cents: number) => formatMoney(cents, "USD", locale);
   const statusBadge = (d: DriverRow) =>
     d.status === "active" ? null : <Badge variant="outline">{t(`driverStatuses.${d.status}`)}</Badge>;
   const editButton = (d: DriverRow) =>
@@ -52,12 +49,6 @@ export function DriversPanel({ service }: { service: BusinessUnitKey }) {
       ),
     },
     { id: "phone", header: t("phoneLabel"), accessorFn: (d) => d.phone ?? "", cell: ({ row }) => row.original.phone ?? "—", meta: { hideBelow: "md" } },
-    {
-      id: "rate",
-      header: t("dayRateLabel"),
-      cell: ({ row }) => money(row.original.dayRate),
-      meta: { className: "whitespace-nowrap tabular-nums" },
-    },
     {
       id: "car",
       header: t("carHeader"),
@@ -96,7 +87,7 @@ export function DriversPanel({ service }: { service: BusinessUnitKey }) {
                 {statusBadge(d)}
               </span>
               <span className="text-xs text-muted-foreground">
-                {[d.phone, d.carPlate, t("perDay", { amount: money(d.dayRate) })].filter(Boolean).join(" · ")}
+                {[d.phone, d.carPlate].filter(Boolean).join(" · ") || "—"}
               </span>
             </div>
             {editButton(d)}

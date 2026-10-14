@@ -11,14 +11,13 @@ import { DRIVER_STATUSES, type DriverStatus } from "../../../convex/lib/transpor
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { MoneyInput } from "@/components/ui/money-input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 /**
- * Add a driver, or edit one (`driver` given): name, phone, pay per day
- * and - when editing - active or inactive. Mounted with a `key` per driver.
+ * Add a driver, or edit one (`driver` given): name, phone and - when
+ * editing - active or inactive. Pay is set per contract. Mounted with a `key` per driver.
  */
 export function DriverDialog({
   service,
@@ -36,21 +35,20 @@ export function DriverDialog({
   const update = useMutation(api.drivers.update);
   const [name, setName] = useState(driver?.name ?? "");
   const [phone, setPhone] = useState(driver?.phone ?? "");
-  const [dayRate, setDayRate] = useState<number | null>(driver?.dayRate ?? null);
   const [status, setStatus] = useState<DriverStatus>(driver?.status ?? "active");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
-    if (!name.trim() || dayRate === null) {
+    if (!name.trim()) {
       setError(t("missingFields"));
       return;
     }
     setSubmitting(true);
     setError(null);
     try {
-      const fields = { name, dayRate, ...(phone.trim() ? { phone } : {}) };
+      const fields = { name, ...(phone.trim() ? { phone } : {}) };
       if (driver) {
         await update({ driverId: driver._id, ...fields, status });
       } else {
@@ -81,19 +79,10 @@ export function DriverDialog({
               </Label>
               <Input id="driver-name" value={name} onChange={(e) => setName(e.target.value)} maxLength={100} required className="h-11" />
             </div>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="driver-phone">{t("phoneLabel")}</Label>
-                <Input id="driver-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={30} className="h-11" />
-              </div>
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="driver-rate" required>
-                  {t("dayRateLabel")}
-                </Label>
-                <MoneyInput id="driver-rate" currency="USD" valueMinor={dayRate} onCommit={setDayRate} required className="h-11" />
-              </div>
+            <div className="flex flex-col gap-2">
+              <Label htmlFor="driver-phone">{t("phoneLabel")}</Label>
+              <Input id="driver-phone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} maxLength={30} className="h-11" />
             </div>
-            <p className="text-xs text-muted-foreground">{t("dayRateHint")}</p>
             {driver ? (
               <div className="flex flex-col gap-2">
                 <Label htmlFor="driver-status" required>

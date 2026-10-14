@@ -1386,7 +1386,6 @@
     "driverLabel": "Chauffeur",
     "noDriver": "Aucun chauffeur",
     "noFreeDriver": "Chaque chauffeur actif conduit déjà un véhicule. Ajoutez un chauffeur dans l'onglet Chauffeurs.",
-    "driverDayRateHeader": "Paie chauffeur / jour",
     "editCar": "Modifier {plate}",
     "carStatuses": {
       "active": "Actif",
@@ -1403,14 +1402,12 @@
     "saving": "Enregistrement…",
     "save": "Enregistrer",
     "driversTitle": "Chauffeurs",
-    "driversSubtitle": "Les chauffeurs, leur paie par jour et le véhicule de chacun.",
+    "driversSubtitle": "Les chauffeurs et le véhicule de chacun. Leur paie est fixée sur chaque contrat.",
     "addDriver": "Ajouter un chauffeur",
     "noDrivers": "Aucun chauffeur pour l'instant.",
     "searchDrivers": "Rechercher par nom, téléphone ou plaque",
     "nameLabel": "Nom",
     "phoneLabel": "Téléphone",
-    "dayRateLabel": "Paie par jour",
-    "dayRateHint": "Proposée sur chaque nouveau contrat (paie par jour × jours). Modifiable par contrat.",
     "carHeader": "Véhicule",
     "editDriver": "Modifier {name}",
     "driverStatuses": {
@@ -1419,8 +1416,7 @@
     },
     "newDriverTitle": "Ajouter un chauffeur",
     "editDriverTitle": "Modifier {name}",
-    "driverHint": "Les chauffeurs ne sont pas des utilisateurs de l'application : juste leur nom, téléphone et paie.",
-    "perDay": "{amount} / jour"
+    "driverHint": "Les chauffeurs ne sont pas des utilisateurs de l'application : juste un nom et un téléphone. La paie est fixée sur chaque contrat."
   },
   "Credit": {
     "title": "Crédit",

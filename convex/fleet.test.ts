@@ -15,8 +15,7 @@ async function setup() {
   const manager = await insertUserWithRole(t, "manager_admin", { email: "mgr@x.com", name: "Manager" });
   const superAdmin = await insertUserWithRole(t, "super_admin", { email: "sa@x.com", name: "Owner" });
   const as = (user: Id<"users">) => t.withIdentity({ subject: user });
-  const addDriver = (name: string, dayRate = 2_000, who = chief) =>
-    as(who).mutation(api.drivers.create, { businessUnitKey: "transport", name, dayRate });
+  const addDriver = (name: string, who = chief) => as(who).mutation(api.drivers.create, { businessUnitKey: "transport", name });
   const addCar = (plateNumber: string, driverId?: Id<"drivers">, who = chief) =>
     as(who).mutation(api.cars.create, {
       businessUnitKey: "transport",
@@ -36,22 +35,22 @@ test("plates: trimmed and upper-cased; spaces and dashes don't make a new plate"
 
 test("the Chief Admin adds drivers and cars; others can't, and only Transport has cars", async () => {
   const s = await setup();
-  const jean = await s.addDriver("  Jean   Mukendi ", 2_500);
+  const jean = await s.addDriver("  Jean   Mukendi ");
   const car = await s.addCar("5432 ab 07", jean);
 
   expect(await s.as(s.chief).query(api.cars.list, { businessUnitKey: "transport" })).toMatchObject([
-    { _id: car, plateNumber: "5432 AB 07", model: "Land Cruiser", driverName: "Jean Mukendi", driverDayRate: 2_500, status: "active" },
+    { _id: car, plateNumber: "5432 AB 07", model: "Land Cruiser", driverName: "Jean Mukendi", status: "active" },
   ]);
   expect(await s.as(s.chief).query(api.drivers.list, { businessUnitKey: "transport" })).toMatchObject([
-    { name: "Jean Mukendi", dayRate: 2_500, currency: "USD", carPlate: "5432 AB 07" },
+    { name: "Jean Mukendi", carPlate: "5432 AB 07", status: "active" },
   ]);
 
-  // Audited, with readable names and the day rate as money.
+  // Audited, with readable names.
   expect((await s.audits("cars"))[0]).toMatchObject({ action: "create", after: { plateNumber: "5432 AB 07", driverName: "Jean Mukendi" } });
-  expect((await s.audits("drivers"))[0]).toMatchObject({ action: "create", after: { dayRateAmount: 2_500, currency: "USD" } });
+  expect((await s.audits("drivers"))[0]).toMatchObject({ action: "create", after: { name: "Jean Mukendi", phone: null, status: "active" } });
 
   // No transport permissions by default for other roles.
-  await expect(s.addDriver("Paul", 2_000, s.manager)).rejects.toThrow(/transport\.fleet\.manage/);
+  await expect(s.addDriver("Paul", s.manager)).rejects.toThrow(/transport\.fleet\.manage/);
   await expect(s.as(s.manager).query(api.cars.list, { businessUnitKey: "transport" })).rejects.toThrow(/transport\.view/);
   // Hair runs no fleet.
   await expect(s.as(s.chief).query(api.cars.list, { businessUnitKey: "hair" })).rejects.toThrow(/no cars/);
@@ -101,26 +100,24 @@ test("a plate is unique per service; a driver drives one active car", async () =
 
 test("drivers: edits are audited; one who drives an active car can't be made inactive", async () => {
   const s = await setup();
-  const jean = await s.addDriver("Jean", 2_000);
+  const jean = await s.addDriver("Jean");
   await s.addCar("5432 AB 07", jean);
-  const edit = (fields: Partial<{ dayRate: number; status: "active" | "inactive"; phone: string }>) =>
+  const edit = (fields: Partial<{ status: "active" | "inactive"; phone: string }>) =>
     s.as(s.chief).mutation(api.drivers.update, {
       driverId: jean,
       name: "Jean",
-      dayRate: fields.dayRate ?? 2_000,
       status: fields.status ?? "active",
       ...(fields.phone ? { phone: fields.phone } : {}),
     });
-  await edit({ dayRate: 3_000, phone: "+243 900 000 000" });
+  await edit({ phone: "+243 900 000 000" });
   expect((await s.audits("drivers")).at(-1)).toMatchObject({
     action: "update",
-    before: { name: "Jean", dayRateAmount: 2_000, phone: null, currency: "USD" },
-    after: { name: "Jean", dayRateAmount: 3_000, phone: "+243 900 000 000", currency: "USD" },
+    before: { name: "Jean", phone: null },
+    after: { name: "Jean", phone: "+243 900 000 000" },
   });
-  await expect(edit({ dayRate: 3_000, status: "inactive" })).rejects.toThrow(/drives 5432 AB 07/);
-  await expect(edit({ dayRate: 12.5 })).rejects.toThrow(/whole cents/);
+  await expect(edit({ phone: "+243 900 000 000", status: "inactive" })).rejects.toThrow(/drives 5432 AB 07/);
   // An inactive driver can't be given a car.
   const paul = await s.addDriver("Paul");
-  await s.as(s.chief).mutation(api.drivers.update, { driverId: paul, name: "Paul", dayRate: 2_000, status: "inactive" });
+  await s.as(s.chief).mutation(api.drivers.update, { driverId: paul, name: "Paul", status: "inactive" });
   await expect(s.addCar("1111 AA 01", paul)).rejects.toThrow(/Paul is inactive/);
 });

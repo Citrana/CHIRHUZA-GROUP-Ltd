@@ -4,10 +4,9 @@ import { useState } from "react";
 import { Pencil, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
-import { formatMoney } from "../../../convex/lib/money";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { CarDialog } from "@/components/fleet/car-dialog";
@@ -20,7 +19,6 @@ type CarRow = FunctionReturnType<typeof api.cars.list>[number];
 /** The fleet: every car with its driver; add / edit for transport.fleet.manage. */
 export function CarsPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Fleet");
-  const locale = useLocale();
   const canView = useCan("transport.view");
   const canManage = useCan("transport.fleet.manage");
   const cars = useQuery(api.cars.list, canView ? { businessUnitKey: service } : "skip");
@@ -30,7 +28,6 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
 
-  const money = (cents: number) => formatMoney(cents, "USD", locale);
   const statusBadge = (car: CarRow) =>
     car.status === "active" ? null : <Badge variant="outline">{t(`carStatuses.${car.status}`)}</Badge>;
   const driver = (car: CarRow) =>
@@ -64,12 +61,6 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
     },
     { id: "model", header: t("modelLabel"), accessorFn: (car) => car.model, meta: { hideBelow: "md" } },
     { id: "driver", header: t("driverLabel"), accessorFn: (car) => car.driverName ?? "", cell: ({ row }) => driver(row.original) },
-    {
-      id: "rate",
-      header: t("driverDayRateHeader"),
-      cell: ({ row }) => (row.original.driverDayRate !== null ? money(row.original.driverDayRate) : "—"),
-      meta: { hideBelow: "md", className: "whitespace-nowrap tabular-nums" },
-    },
     { id: "actions", header: "", cell: ({ row }) => editButton(row.original), meta: { className: "w-12 text-right" } },
   ];
 

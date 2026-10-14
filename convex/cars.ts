@@ -85,7 +85,6 @@ export const list = authedQuery({
           ...car,
           driverName: driver?.name ?? null,
           driverPhone: driver?.phone ?? null,
-          driverDayRate: driver?.dayRate ?? null,
         };
       }),
     );

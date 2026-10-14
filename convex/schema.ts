@@ -535,14 +535,12 @@ export default defineSchema({
     .index("by_businessUnitId_and_plateKey", ["businessUnitId", "plateKey"])
     .index("by_driverId", ["driverId"]),
 
-  // Drivers are records, not app users. dayRate (USD cents) is their
-  // default pay per contract day.
+  // Drivers are records, not app users: a name and a phone. Their pay is
+  // set per contract.
   drivers: defineTable({
     businessUnitId: v.id("businessUnits"),
     name: v.string(),
     phone: v.optional(v.string()),
-    dayRate: v.number(),
-    currency: usdValidator,
     status: driverStatusValidator,
     createdBy: v.id("users"),
     createdAt: v.number(),

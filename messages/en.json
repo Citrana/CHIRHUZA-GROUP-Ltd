@@ -1386,7 +1386,6 @@
     "driverLabel": "Driver",
     "noDriver": "No driver",
     "noFreeDriver": "Every active driver already drives a car. Add a driver in the Drivers tab.",
-    "driverDayRateHeader": "Driver pay / day",
     "editCar": "Edit {plate}",
     "carStatuses": {
       "active": "Active",
@@ -1403,14 +1402,12 @@
     "saving": "Saving…",
     "save": "Save",
     "driversTitle": "Drivers",
-    "driversSubtitle": "Drivers, their pay per day and the car each drives.",
+    "driversSubtitle": "Drivers and the car each drives. Their pay is set on each contract.",
     "addDriver": "Add driver",
     "noDrivers": "No drivers yet.",
     "searchDrivers": "Search by name, phone or plate",
     "nameLabel": "Name",
     "phoneLabel": "Phone",
-    "dayRateLabel": "Pay per day",
-    "dayRateHint": "Suggested on each new contract (pay per day × days). It can be changed per contract.",
     "carHeader": "Car",
     "editDriver": "Edit {name}",
     "driverStatuses": {
@@ -1419,8 +1416,7 @@
     },
     "newDriverTitle": "Add a driver",
     "editDriverTitle": "Edit {name}",
-    "driverHint": "Drivers are not app users: just their name, phone and pay.",
-    "perDay": "{amount} / day"
+    "driverHint": "Drivers are not app users: just a name and a phone. Pay is set on each contract."
   },
   "Credit": {
     "title": "Credit",

@@ -254,8 +254,9 @@ this repo, now and later — do not relax them for convenience.
   `FLEET_SERVICES`; `requireFleetUnit` refuses other services). Cars
   (`cars.ts`) are known by their plate, unique per service through
   `plateKey` (no spaces/dashes); each has one driver, and a driver drives
-  one active car. Drivers (`drivers.ts`) are records, not app users, with a
-  default pay per day. Cars are never deleted (`retired`), drivers become
+  one active car. Drivers (`drivers.ts`) are records, not app users: a name
+  and a phone. Their pay per day is set on each contract, never on the
+  driver. Cars are never deleted (`retired`), drivers become
   `inactive`.
 - Permissions: module `transport` (`transport.view`,
   `transport.fleet.manage`, `transport.contracts.manage`,

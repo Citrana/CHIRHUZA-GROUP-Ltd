@@ -3,16 +3,11 @@ import type { Doc } from "./_generated/dataModel";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator } from "./lib/businessUnits";
 import { diff } from "./lib/audit";
-import {
-  MAX_NAME_LENGTH,
-  checkDayRate,
-  cleanText,
-  driverStatusValidator,
-  requireFleetUnit,
-} from "./lib/transport";
+import { MAX_NAME_LENGTH, cleanText, driverStatusValidator, requireFleetUnit } from "./lib/transport";
 
 /**
- * Drivers (convex/lib/transport.ts): records, not app users. Viewing needs
+ * Drivers (convex/lib/transport.ts): records, not app users - a name and a
+ * phone; their pay is set per contract. Viewing needs
  * transport.view; adding and editing transport.fleet.manage. Never deleted
  * - set inactive instead.
  */
@@ -20,12 +15,10 @@ import {
 const MAX_DRIVERS = 500;
 const MAX_PHONE_LENGTH = 30;
 
-/** An audit snapshot (day rate as a money field). */
-const snapshot = (d: Pick<Doc<"drivers">, "name" | "phone" | "dayRate" | "status">) => ({
+/** An audit snapshot. */
+const snapshot = (d: Pick<Doc<"drivers">, "name" | "phone" | "status">) => ({
   name: d.name,
   phone: d.phone ?? null,
-  dayRateAmount: d.dayRate,
-  currency: "USD",
   status: d.status,
 });
 
@@ -59,19 +52,16 @@ export const create = authedMutation({
     businessUnitKey: businessUnitKeyValidator,
     name: v.string(),
     phone: v.optional(v.string()),
-    dayRate: v.number(),
   },
   handler: async (ctx, args) => {
     await ctx.requirePermission("transport.fleet.manage");
     const unit = await requireFleetUnit(ctx, args.businessUnitKey);
     const name = cleanText(args.name, { label: "Name", max: MAX_NAME_LENGTH, required: true })!;
     const phone = cleanText(args.phone, { label: "Phone", max: MAX_PHONE_LENGTH });
-    const dayRate = checkDayRate(args.dayRate);
-    const fields = { name, phone, dayRate, status: "active" as const };
+    const fields = { name, phone, status: "active" as const };
     const driverId = await ctx.db.insert("drivers", {
       businessUnitId: unit._id,
       ...fields,
-      currency: "USD",
       createdBy: ctx.user._id,
       createdAt: Date.now(),
     });
@@ -91,7 +81,6 @@ export const update = authedMutation({
     driverId: v.id("drivers"),
     name: v.string(),
     phone: v.optional(v.string()),
-    dayRate: v.number(),
     status: driverStatusValidator,
   },
   handler: async (ctx, args) => {
@@ -101,7 +90,6 @@ export const update = authedMutation({
     const next = {
       name: cleanText(args.name, { label: "Name", max: MAX_NAME_LENGTH, required: true })!,
       phone: cleanText(args.phone, { label: "Phone", max: MAX_PHONE_LENGTH }),
-      dayRate: checkDayRate(args.dayRate),
       status: args.status,
     };
     if (driver.status === "active" && next.status === "inactive") {
