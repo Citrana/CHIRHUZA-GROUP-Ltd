@@ -1270,10 +1270,13 @@
     "costAndMargin": "coût {cost} · marge",
     "discountReasonShown": "Motif du prix : {reason}",
     "pieces": "{count, plural, one {# pièce} other {# pièces}}",
-    "fromLabel": "Du",
-    "toLabel": "Au",
     "allLocations": "Tous les sites",
-    "resetFilters": "Réinitialiser",
+    "creditStatusLabel": "Crédit",
+    "creditStatus": {
+      "all": "Toutes les ventes",
+      "open": "Reste à payer",
+      "settled": "Soldée"
+    },
     "empty": "Aucune vente ne correspond à ces filtres.",
     "timeZoneNote": "Les dates sont à l'heure de Lubumbashi (UTC+2). Marge = prix − coût d'achat du lot.",
     "suggestedHint": "Conseillé : {price}",
@@ -1328,6 +1331,26 @@
       "reversal": "Correction"
     },
     "creditLink": "Crédit"
+  },
+  "Filters": {
+    "button": "Filtres",
+    "title": "Filtres",
+    "apply": "Appliquer",
+    "clear": "Effacer",
+    "removeFilter": "Retirer le filtre : {name}",
+    "presetsLabel": "Dates rapides",
+    "presets": {
+      "today": "Aujourd'hui",
+      "yesterday": "Hier",
+      "week": "Cette semaine",
+      "month": "Ce mois-ci",
+      "lastMonth": "Le mois dernier"
+    },
+    "fromLabel": "Du",
+    "toLabel": "Au",
+    "dateRangeChip": "{from} – {to}",
+    "fromChip": "Depuis le {date}",
+    "toChip": "Jusqu'au {date}"
   },
   "Credit": {
     "title": "Crédit",

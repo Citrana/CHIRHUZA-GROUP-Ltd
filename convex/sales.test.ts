@@ -269,6 +269,50 @@ test("the sales list: agents see their location only; location and date filters"
   await expect(list(s.inventory)).rejects.toThrow(/sales\.view/);
 });
 
+test("the sales list's credit filter: still owes or settled, never cash sales", async () => {
+  const { s, other, p1Lot } = await withShopStock();
+  const customer = (name: string) => s.as(s.agent).mutation(api.customers.create, { businessUnitKey: "hair", name });
+  const neema = await customer("Neema");
+  const amani = await customer("Amani");
+  const cash = await sell(s, s.agent, [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }]);
+  const owing = await s.as(s.agent).mutation(api.sales.create, {
+    businessUnitKey: "hair",
+    paymentMethod: "credit",
+    customerId: neema,
+    lines: [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }],
+    paidNow: 200,
+    paidNowMethod: "cash",
+  });
+  const paid = await s.as(s.sales).mutation(api.sales.create, {
+    businessUnitKey: "hair",
+    paymentMethod: "credit",
+    customerId: amani,
+    locationId: other,
+    lines: [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 700 }],
+    paidNow: 700,
+    paidNowMethod: "mobile_money",
+  });
+
+  const list = async (
+    who: Id<"users">,
+    filters: Partial<{ locationId: Id<"locations">; from: string; to: string; creditStatus: "open" | "settled" }> = {},
+  ) => (await s.as(who).query(api.sales.list, { businessUnitKey: "hair", paginationOpts: PAGE, ...filters })).page.map((x) => x.number);
+
+  expect(await list(s.chief)).toEqual([paid.number, owing.number, cash.number]);
+  expect(await list(s.chief, { creditStatus: "open" })).toEqual([owing.number]);
+  expect(await list(s.chief, { creditStatus: "settled" })).toEqual([paid.number]);
+  // Combined with location and dates.
+  expect(await list(s.chief, { creditStatus: "settled", locationId: s.shop })).toEqual([]);
+  expect(await list(s.chief, { creditStatus: "settled", locationId: other })).toEqual([paid.number]);
+  const today = owing.soldOn;
+  const tomorrow = addBusinessDays(today, 1);
+  expect(await list(s.chief, { creditStatus: "open", from: today, to: today })).toEqual([owing.number]);
+  expect(await list(s.chief, { creditStatus: "open", from: tomorrow })).toEqual([]);
+  // own_location agents stay on their location, filter or not.
+  expect(await list(s.agent, { creditStatus: "settled" })).toEqual([]);
+  expect(await list(s.agent, { creditStatus: "open", locationId: other })).toEqual([owing.number]);
+});
+
 test("an agent without a location can't sell", async () => {
   const { s, p1Lot } = await withShopStock();
   const lost = await insertUserWithRole(s.t, "sales_agent", { email: "lost@x.com" });

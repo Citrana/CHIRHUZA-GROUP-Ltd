@@ -18,7 +18,13 @@ import {
   saleTimestamp,
 } from "./lib/sales";
 import { productDetails } from "./lib/products";
-import { applySalePayment, collectionMethodValidator, saleBalance, splitDiscount } from "./lib/credit";
+import {
+  applySalePayment,
+  collectionMethodValidator,
+  creditStatusValidator,
+  saleBalance,
+  splitDiscount,
+} from "./lib/credit";
 
 /**
  * Sales (convex/lib/sales.ts). sales.create records a sale; its scope is
@@ -367,9 +373,11 @@ function dayRange(from: string | undefined, to: string | undefined) {
 }
 
 /**
- * Sales, newest first, with their lines and margins. Filters: location and
- * business days (Lubumbashi time). own_location viewers only ever see their
- * own location's sales.
+ * Sales, newest first, with their lines and margins. Filters: location,
+ * business days (Lubumbashi time) and credit status (open = still owes,
+ * settled = paid in full; other sales are left out). own_location viewers
+ * only ever see their own location's sales. The credit filter runs after the
+ * index range, so a page can hold fewer rows than asked while more remain.
  */
 export const list = authedQuery({
   args: {
@@ -377,6 +385,7 @@ export const list = authedQuery({
     locationId: v.optional(v.id("locations")),
     from: v.optional(v.string()),
     to: v.optional(v.string()),
+    creditStatus: v.optional(creditStatusValidator),
     paginationOpts: paginationOptsValidator,
   },
   handler: async (ctx, args) => {
@@ -394,8 +403,8 @@ export const list = authedQuery({
     }
     const { start, end } = dayRange(args.from, args.to);
 
-    const result = locationId
-      ? await ctx.db
+    const ordered = locationId
+      ? ctx.db
           .query("sales")
           .withIndex("by_locationId_and_createdAt", (q) => {
             const eq = q.eq("locationId", locationId);
@@ -403,16 +412,18 @@ export const list = authedQuery({
             return end !== undefined ? lower.lte("createdAt", end) : lower;
           })
           .order("desc")
-          .paginate(args.paginationOpts)
-      : await ctx.db
+      : ctx.db
           .query("sales")
           .withIndex("by_businessUnitId_and_createdAt", (q) => {
             const eq = q.eq("businessUnitId", unit._id);
             const lower = start !== undefined ? eq.gte("createdAt", start) : eq;
             return end !== undefined ? lower.lte("createdAt", end) : lower;
           })
-          .order("desc")
-          .paginate(args.paginationOpts);
+          .order("desc");
+    const { creditStatus } = args;
+    const result = await (
+      creditStatus ? ordered.filter((q) => q.eq(q.field("creditStatus"), creditStatus)) : ordered
+    ).paginate(args.paginationOpts);
 
     const page = await Promise.all(
       result.page.map(async (sale) => {
