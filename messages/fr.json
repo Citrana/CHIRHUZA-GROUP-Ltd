@@ -130,7 +130,9 @@
     "expenses": "Dépenses",
     "payroll": "Paie",
     "withdrawals": "Retraits",
-    "approvals": "Approbations"
+    "approvals": "Approbations",
+    "cars": "Véhicules",
+    "contracts": "Contrats"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -296,7 +298,8 @@
     "analytics": "Analyses",
     "admin": "Administration",
     "products": "Produits",
-    "withdrawals": "Retraits"
+    "withdrawals": "Retraits",
+    "transport": "Transport"
   },
   "Permissions": {
     "sales": {
@@ -362,6 +365,19 @@
     },
     "audit": {
       "view": "Voir le journal d'audit"
+    },
+    "transport": {
+      "view": "Voir les véhicules, chauffeurs et contrats",
+      "fleet": {
+        "manage": "Ajouter et modifier véhicules et chauffeurs"
+      },
+      "contracts": {
+        "manage": "Créer et modifier les contrats, enregistrer les paiements des clients"
+      },
+      "driver_pay": {
+        "request": "Demander les paiements des chauffeurs",
+        "approve": "Approuver les paiements des chauffeurs"
+      }
     }
   },
   "AuditLog": {
@@ -1351,6 +1367,60 @@
     "dateRangeChip": "{from} – {to}",
     "fromChip": "Depuis le {date}",
     "toChip": "Jusqu'au {date}"
+  },
+  "Fleet": {
+    "tabs": {
+      "label": "Flotte",
+      "cars": "Véhicules",
+      "drivers": "Chauffeurs"
+    },
+    "accessDenied": "Vous n'avez pas accès à la flotte.",
+    "carsTitle": "Véhicules",
+    "carsSubtitle": "Tous les véhicules de la flotte, avec leur chauffeur.",
+    "addCar": "Ajouter un véhicule",
+    "noCars": "Aucun véhicule pour l'instant.",
+    "searchCars": "Rechercher par plaque, modèle ou chauffeur",
+    "plateLabel": "Plaque d'immatriculation",
+    "platePlaceholder": "ex. 5432 AB 07",
+    "modelLabel": "Modèle",
+    "driverLabel": "Chauffeur",
+    "noDriver": "Aucun chauffeur",
+    "noFreeDriver": "Chaque chauffeur actif conduit déjà un véhicule. Ajoutez un chauffeur dans l'onglet Chauffeurs.",
+    "driverDayRateHeader": "Paie chauffeur / jour",
+    "editCar": "Modifier {plate}",
+    "carStatuses": {
+      "active": "Actif",
+      "retired": "Retiré"
+    },
+    "statusLabel": "Statut",
+    "retireHint": "Un véhicule retiré reste dans l'historique mais ne prend plus de contrats, et son chauffeur est libre pour un autre véhicule.",
+    "noteLabel": "Note",
+    "newCarTitle": "Ajouter un véhicule",
+    "editCarTitle": "Modifier {plate}",
+    "carHint": "Chaque véhicule est identifié par sa plaque et a un chauffeur.",
+    "missingFields": "Remplissez les champs obligatoires.",
+    "saveError": "Enregistrement impossible. Réessayez.",
+    "saving": "Enregistrement…",
+    "save": "Enregistrer",
+    "driversTitle": "Chauffeurs",
+    "driversSubtitle": "Les chauffeurs, leur paie par jour et le véhicule de chacun.",
+    "addDriver": "Ajouter un chauffeur",
+    "noDrivers": "Aucun chauffeur pour l'instant.",
+    "searchDrivers": "Rechercher par nom, téléphone ou plaque",
+    "nameLabel": "Nom",
+    "phoneLabel": "Téléphone",
+    "dayRateLabel": "Paie par jour",
+    "dayRateHint": "Proposée sur chaque nouveau contrat (paie par jour × jours). Modifiable par contrat.",
+    "carHeader": "Véhicule",
+    "editDriver": "Modifier {name}",
+    "driverStatuses": {
+      "active": "Actif",
+      "inactive": "Inactif"
+    },
+    "newDriverTitle": "Ajouter un chauffeur",
+    "editDriverTitle": "Modifier {name}",
+    "driverHint": "Les chauffeurs ne sont pas des utilisateurs de l'application : juste leur nom, téléphone et paie.",
+    "perDay": "{amount} / jour"
   },
   "Credit": {
     "title": "Crédit",

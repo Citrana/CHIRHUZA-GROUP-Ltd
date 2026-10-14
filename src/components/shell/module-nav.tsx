@@ -4,6 +4,7 @@ import { House, Settings } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
+import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { useVisibleModules } from "@/lib/use-visible-modules";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
@@ -27,9 +28,10 @@ export function ModuleNav({
   const t = useTranslations("Shell");
   const tModules = useTranslations("Modules");
   const pathname = usePathname();
-  const modules = useVisibleModules();
+  const modules = useVisibleModules(service);
   const tNav = useTranslations("Nav");
-  const canManageProductSettings = useCan("products.settings");
+  // Product settings only where the service sells products.
+  const canManageProductSettings = useCan("products.settings") && PRODUCT_PROFILES[service].categories.length > 0;
 
   const homeHref = `/${service}`;
   const settingsHref = `/${service}/settings`;

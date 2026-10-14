@@ -19,7 +19,7 @@ import {
   quoteIndex,
   type AttentionRow,
 } from "@/lib/home-briefing";
-import type { ShellModuleKey } from "@/lib/shell-modules";
+import { findShellModule, moduleInService, type ShellModuleKey } from "@/lib/shell-modules";
 import { useCan } from "@/lib/use-can";
 import { useVisibleModules } from "@/lib/use-visible-modules";
 import { cn } from "@/lib/utils";
@@ -46,10 +46,12 @@ export function ServiceHome({ service }: { service: BusinessUnitKey }) {
   const tModules = useTranslations("Modules");
   const tUnits = useTranslations("BusinessUnits");
   const locale = useLocale();
-  const modules = useVisibleModules();
+  const modules = useVisibleModules(service);
   const me = useQuery(api.users.getCurrentUser);
   const summary = useQuery(api.home.summary, { businessUnitKey: service });
   const canRecordSales = useCan("sales.create");
+  // The sales reminders only where the service has a Sales module.
+  const sellsHere = moduleInService(findShellModule("sales")!, service);
   // The moment the page opened (greeting, date, quote and the 16:00 reminder).
   const [now] = useState(() => Date.now());
 
@@ -70,7 +72,7 @@ export function ServiceHome({ service }: { service: BusinessUnitKey }) {
   const tAny = (key: string, values?: Record<string, string | number>) => t(key as Parameters<typeof t>[0], values);
 
   const attention = summary
-    ? homeAttention(summary, { service, hour, canRecordSales: Boolean(canRecordSales), t: tAny, money })
+    ? homeAttention(summary, { service, hour, canRecordSales: Boolean(canRecordSales) && sellsHere, t: tAny, money })
     : null;
 
   // One neutral figure per module card ("" while loading).

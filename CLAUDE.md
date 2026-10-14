@@ -248,6 +248,23 @@ this repo, now and later — do not relax them for convenience.
   any profit/analytics figure excludes them and shows them separately, so
   owners see the real picture.
 
+## Transport
+
+- Transport runs a **fleet** instead of products (`convex/lib/transport.ts`,
+  `FLEET_SERVICES`; `requireFleetUnit` refuses other services). Cars
+  (`cars.ts`) are known by their plate, unique per service through
+  `plateKey` (no spaces/dashes); each has one driver, and a driver drives
+  one active car. Drivers (`drivers.ts`) are records, not app users, with a
+  default pay per day. Cars are never deleted (`retired`), drivers become
+  `inactive`.
+- Permissions: module `transport` (`transport.view`,
+  `transport.fleet.manage`, `transport.contracts.manage`,
+  `transport.driver_pay.request` / `.approve`). The Chief Admin holds them
+  all by default.
+- Menu modules can be limited to services (`services` in
+  `src/lib/shell-modules.ts`): products, requisitions, stock and sales are
+  Hair/Mode only; cars and contracts are Transport only.
+
 ## Analytics
 
 - Analytics reads **pre-aggregated rollups only** — never scan raw sales
@@ -448,6 +465,8 @@ analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts, and
 the "Products sold" report - every product sold in any day or range, per
 shop, with CSV).
+Transport has its fleet (`/transport/cars`: cars and drivers); contracts
+and driver payments come next.
 Mode (fashion) is live on the same modules, with clothes told apart by
 name, size (managed, ordered list in Product settings) and colour. Locations are
 shared by every service.

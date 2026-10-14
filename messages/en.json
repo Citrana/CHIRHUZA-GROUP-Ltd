@@ -130,7 +130,9 @@
     "expenses": "Expenses",
     "payroll": "Payroll",
     "withdrawals": "Withdrawals",
-    "approvals": "Approvals"
+    "approvals": "Approvals",
+    "cars": "Cars",
+    "contracts": "Contracts"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -296,7 +298,8 @@
     "analytics": "Analytics",
     "admin": "Administration",
     "products": "Products",
-    "withdrawals": "Withdrawals"
+    "withdrawals": "Withdrawals",
+    "transport": "Transport"
   },
   "Permissions": {
     "sales": {
@@ -362,6 +365,19 @@
     },
     "audit": {
       "view": "View the audit log"
+    },
+    "transport": {
+      "view": "View cars, drivers and contracts",
+      "fleet": {
+        "manage": "Add and edit cars and drivers"
+      },
+      "contracts": {
+        "manage": "Create and edit contracts, record client payments"
+      },
+      "driver_pay": {
+        "request": "Request driver payments",
+        "approve": "Approve driver payments"
+      }
     }
   },
   "AuditLog": {
@@ -1351,6 +1367,60 @@
     "dateRangeChip": "{from} – {to}",
     "fromChip": "From {date}",
     "toChip": "Until {date}"
+  },
+  "Fleet": {
+    "tabs": {
+      "label": "Fleet",
+      "cars": "Cars",
+      "drivers": "Drivers"
+    },
+    "accessDenied": "You don't have access to the fleet.",
+    "carsTitle": "Cars",
+    "carsSubtitle": "Every car of the fleet, with its driver.",
+    "addCar": "Add car",
+    "noCars": "No cars yet.",
+    "searchCars": "Search by plate, model or driver",
+    "plateLabel": "Plate number",
+    "platePlaceholder": "e.g. 5432 AB 07",
+    "modelLabel": "Model",
+    "driverLabel": "Driver",
+    "noDriver": "No driver",
+    "noFreeDriver": "Every active driver already drives a car. Add a driver in the Drivers tab.",
+    "driverDayRateHeader": "Driver pay / day",
+    "editCar": "Edit {plate}",
+    "carStatuses": {
+      "active": "Active",
+      "retired": "Retired"
+    },
+    "statusLabel": "Status",
+    "retireHint": "A retired car stays in the history but takes no new contracts, and its driver is free for another car.",
+    "noteLabel": "Note",
+    "newCarTitle": "Add a car",
+    "editCarTitle": "Edit {plate}",
+    "carHint": "Each car is known by its plate number and has one driver.",
+    "missingFields": "Fill in the required fields.",
+    "saveError": "Couldn't save. Try again.",
+    "saving": "Saving…",
+    "save": "Save",
+    "driversTitle": "Drivers",
+    "driversSubtitle": "Drivers, their pay per day and the car each drives.",
+    "addDriver": "Add driver",
+    "noDrivers": "No drivers yet.",
+    "searchDrivers": "Search by name, phone or plate",
+    "nameLabel": "Name",
+    "phoneLabel": "Phone",
+    "dayRateLabel": "Pay per day",
+    "dayRateHint": "Suggested on each new contract (pay per day × days). It can be changed per contract.",
+    "carHeader": "Car",
+    "editDriver": "Edit {name}",
+    "driverStatuses": {
+      "active": "Active",
+      "inactive": "Inactive"
+    },
+    "newDriverTitle": "Add a driver",
+    "editDriverTitle": "Edit {name}",
+    "driverHint": "Drivers are not app users: just their name, phone and pay.",
+    "perDay": "{amount} / day"
   },
   "Credit": {
     "title": "Credit",
