@@ -5,11 +5,14 @@ import { Pencil, Plus } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useTranslations } from "next-intl";
+import { businessDayOf } from "../../../convex/lib/time";
 import { api } from "../../../convex/_generated/api";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { CarDialog } from "@/components/fleet/car-dialog";
+import { useDayFormat } from "@/components/fleet/contract-bits";
+import { Link } from "@/i18n/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useCan } from "@/lib/use-can";
@@ -21,7 +24,9 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Fleet");
   const canView = useCan("transport.view");
   const canManage = useCan("transport.fleet.manage");
-  const cars = useQuery(api.cars.list, canView ? { businessUnitKey: service } : "skip");
+  const [today] = useState(() => businessDayOf(Date.now()));
+  const cars = useQuery(api.cars.list, canView ? { businessUnitKey: service, today } : "skip");
+  const day = useDayFormat();
   // null = closed; "new" = adding; a row = editing it.
   const [editing, setEditing] = useState<CarRow | "new" | null>(null);
 
@@ -38,6 +43,15 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
       </span>
     ) : (
       <span className="text-muted-foreground">{t("noDriver")}</span>
+    );
+  // On a contract today ("Busy until …", linking to it) or free.
+  const availability = (car: CarRow) =>
+    car.status !== "active" ? null : car.currentContract ? (
+      <Link href={`/${service}/contracts/${car.currentContract._id}`} className="text-amber-700 underline-offset-4 hover:underline dark:text-amber-400">
+        {t("busyUntil", { date: day(car.currentContract.endDay) })}
+      </Link>
+    ) : (
+      <span className="text-[color:var(--chart-2)]">{t("free")}</span>
     );
   const editButton = (car: CarRow) =>
     canManage ? (
@@ -61,6 +75,7 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
     },
     { id: "model", header: t("modelLabel"), accessorFn: (car) => car.model, meta: { hideBelow: "md" } },
     { id: "driver", header: t("driverLabel"), accessorFn: (car) => car.driverName ?? "", cell: ({ row }) => driver(row.original) },
+    { id: "availability", header: t("availabilityHeader"), cell: ({ row }) => availability(row.original), meta: { hideBelow: "sm" } },
     { id: "actions", header: "", cell: ({ row }) => editButton(row.original), meta: { className: "w-12 text-right" } },
   ];
 
@@ -93,6 +108,7 @@ export function CarsPanel({ service }: { service: BusinessUnitKey }) {
               </span>
               <span className="text-xs text-muted-foreground">{car.model}</span>
               <span className="text-sm">{driver(car)}</span>
+              <span className="text-sm">{availability(car)}</span>
             </div>
             {editButton(car)}
           </div>

@@ -4,6 +4,7 @@ import type { QueryCtx } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator } from "./lib/businessUnits";
 import { diff } from "./lib/audit";
+import { isBusinessDay } from "./lib/time";
 import {
   MAX_NAME_LENGTH,
   MAX_NOTE_LENGTH,
@@ -68,10 +69,14 @@ async function checkDriver(ctx: QueryCtx, unitId: Id<"businessUnits">, driverId:
   if (other) throw new ConvexError(`${driver.name} already drives ${other.plateNumber}.`);
 }
 
-/** The service's cars (active first, then by plate), with their driver. */
+/**
+ * The service's cars (active first, then by plate), with their driver and -
+ * given `today` (YYYY-MM-DD, from the client: queries don't read the clock)
+ * - the contract running today, if any.
+ */
 export const list = authedQuery({
-  args: { businessUnitKey: businessUnitKeyValidator },
-  handler: async (ctx, { businessUnitKey }) => {
+  args: { businessUnitKey: businessUnitKeyValidator, today: v.optional(v.string()) },
+  handler: async (ctx, { businessUnitKey, today }) => {
     await ctx.requirePermission("transport.view");
     const unit = await requireFleetUnit(ctx, businessUnitKey);
     const cars = await ctx.db
@@ -81,8 +86,19 @@ export const list = authedQuery({
     const rows = await Promise.all(
       cars.map(async (car) => {
         const driver = car.driverId ? await ctx.db.get("drivers", car.driverId) : null;
+        // The latest contract started by today; it's running if it ends today or later.
+        const latest =
+          today && isBusinessDay(today)
+            ? await ctx.db
+                .query("contracts")
+                .withIndex("by_carId_and_startDay", (q) => q.eq("carId", car._id).lte("startDay", today))
+                .order("desc")
+                .first()
+            : null;
+        const current = latest && latest.endDay >= today! ? latest : null;
         return {
           ...car,
+          currentContract: current ? { _id: current._id, number: current.number, endDay: current.endDay, clientName: current.clientName } : null,
           driverName: driver?.name ?? null,
           driverPhone: driver?.phone ?? null,
         };

@@ -13,7 +13,15 @@ import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
 import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
-import { carStatusValidator, clientKindValidator, driverStatusValidator } from "./lib/transport";
+import {
+  carStatusValidator,
+  clientKindValidator,
+  contractPaymentKindValidator,
+  contractPaymentStatusValidator,
+  driverPaymentStatusValidator,
+  driverStatusValidator,
+  transportPaymentMethodValidator,
+} from "./lib/transport";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -569,6 +577,88 @@ export default defineSchema({
   })
     .index("by_businessUnitId_and_nameKey", ["businessUnitId", "nameKey"])
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["businessUnitId"] }),
+
+  // Transport contracts (convex/lib/transport.ts): a car hired by a client
+  // for `days` days from `startDay` (business days, inclusive to endDay).
+  // One car never has two overlapping contracts. computedTotal = dayRate x
+  // days; totalAmount is the agreed total (a different one needs
+  // priceChangeReason). The driver's pay is set here, per contract:
+  // driverPayTotal = driverDayRate x days. amountPaid / driverPaid follow
+  // the payments. Plate, client and driver names are snapshots. USD cents.
+  contracts: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    number: v.string(),
+    carId: v.id("cars"),
+    plateNumber: v.string(),
+    clientId: v.id("clients"),
+    clientName: v.string(),
+    driverId: v.optional(v.id("drivers")),
+    driverName: v.optional(v.string()),
+    startDay: v.string(),
+    days: v.number(),
+    endDay: v.string(),
+    dayRate: v.number(),
+    computedTotal: v.number(),
+    totalAmount: v.number(),
+    priceChangeReason: v.optional(v.string()),
+    amountPaid: v.number(),
+    paymentStatus: contractPaymentStatusValidator,
+    driverDayRate: v.number(),
+    driverPayTotal: v.number(),
+    driverPaid: v.number(),
+    currency: usdValidator,
+    note: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_businessUnitId_and_startDay", ["businessUnitId", "startDay"])
+    .index("by_carId_and_startDay", ["carId", "startDay"])
+    .index("by_clientId_and_startDay", ["clientId", "startDay"]),
+
+  // Money received from the client for a contract (append-only): a payment
+  // (at signing or later, any amount up to what's owed) or, negative, a
+  // reversal of a wrong one, approved through the approval engine.
+  contractPayments: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    contractId: v.id("contracts"),
+    clientId: v.id("clients"),
+    amount: v.number(),
+    currency: usdValidator,
+    method: transportPaymentMethodValidator,
+    kind: contractPaymentKindValidator,
+    reversesPaymentId: v.optional(v.id("contractPayments")),
+    // UTC ms of when the money was received.
+    paidAt: v.number(),
+    recordedBy: v.id("users"),
+    note: v.optional(v.string()),
+  })
+    .index("by_contractId", ["contractId"])
+    .index("by_reversesPaymentId", ["reversesPaymentId"]),
+
+  // What a contract's driver is paid, in installments (convex/lib/contracts.ts).
+  // Created pending; the Chief Admin approves through the approval engine
+  // (driver_payment). Approved ones add to contracts.driverPaid and count
+  // as payroll on their paidAt day. Pending + approved never exceed the
+  // contract's driverPayTotal.
+  driverPayments: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    contractId: v.id("contracts"),
+    driverId: v.optional(v.id("drivers")),
+    driverName: v.string(),
+    amount: v.number(),
+    currency: usdValidator,
+    method: transportPaymentMethodValidator,
+    // UTC ms of when the driver is (or was) paid.
+    paidAt: v.number(),
+    note: v.optional(v.string()),
+    status: driverPaymentStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    requestedBy: v.id("users"),
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_contractId", ["contractId"])
+    .index("by_businessUnitId_and_paidAt", ["businessUnitId", "paidAt"]),
 
   // Payroll (convex/lib/payroll.ts): salary payments, approved by the Chief
   // Admin (approval type "payroll"). USD cents; a period is a month.

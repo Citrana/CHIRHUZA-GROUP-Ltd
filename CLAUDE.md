@@ -263,6 +263,28 @@ this repo, now and later — do not relax them for convenience.
   (`ClientPicker`; a duplicate name picks the existing client). Only the
   name is required. `balance` is what they owe across contracts. Never
   deleted. Managed at `/transport/contracts/clients`.
+- Contracts (`contracts.ts`, `convex/lib/contracts.ts`): a car hired by a
+  client for `days` business days from `startDay`; one car never has two
+  overlapping contracts. `totalAmount` defaults to `dayRate` x days; a
+  different total needs `priceChangeReason`. Plate, client and driver
+  names are snapshots; the car never changes on edit. Edits need a reason,
+  can't take the total below what was paid (nor the driver's total below
+  what was paid or asked), and reverse + re-apply the rollups. A contract
+  is deleted only through a `delete` approval, and only without payments.
+- Revenue counts **spread over the contract's days** (`contractEvents`,
+  `spreadOverDays`) as `dailyFinance.sales`, business-level (`none`);
+  client payments never touch the rollups.
+- Client payments (`contractPayments`, **append-only**): any amount up to
+  what's owed, any past date, cash / mobile money / bank, no approval.
+  `applyContractPayment` is the only writer (row + contract `amountPaid` /
+  `paymentStatus` + `clients.balance`). A wrong one is undone only through
+  `contract_payment_reversal`.
+- Driver payments (`driverPayments`): the driver's pay per day is set on
+  each contract (`driverDayRate`; total = rate x days). Each payment is
+  `pending` until the Chief Admin approves (`driver_payment`, decided with
+  `transport.driver_pay.approve`); pending + approved never exceed the
+  driver's total. Approved ones add to `driverPaid` and count as
+  `dailyFinance.payroll` on their `paidAt` day (`driverPaymentEvent`).
 - Permissions: module `transport` (`transport.view`,
   `transport.fleet.manage`, `transport.contracts.manage`,
   `transport.driver_pay.request` / `.approve`). The Chief Admin holds them
@@ -471,8 +493,10 @@ analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts, and
 the "Products sold" report - every product sold in any day or range, per
 shop, with CSV).
-Transport has its fleet (`/transport/cars`: cars and drivers); contracts
-and driver payments come next.
+Transport has its fleet (`/transport/cars`: cars and drivers), clients and
+contracts (`/transport/contracts`: client payments in installments, driver
+payments approved by the Chief Admin); its Analytics shows contract revenue
+and driver pay, without product reports.
 Mode (fashion) is live on the same modules, with clothes told apart by
 name, size (managed, ordered list in Product settings) and colour. Locations are
 shared by every service.
