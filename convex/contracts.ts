@@ -197,7 +197,18 @@ export const get = authedQuery({
     return {
       ...contract,
       balance: contractBalance(contract),
-      client: client ? { _id: client._id, name: client.name, phone: client.phone ?? null, contactName: client.contactName ?? null } : null,
+      client: client
+        ? {
+            _id: client._id,
+            kind: client.kind,
+            name: client.name,
+            contactName: client.contactName ?? null,
+            phone: client.phone ?? null,
+            email: client.email ?? null,
+            address: client.address ?? null,
+          }
+        : null,
+      carModel: (await ctx.db.get("cars", contract.carId))?.model ?? null,
       payments: payments.sort((a, b) => b.paidAt - a.paidAt),
       driverPayments: driverPayments.sort((a, b) => b.paidAt - a.paidAt),
       driverPending,

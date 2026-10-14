@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ArrowLeft, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Download, Pencil, Plus, Trash2, Undo2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -11,7 +11,8 @@ import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
 import { BUSINESS_TIME_ZONE, businessDayOf } from "../../../convex/lib/time";
 import { Link } from "@/i18n/navigation";
-import { ContractDates, PaymentBadge } from "@/components/fleet/contract-bits";
+import { ContractPaper } from "@/components/fleet/contract-paper";
+import { contractPaperContent, renderContractPdf } from "@/lib/contract-pdf";
 import { AddPaymentDialog, DriverPaymentDialog, EditContractDialog, ReasonDialog } from "@/components/fleet/contract-dialogs";
 import { ApprovalStatusBadge } from "@/components/approvals/approval-status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +24,8 @@ type ContractView = NonNullable<FunctionReturnType<typeof api.contracts.get>>;
 type Payment = ContractView["payments"][number];
 
 /**
- * One contract: car, driver, client, dates and money, the client's
+ * One contract, shown as a paper document (the client's copy, also
+ * downloadable as a PDF), then the operational parts: the client's
  * payments (add one, ask to reverse a wrong one), the driver's payments
  * (each approved by the Chief Admin), and edit / ask to delete.
  */
@@ -36,7 +38,11 @@ export function ContractDetail({ service, contractId }: { service: BusinessUnitK
   const contract = useQuery(api.contracts.get, canView ? { contractId } : "skip");
   const requestReversal = useMutation(api.contractPayments.requestReversal);
   const requestDelete = useMutation(api.contracts.requestDelete);
-  const [today] = useState(() => businessDayOf(Date.now()));
+  // The moment the page opened (the paper's "issued on", today's date for payments).
+  const [openedAt] = useState(() => Date.now());
+  const today = businessDayOf(openedAt);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [pdfError, setPdfError] = useState(false);
   const [dialog, setDialog] = useState<"pay" | "payDriver" | "edit" | "delete" | { reverse: Payment } | null>(null);
 
   if (canView === undefined || contract === undefined) return null;
@@ -46,60 +52,59 @@ export function ContractDetail({ service, contractId }: { service: BusinessUnitK
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const time = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
   const close = (open: boolean) => !open && setDialog(null);
-  const row = (label: string, value: React.ReactNode) => (
-    <>
-      <dt className="text-muted-foreground">{label}</dt>
-      <dd className="text-right font-medium sm:text-left">{value}</dd>
-    </>
-  );
+  const translate = (key: string, values?: Record<string, string | number>) => t(key as Parameters<typeof t>[0], values);
+  const paper = contractPaperContent(contract, { t: translate, locale, now: openedAt });
+
+  async function downloadPdf() {
+    if (!contract) return;
+    setPdfBusy(true);
+    setPdfError(false);
+    try {
+      await renderContractPdf(contractPaperContent(contract, { t: translate, locale, now: Date.now() }), (page, pages) =>
+        t("paper.page", { page, pages }),
+      );
+    } catch {
+      setPdfError(true);
+    } finally {
+      setPdfBusy(false);
+    }
+  }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-      <div className="flex flex-col gap-2">
+    <div className="mx-auto flex w-full max-w-[820px] flex-col gap-6">
+      {/* Toolbar: not part of the paper */}
+      <div className="flex flex-col gap-3">
         <Link href={`/${service}/contracts`} className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="size-4" aria-hidden />
           {t("backToList")}
         </Link>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="font-heading text-2xl font-bold text-primary">
-            <span className="font-mono">{contract.number}</span>
-          </h1>
-          <PaymentBadge contract={contract} />
-        </div>
-        {contract.deletePending ? <Badge variant="outline" className="self-start">{t("deletePending")}</Badge> : null}
-      </div>
-
-      <section className="rounded-xl border border-border bg-card p-4">
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-          {row(t("carLabel"), <span className="font-mono">{contract.plateNumber}</span>)}
-          {row(t("driverLabel"), contract.driverName ?? "—")}
-          {row(t("clientLabel"), [contract.clientName, contract.client?.contactName, contract.client?.phone].filter(Boolean).join(" · "))}
-          {row(t("datesHeader"), <ContractDates contract={contract} />)}
-          {row(t("dayRateLabel"), money(contract.dayRate))}
-          {row(t("totalLabel"), money(contract.totalAmount))}
-          {contract.priceChangeReason
-            ? row(t("priceReasonLabel"), t("priceChangeShown", { computed: money(contract.computedTotal), reason: contract.priceChangeReason }))
-            : null}
-          {row(t("paidLabel"), money(contract.amountPaid))}
-          {row(t("owesLabel"), <span className={cn(contract.balance > 0 && "text-destructive")}>{money(contract.balance)}</span>)}
-          {row(t("driverPayLabel"), t("driverPayShown", { rate: money(contract.driverDayRate), total: money(contract.driverPayTotal) }))}
-          {contract.note ? row(t("noteLabel"), contract.note) : null}
-        </dl>
-        {canManage ? (
-          <div className="mt-4 flex flex-wrap gap-2 border-t border-border pt-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <Button className="min-h-11" onClick={downloadPdf} disabled={pdfBusy}>
+            <Download aria-hidden />
+            {pdfBusy ? t("paper.preparing") : t("paper.download")}
+          </Button>
+          {canManage ? (
             <Button variant="outline" className="min-h-11" onClick={() => setDialog("edit")}>
               <Pencil aria-hidden />
               {t("edit")}
             </Button>
-            {contract.payments.length === 0 && contract.driverPayments.length === 0 && !contract.deletePending ? (
-              <Button variant="ghost" className="min-h-11 text-destructive" onClick={() => setDialog("delete")}>
-                <Trash2 aria-hidden />
-                {t("delete")}
-              </Button>
-            ) : null}
-          </div>
+          ) : null}
+          {canManage && contract.payments.length === 0 && contract.driverPayments.length === 0 && !contract.deletePending ? (
+            <Button variant="ghost" className="min-h-11 text-destructive" onClick={() => setDialog("delete")}>
+              <Trash2 aria-hidden />
+              {t("delete")}
+            </Button>
+          ) : null}
+          {contract.deletePending ? <Badge variant="outline">{t("deletePending")}</Badge> : null}
+        </div>
+        {pdfError ? (
+          <p className="text-sm text-destructive" role="alert">
+            {t("paper.downloadError")}
+          </p>
         ) : null}
-      </section>
+      </div>
+
+      <ContractPaper content={paper} />
 
       <section className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-2">

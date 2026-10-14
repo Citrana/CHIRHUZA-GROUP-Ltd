@@ -103,6 +103,8 @@ test("a contract: price per day × days, the car's driver, revenue spread over i
     amountPaid: 0,
     balance: 30_000,
     paymentStatus: "open",
+    carModel: "Land Cruiser",
+    client: { name: "Kamoto Mining", kind: "company", email: null, address: null },
   });
   expect(await clientBalance(s)).toBe(30_000);
   expect(await salesByDay(s)).toEqual({ "2026-10-01": 10_000, "2026-10-02": 10_000, "2026-10-03": 10_000 });
