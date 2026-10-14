@@ -13,6 +13,7 @@ import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
 import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
+import { carStatusValidator, driverStatusValidator } from "./lib/transport";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -516,6 +517,36 @@ export default defineSchema({
     .index("by_saleId", ["saleId"])
     .index("by_customerId_and_paidAt", ["customerId", "paidAt"])
     .index("by_reversesPaymentId", ["reversesPaymentId"]),
+
+  // Transport (convex/lib/transport.ts): the fleet. A car is known by its
+  // plate (unique per service through plateKey: no spaces or dashes) and
+  // has one driver. Never deleted: retired / inactive instead.
+  cars: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    plateNumber: v.string(),
+    plateKey: v.string(),
+    model: v.string(),
+    driverId: v.optional(v.id("drivers")),
+    status: carStatusValidator,
+    note: v.optional(v.string()),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_businessUnitId_and_plateKey", ["businessUnitId", "plateKey"])
+    .index("by_driverId", ["driverId"]),
+
+  // Drivers are records, not app users. dayRate (USD cents) is their
+  // default pay per contract day.
+  drivers: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    name: v.string(),
+    phone: v.optional(v.string()),
+    dayRate: v.number(),
+    currency: usdValidator,
+    status: driverStatusValidator,
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_businessUnitId_and_name", ["businessUnitId", "name"]),
 
   // Payroll (convex/lib/payroll.ts): salary payments, approved by the Chief
   // Admin (approval type "payroll"). USD cents; a period is a month.

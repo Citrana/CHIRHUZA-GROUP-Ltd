@@ -48,6 +48,13 @@ export const PERMISSIONS = [
 
   { key: "analytics.view", module: "analytics", description: "View analytics" },
 
+  // Transport (cars rented out on contracts).
+  { key: "transport.view", module: "transport", description: "View cars, drivers and contracts" },
+  { key: "transport.fleet.manage", module: "transport", description: "Add and edit cars and drivers" },
+  { key: "transport.contracts.manage", module: "transport", description: "Create and edit contracts, record client payments" },
+  { key: "transport.driver_pay.request", module: "transport", description: "Request driver payments" },
+  { key: "transport.driver_pay.approve", module: "transport", description: "Approve driver payments" },
+
   { key: "users.manage", module: "admin", description: "Manage users" },
   { key: "roles.manage", module: "admin", description: "Manage roles and permissions" },
   { key: "locations.manage", module: "admin", description: "Manage locations" },
@@ -97,6 +104,15 @@ const PRODUCTS_AND_WITHDRAWALS: PermissionKey[] = [
   "withdrawals.request",
 ];
 
+/** Transport: the Chief Admin runs it (and approves driver payments). */
+const TRANSPORT_ALL: PermissionKey[] = [
+  "transport.view",
+  "transport.fleet.manage",
+  "transport.contracts.manage",
+  "transport.driver_pay.request",
+  "transport.driver_pay.approve",
+];
+
 /** What the first seed step granted to every role - frozen, never edit. */
 const PRODUCTS_AND_WITHDRAWALS_2026_09: PermissionKey[] = [
   ...PRODUCTS_AND_WITHDRAWALS,
@@ -136,6 +152,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "products.confirm",
       "products.settings",
       "products.set_price",
+      ...TRANSPORT_ALL,
     ]),
   },
   {
@@ -286,6 +303,18 @@ export const SEED_STEPS: readonly SeedStep[] = [
       ["chief_sales_admin", "withdrawals.approve"],
       ["chief_inventory_admin", "withdrawals.approve"],
       ["sales_agent", "withdrawals.approve"],
+    ],
+  },
+  {
+    // Transport: the Chief Admin gets the whole module; other roles get it
+    // from Manage roles when needed. (Frozen list - never edit.)
+    key: "2026-10-transport",
+    grants: [
+      ["chief_admin", "transport.view", "all_locations"],
+      ["chief_admin", "transport.fleet.manage", "all_locations"],
+      ["chief_admin", "transport.contracts.manage", "all_locations"],
+      ["chief_admin", "transport.driver_pay.request", "all_locations"],
+      ["chief_admin", "transport.driver_pay.approve", "all_locations"],
     ],
   },
 ];
