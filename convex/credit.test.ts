@@ -115,6 +115,12 @@ test("a credit sale: agreed total with a reason, part paid now, the rest owed", 
   expect((await getCustomer(s, neema))!.balance).toBe(1500);
   const payments = await s.t.run((ctx) => ctx.db.query("salePayments").withIndex("by_saleId", (q) => q.eq("saleId", saleId)).collect());
   expect(payments).toMatchObject([{ amount: 700, method: "cash", kind: "at_sale", customerId: neema }]);
+  // The customer's credit page shows the products they took.
+  const view = await s.as(s.agent).query(api.credit.customer, { customerId: neema });
+  expect(view.sales[0].lines.map((l) => [l.productName, l.qty, l.unitPrice])).toEqual([
+    ["P1", 2, 500],
+    ["P2", 1, 1500],
+  ]);
 
   // Analytics: revenue is the agreed total, split over the products.
   const today = businessDayOf(Date.now());

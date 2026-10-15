@@ -1370,6 +1370,7 @@
     "owes": "Doit {amount}",
     "salesTitle": "Ventes à crédit",
     "saleHeader": "Vente",
+    "productsHeader": "Produits",
     "dateHeader": "Date",
     "totalHeader": "Total",
     "paidHeader": "Payé",
