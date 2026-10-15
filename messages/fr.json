@@ -222,7 +222,6 @@
       "lockedBadge": "Verrouillé",
       "edit": "Modifier les permissions",
       "back": "Retour aux rôles",
-      "notFound": "Rôle introuvable.",
       "lockedNote": "Le rôle Super administrateur est verrouillé : il détient toujours toutes les permissions, afin que personne ne puisse se bloquer l'accès.",
       "permissionHeader": "Permission",
       "grantedHeader": "Accordée",
@@ -686,7 +685,6 @@
     "addToRequisition": "Ajouter à la réquisition",
     "qtyError": "Nombre entier à partir de 1.",
     "backToList": "Toutes les réquisitions",
-    "notFound": "Cette réquisition n'existe pas ou vous ne pouvez pas la voir.",
     "productHeader": "Produit",
     "qtyHeader": "Quantité",
     "lineNoteHeader": "Note",
@@ -838,7 +836,6 @@
     "reasonLabel": "Motif",
     "remove": "Retirer",
     "backToList": "Tous les lots",
-    "notFound": "Ce lot n'existe pas ou vous ne pouvez pas le voir.",
     "incomplete": "{count, plural, one {# ligne nécessite} other {# lignes nécessitent}} encore un coût unitaire, une quantité ou un motif.",
     "productHeader": "Produit",
     "lineStatusHeader": "Statut",
@@ -1636,5 +1633,11 @@
     "showNetProfit": "Afficher le bénéfice net",
     "hideNetProfit": "Masquer le bénéfice net",
     "hiddenValue": "Masqué"
+  },
+  "NotFound": {
+    "title": "Page introuvable",
+    "body": "La page que vous cherchez n'existe pas ou a été déplacée.",
+    "home": "Retour à l'accueil",
+    "back": "Retour"
   }
 }

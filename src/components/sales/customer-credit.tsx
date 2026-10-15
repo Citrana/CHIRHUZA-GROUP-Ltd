@@ -6,6 +6,7 @@ import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
+import { notFound } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
@@ -26,7 +27,7 @@ import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { useProductLineLabel } from "./use-product-line-label";
 
-type View = FunctionReturnType<typeof api.credit.customer>;
+type View = NonNullable<FunctionReturnType<typeof api.credit.customer>>;
 type SaleRow = View["sales"][number];
 type PaymentRow = View["payments"][number];
 
@@ -46,7 +47,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   const lineLabel = useProductLineLabel();
   const locale = useLocale();
   const canView = useCan("sales.view");
-  const view = useQuery(api.credit.customer, canView ? { customerId: customerId as Id<"customers"> } : "skip");
+  const view = useQuery(api.credit.customer, canView ? { customerId } : "skip");
   const record = useMutation(api.credit.recordRepayment);
   const requestReversal = useMutation(api.credit.requestPaymentReversal);
 
@@ -63,6 +64,9 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
   if (view === undefined) return <p className="text-sm text-muted-foreground">{tSales("loading")}</p>;
+  // A wrong link (bad id, unknown customer, another service's): the 404 page.
+  if (view === null || view.businessUnitKey !== service) notFound();
+  const customer = view._id;
 
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
@@ -78,7 +82,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
     setMessage(null);
     try {
       const result = await record({
-        customerId: customerId as Id<"customers">,
+        customerId: customer,
         amount,
         method,
         ...(paidOn !== today ? { paidOn } : {}),
