@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { useTranslations } from "next-intl";
+import { notFound } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import type { PermissionKey, PermissionModule, Scope } from "../../../convex/lib/permissions";
 import { Link } from "@/i18n/navigation";
@@ -67,14 +68,8 @@ export function RolePermissionsEditor({ roleId }: { roleId: string }) {
     </Link>
   );
 
-  if (data === null) {
-    return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <p className="text-sm text-muted-foreground">{t("notFound")}</p>
-      </div>
-    );
-  }
+  // A wrong link (bad id, unknown role): the 404 page.
+  if (data === null) notFound();
 
   const { role, locked, modules } = data;
   const text = roleText(role);

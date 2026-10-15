@@ -5,6 +5,7 @@ import { ArrowLeft, Download, Pencil, Plus, Send, Trash2 } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
+import { notFound } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
@@ -130,14 +131,8 @@ export function RequisitionDetail({
   if (requisition === undefined) {
     return <p className="text-sm text-muted-foreground">{t("loading")}</p>;
   }
-  if (requisition === null || requisition.businessUnitKey !== service) {
-    return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <p className="text-sm text-muted-foreground">{t("notFound")}</p>
-      </div>
-    );
-  }
+  // A wrong link (bad id, not visible to me, another service's): the 404 page.
+  if (requisition === null || requisition.businessUnitKey !== service) notFound();
 
   const time = new Intl.DateTimeFormat(locale, {
     dateStyle: "medium",

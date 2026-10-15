@@ -6,6 +6,7 @@ import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
+import { notFound } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
@@ -24,8 +25,9 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
+import { useProductLineLabel } from "./use-product-line-label";
 
-type View = FunctionReturnType<typeof api.credit.customer>;
+type View = NonNullable<FunctionReturnType<typeof api.credit.customer>>;
 type SaleRow = View["sales"][number];
 type PaymentRow = View["payments"][number];
 
@@ -42,9 +44,10 @@ function errorMessage(e: unknown, fallback: string): string {
 export function CustomerCredit({ service, customerId }: { service: BusinessUnitKey; customerId: string }) {
   const t = useTranslations("Credit");
   const tSales = useTranslations("Sales");
+  const lineLabel = useProductLineLabel();
   const locale = useLocale();
   const canView = useCan("sales.view");
-  const view = useQuery(api.credit.customer, canView ? { customerId: customerId as Id<"customers"> } : "skip");
+  const view = useQuery(api.credit.customer, canView ? { customerId } : "skip");
   const record = useMutation(api.credit.recordRepayment);
   const requestReversal = useMutation(api.credit.requestPaymentReversal);
 
@@ -61,6 +64,9 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
   if (view === undefined) return <p className="text-sm text-muted-foreground">{tSales("loading")}</p>;
+  // A wrong link (bad id, unknown customer, another service's): the 404 page.
+  if (view === null || view.businessUnitKey !== service) notFound();
+  const customer = view._id;
 
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
@@ -76,7 +82,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
     setMessage(null);
     try {
       const result = await record({
-        customerId: customerId as Id<"customers">,
+        customerId: customer,
         amount,
         method,
         ...(paidOn !== today ? { paidOn } : {}),
@@ -119,8 +125,21 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
       <Badge variant="secondary">{t("statusSettled")}</Badge>
     );
 
+  // What the customer took on a sale, one product per line.
+  const products = (s: SaleRow) =>
+    s.lines.length > 0 ? (
+      <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+        {s.lines.map((line) => (
+          <li key={line._id}>
+            {lineLabel(line)} · {tSales("qtyAtPrice", { qty: line.qty, price: money(line.unitPrice) })}
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
   const saleColumns: DataTableColumn<SaleRow>[] = [
     { id: "number", header: t("saleHeader"), cell: ({ row }) => row.original.number, meta: { className: "font-mono text-xs font-medium" } },
+    { id: "products", header: t("productsHeader"), cell: ({ row }) => products(row.original) },
     {
       id: "date",
       header: t("dateHeader"),
@@ -294,17 +313,20 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
           getRowId={(s) => s._id}
           emptyMessage={t("noSales")}
           renderCard={(s) => (
-            <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block font-mono text-xs font-medium">{s.number}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {day.format(s.createdAt)} · {t("totalHeader")} {money(s.totalAmount)} · {t("paidHeader")} {money(s.amountPaid)}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block font-mono text-xs font-medium">{s.number}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {day.format(s.createdAt)} · {t("totalHeader")} {money(s.totalAmount)} · {t("paidHeader")} {money(s.amountPaid)}
+                  </span>
                 </span>
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-1">
-                <span className="font-semibold tabular-nums">{money(s.balance)}</span>
-                {statusBadge(s)}
-              </span>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="font-semibold tabular-nums">{money(s.balance)}</span>
+                  {statusBadge(s)}
+                </span>
+              </div>
+              {products(s)}
             </div>
           )}
         />

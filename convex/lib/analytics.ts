@@ -1,5 +1,5 @@
 import { ConvexError } from "convex/values";
-import type { MutationCtx } from "../_generated/server";
+import type { MutationCtx, QueryCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { addBusinessDays, businessDayOf, isBusinessDay } from "./time";
 
@@ -144,6 +144,22 @@ export async function applyRollupEvent(ctx: MutationCtx, businessUnitId: Id<"bus
 
 export async function applyRollupEvents(ctx: MutationCtx, businessUnitId: Id<"businessUnits">, events: RollupEvent[]) {
   for (const event of events) await applyRollupEvent(ctx, businessUnitId, event);
+}
+
+/** Units sold at one location key on one business day, from the rollups. */
+export async function unitsSoldOn(
+  ctx: QueryCtx,
+  businessUnitId: Id<"businessUnits">,
+  locationKey: string,
+  day: string,
+): Promise<number> {
+  const rows = await ctx.db
+    .query("dailyStats")
+    .withIndex("by_unit_location_day", (q) =>
+      q.eq("businessUnitId", businessUnitId).eq("locationKey", locationKey).eq("day", day),
+    )
+    .take(2000);
+  return rows.reduce((sum, row) => sum + row.unitsSold, 0);
 }
 
 // ----------------------------------------------------- full recomputation

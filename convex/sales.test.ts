@@ -421,6 +421,25 @@ test("a sale recorded late can be dated up to 7 days back, never in the future",
   ).rejects.toThrow(/Only 3 left/);
 });
 
+test("each sale returns the products its shop sold that day, from the rollups", async () => {
+  const { s, other, p1Lot, p2Lot } = await withShopStock();
+  const today = businessDayOf(Date.now());
+  const yesterday = addBusinessDays(today, -1);
+
+  expect((await sell(s, s.agent, [{ inventoryBatchId: p1Lot, qty: 2, unitPrice: 500 }])).dayUnits).toBe(2);
+  // Another shop's sales don't count.
+  expect((await sell(s, s.sales, [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }], { locationId: other })).dayUnits).toBe(1);
+  // A late sale counts for its own day only.
+  expect(
+    (await sell(s, s.agent, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1500 }], { soldOn: yesterday })).dayUnits,
+  ).toBe(1);
+  const lines = [
+    { inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 },
+    { inventoryBatchId: p2Lot, qty: 2, unitPrice: 1500 },
+  ];
+  expect((await sell(s, s.agent, lines)).dayUnits).toBe(5);
+});
+
 test("saleTimestamp keeps the clock time inside the chosen business day", () => {
   // 10:30 in Lubumbashi on 30 Sep = 08:30 UTC.
   const now = Date.UTC(2026, 8, 30, 8, 30);

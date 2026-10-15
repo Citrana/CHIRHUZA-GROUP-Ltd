@@ -6,7 +6,8 @@ import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUni
 import { requestApproval } from "./lib/approvals";
 import { logAudit } from "./lib/audit";
 import type { Scope } from "./lib/permissions";
-import { MAX_BACKDATE_DAYS, saleTimestamp } from "./lib/sales";
+import { MAX_BACKDATE_DAYS, MAX_SALE_LINES, saleTimestamp } from "./lib/sales";
+import { describeProduct } from "./lib/products";
 import { businessDayOf } from "./lib/time";
 import {
   allocateRepayment,
@@ -61,13 +62,19 @@ export const owed = authedQuery({
   },
 });
 
-/** One customer: their credit sales and payments (within scope). */
+/**
+ * One customer: their credit sales (with the products taken) and payments
+ * (within scope). null when the id is invalid or the customer doesn't exist.
+ */
 export const customer = authedQuery({
-  args: { customerId: v.id("customers") },
-  handler: async (ctx, { customerId }) => {
+  // A string, not v.id: it comes from the URL, and a bad one is just "not found".
+  args: { customerId: v.string() },
+  handler: async (ctx, args) => {
     const { scope } = await ctx.requirePermission("sales.view");
-    const customer = await ctx.db.get("customers", customerId);
-    if (!customer) throw new ConvexError("Customer not found.");
+    const customerId = ctx.db.normalizeId("customers", args.customerId);
+    const customer = customerId ? await ctx.db.get("customers", customerId) : null;
+    if (!customerId || !customer) return null;
+    const unit = await ctx.db.get("businessUnits", customer.businessUnitId);
     const sales = (
       await ctx.db
         .query("sales")
@@ -95,6 +102,7 @@ export const customer = authedQuery({
     }
     return {
       _id: customer._id,
+      businessUnitKey: unit?.key ?? null,
       name: customer.name,
       phone: customer.phone ?? null,
       balance: sales.filter((s) => s.creditStatus === "open").reduce((t, s) => t + saleBalance(s), 0),
@@ -109,6 +117,20 @@ export const customer = authedQuery({
           amountPaid: sale.amountPaid ?? 0,
           balance: saleBalance(sale),
           creditStatus: sale.creditStatus ?? null,
+          // What the customer took on this sale.
+          lines: await Promise.all(
+            (
+              await ctx.db
+                .query("saleItems")
+                .withIndex("by_saleId", (q) => q.eq("saleId", sale._id))
+                .take(MAX_SALE_LINES)
+            ).map(async (item) => ({
+              _id: item._id,
+              qty: item.qty,
+              unitPrice: item.unitPrice,
+              ...(await describeProduct(ctx, item.productId)),
+            })),
+          ),
         })),
       ),
       payments: await Promise.all(
