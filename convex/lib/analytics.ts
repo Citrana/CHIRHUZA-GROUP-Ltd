@@ -2,6 +2,7 @@ import { ConvexError } from "convex/values";
 import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { addBusinessDays, businessDayOf, isBusinessDay } from "./time";
+import { spreadOverDays } from "./transport";
 
 /**
  * Analytics rollups (CLAUDE.md "Analytics"). Charts and summaries read
@@ -68,6 +69,25 @@ export function saleEvents(
     },
   });
   return events;
+}
+
+/**
+ * A transport contract's revenue (business-level), spread over its days:
+ * a 19-day contract adds 1/19 of its agreed total to each day (sign -1
+ * reverses it, for edits and deletes). No sale cost: the car isn't stock.
+ */
+export function contractEvents(
+  contract: Pick<Doc<"contracts">, "startDay" | "days" | "totalAmount">,
+  sign: 1 | -1 = 1,
+): RollupEvent[] {
+  return spreadOverDays(contract.totalAmount, contract.days)
+    .map((amount, i) => ({ locationId: null, day: addBusinessDays(contract.startDay, i), finance: { sales: sign * amount } }))
+    .filter((event) => event.finance.sales !== 0);
+}
+
+/** An approved driver payment (business-level), as payroll on the day it's paid. */
+export function driverPaymentEvent(payment: Pick<Doc<"driverPayments">, "amount" | "paidAt">): RollupEvent {
+  return { locationId: null, day: businessDayOf(payment.paidAt), finance: { payroll: payment.amount } };
 }
 
 /** A trip expense (business-level) on the day it was recorded. */
@@ -205,6 +225,18 @@ async function rawEvents(ctx: MutationCtx, businessUnitId: Id<"businessUnits">):
     if (sale.status !== "completed") continue;
     const items = await ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", sale._id)).take(500);
     events.push(...saleEvents(sale, items));
+  }
+  const contracts = await ctx.db
+    .query("contracts")
+    .withIndex("by_businessUnitId_and_startDay", (q) => q.eq("businessUnitId", businessUnitId))
+    .take(MAX_SOURCE_ROWS);
+  for (const contract of contracts) events.push(...contractEvents(contract));
+  const driverPayments = await ctx.db
+    .query("driverPayments")
+    .withIndex("by_businessUnitId_and_paidAt", (q) => q.eq("businessUnitId", businessUnitId))
+    .take(MAX_SOURCE_ROWS);
+  for (const payment of driverPayments) {
+    if (payment.status === "approved") events.push(driverPaymentEvent(payment));
   }
   const batches = await ctx.db
     .query("stockBatches")

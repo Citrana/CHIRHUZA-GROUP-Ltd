@@ -25,6 +25,9 @@ export const DEFAULT_REQUIRED_PERMISSION: Record<ApprovalType, PermissionKey> = 
   distribution: "stock.approve",
   withdrawal: "withdrawals.approve",
   credit_payment_reversal: "sales.edit.approve",
+  // Transport: the Chief Admin decides money corrections.
+  contract_payment_reversal: "transport.driver_pay.approve",
+  driver_payment: "transport.driver_pay.approve",
 };
 
 export type ApprovalRequest = {
