@@ -6,7 +6,7 @@ import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUni
 import { nextSequenceNumber } from "./lib/requisitions";
 import { applyMovement, findHolder, getOrCreateHolder } from "./lib/inventory";
 import { filterableLocations, pickableLocations } from "./lib/locationScope";
-import { applyRollupEvents, saleEvents } from "./lib/analytics";
+import { applyRollupEvents, saleEvents, unitsSoldOn } from "./lib/analytics";
 import { businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./lib/time";
 import {
   MAX_BACKDATE_DAYS,
@@ -343,7 +343,15 @@ export const create = authedMutation({
         });
       }
     }
-    return { saleId, number, soldOn: businessDayOf(createdAt), recordedOn: businessDayOf(recordedAt) };
+    const soldOn = businessDayOf(createdAt);
+    return {
+      saleId,
+      number,
+      soldOn,
+      recordedOn: businessDayOf(recordedAt),
+      // Products the shop sold that day, this sale included (for the seller's encouragement card).
+      dayUnits: await unitsSoldOn(ctx, unit._id, location._id, soldOn),
+    };
   },
 });
 
