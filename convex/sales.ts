@@ -1,7 +1,6 @@
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import type { QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Doc } from "./_generated/dataModel";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
@@ -17,7 +16,7 @@ import {
   saleLineProblems,
   saleTimestamp,
 } from "./lib/sales";
-import { productDetails } from "./lib/products";
+import { describeProduct } from "./lib/products";
 import {
   applySalePayment,
   collectionMethodValidator,
@@ -32,19 +31,6 @@ import {
  * all_locations anywhere (Chief Sales Admin, Super Admin). sales.view lists
  * them, own_location viewers seeing only their location.
  */
-
-async function describeProduct(ctx: QueryCtx, productId: Id<"products">) {
-  const product = await ctx.db.get("products", productId);
-  const details = await productDetails(ctx, product);
-  return {
-    productName: product?.name ?? null,
-    sku: product?.sku ?? null,
-    lengthInches: product?.lengthInches ?? null,
-    colourName: details.colourName,
-    sizeName: details.sizeName,
-  };
-}
-
 
 /**
  * What the sale form needs: where the caller may sell (locked to their own

@@ -22,6 +22,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
+import { useProductLineLabel } from "./use-product-line-label";
 
 type SaleRow = PaginatedQueryItem<typeof api.sales.list>;
 
@@ -55,7 +56,7 @@ const NO_FILTERS: SalesFilters = { from: "", to: "", locationId: "", creditStatu
  */
 export function SalesPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Sales");
-  const tProducts = useTranslations("Products");
+  const lineLabel = useProductLineLabel();
   const locale = useLocale();
   const canView = useCan("sales.view");
   const canSell = useCan("sales.create");
@@ -166,13 +167,7 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
             <div className="flex items-start justify-between gap-3">
               <span className="min-w-0">
                 <span className="block font-medium">
-                  {[
-                    line.productName ?? "—",
-                    line.lengthInches !== null ? tProducts("inches", { inches: line.lengthInches }) : null, line.sizeName,
-                    line.colourName,
-                  ]
-                    .filter(Boolean)
-                    .join(" · ")}
+                  {lineLabel(line)}
                 </span>
                 <span className="block text-xs text-muted-foreground">
                   {[line.sku, line.batchNumber].filter(Boolean).join(" · ")}

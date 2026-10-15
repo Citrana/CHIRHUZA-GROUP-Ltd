@@ -223,6 +223,19 @@ export async function productDetails(ctx: QueryCtx, product: Doc<"products"> | n
   };
 }
 
+/** A product by id with its name, SKU and productDetails (sale lines, lots). */
+export async function describeProduct(ctx: QueryCtx, productId: Id<"products">) {
+  const product = await ctx.db.get("products", productId);
+  const details = await productDetails(ctx, product);
+  return {
+    productName: product?.name ?? null,
+    sku: product?.sku ?? null,
+    lengthInches: product?.lengthInches ?? null,
+    colourName: details.colourName,
+    sizeName: details.sizeName,
+  };
+}
+
 /**
  * Recomputes a stored product's search text (e.g. after its colour was
  * renamed). Writes only when it changed; returns whether it did.
