@@ -1639,5 +1639,32 @@
     "body": "The page you're looking for doesn't exist or has been moved.",
     "home": "Back to home",
     "back": "Go back"
+  },
+  "SaleCelebration": {
+    "wellDone": "Well done, {name}.",
+    "wellDoneNoName": "Well done.",
+    "soldToday": "{units, plural, one {# product} other {# products}} sold today at {location}.",
+    "soldOn": "{units, plural, one {# product} other {# products}} sold on {date} at {location}.",
+    "tiers": {
+      "seedling": "A good start",
+      "star": "Going strong",
+      "trophy": "Great day",
+      "crown": "Outstanding day"
+    },
+    "quotes": {
+      "q1": "Every sale builds the business, one customer at a time.",
+      "q2": "Consistency turns good days into great months.",
+      "q3": "A happy customer is the best advertisement.",
+      "q4": "Small steps every day lead to big results.",
+      "q5": "Your work today shapes tomorrow's success.",
+      "q6": "Great service is remembered long after the sale.",
+      "q7": "Keep going: the effort shows in the numbers.",
+      "q8": "Each customer served well is a customer who returns.",
+      "q9": "Success is the sum of small efforts, repeated daily.",
+      "q10": "Good records today, better decisions tomorrow.",
+      "q11": "Steady work builds a strong business.",
+      "q12": "Thank you for the care you put into every sale."
+    },
+    "dismiss": "Dismiss"
   }
 }

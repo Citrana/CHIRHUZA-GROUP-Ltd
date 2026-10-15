@@ -1639,5 +1639,32 @@
     "body": "La page que vous cherchez n'existe pas ou a été déplacée.",
     "home": "Retour à l'accueil",
     "back": "Retour"
+  },
+  "SaleCelebration": {
+    "wellDone": "Bravo, {name}.",
+    "wellDoneNoName": "Bravo.",
+    "soldToday": "{units, plural, one {# produit vendu} other {# produits vendus}} aujourd'hui à {location}.",
+    "soldOn": "{units, plural, one {# produit vendu} other {# produits vendus}} le {date} à {location}.",
+    "tiers": {
+      "seedling": "Un bon début",
+      "star": "Belle lancée",
+      "trophy": "Excellente journée",
+      "crown": "Journée exceptionnelle"
+    },
+    "quotes": {
+      "q1": "Chaque vente construit l'entreprise, un client à la fois.",
+      "q2": "La constance transforme les bons jours en grands mois.",
+      "q3": "Un client satisfait est la meilleure des publicités.",
+      "q4": "De petits pas chaque jour mènent à de grands résultats.",
+      "q5": "Votre travail d'aujourd'hui prépare le succès de demain.",
+      "q6": "Un bon service se souvient bien après la vente.",
+      "q7": "Continuez : l'effort se voit dans les chiffres.",
+      "q8": "Un client bien servi est un client qui revient.",
+      "q9": "Le succès est la somme de petits efforts répétés chaque jour.",
+      "q10": "De bons enregistrements aujourd'hui, de meilleures décisions demain.",
+      "q11": "Un travail régulier bâtit une entreprise solide.",
+      "q12": "Merci pour le soin que vous mettez dans chaque vente."
+    },
+    "dismiss": "Fermer"
   }
 }

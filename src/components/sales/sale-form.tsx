@@ -36,6 +36,8 @@ import { ProductPhoto } from "@/components/products/product-photo";
 import { CustomerPicker, type PickedCustomer } from "@/components/sales/customer-picker";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
+import { type CelebrationTier, firstName, nextQuote, tierFor } from "@/lib/sale-celebration";
+import { SaleCelebration } from "./sale-celebration";
 
 type Options = FunctionReturnType<typeof api.sales.options>;
 type Lot = Options["lots"][number];
@@ -103,6 +105,17 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     soldOn: string;
     credit?: { customer: string; balance: number };
   } | null>(null);
+  // The mascot after each sale: the shop's products that day, its gift and a quote.
+  const [celebration, setCelebration] = useState<{
+    key: string;
+    units: number;
+    location: string;
+    soldOn: string;
+    tier: CelebrationTier;
+    quote: number;
+  } | null>(null);
+  const [lastQuote, setLastQuote] = useState<number | null>(null);
+  const me = useQuery(api.users.getCurrentUser);
   // The day of the sale: today, or up to MAX_BACKDATE_DAYS back for a sale
   // recorded late. Kept after recording, to enter several late sales.
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
@@ -269,6 +282,16 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         soldOn: result.soldOn,
         ...(isCredit && creditCustomer ? { credit: { customer: creditCustomer.name, balance } } : {}),
       });
+      const quote = nextQuote(lastQuote);
+      setLastQuote(quote);
+      setCelebration({
+        key: result.number,
+        units: result.dayUnits,
+        location: options?.locations.find((l) => l._id === locationId)?.name ?? "",
+        soldOn: result.soldOn,
+        tier: tierFor(result.dayUnits),
+        quote,
+      });
       // The form may stay open past midnight: "today" per the server.
       setToday(result.recordedOn);
       setLines([]);
@@ -290,6 +313,18 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 pb-28">
+      {celebration ? (
+        <SaleCelebration
+          key={celebration.key}
+          name={firstName(me?.name)}
+          units={celebration.units}
+          location={celebration.location}
+          date={celebration.soldOn === today ? null : longDay(celebration.soldOn)}
+          tier={celebration.tier}
+          quote={celebration.quote}
+          onDone={() => setCelebration(null)}
+        />
+      ) : null}
       <Link
         href={`/${service}/sales`}
         className="inline-flex min-h-11 items-center gap-1 self-start text-sm text-muted-foreground hover:text-foreground"
