@@ -24,6 +24,7 @@ import { MoneyInput } from "@/components/ui/money-input";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
+import { useProductLineLabel } from "./use-product-line-label";
 
 type View = FunctionReturnType<typeof api.credit.customer>;
 type SaleRow = View["sales"][number];
@@ -42,6 +43,7 @@ function errorMessage(e: unknown, fallback: string): string {
 export function CustomerCredit({ service, customerId }: { service: BusinessUnitKey; customerId: string }) {
   const t = useTranslations("Credit");
   const tSales = useTranslations("Sales");
+  const lineLabel = useProductLineLabel();
   const locale = useLocale();
   const canView = useCan("sales.view");
   const view = useQuery(api.credit.customer, canView ? { customerId: customerId as Id<"customers"> } : "skip");
@@ -119,8 +121,21 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
       <Badge variant="secondary">{t("statusSettled")}</Badge>
     );
 
+  // What the customer took on a sale, one product per line.
+  const products = (s: SaleRow) =>
+    s.lines.length > 0 ? (
+      <ul className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+        {s.lines.map((line) => (
+          <li key={line._id}>
+            {lineLabel(line)} · {tSales("qtyAtPrice", { qty: line.qty, price: money(line.unitPrice) })}
+          </li>
+        ))}
+      </ul>
+    ) : null;
+
   const saleColumns: DataTableColumn<SaleRow>[] = [
     { id: "number", header: t("saleHeader"), cell: ({ row }) => row.original.number, meta: { className: "font-mono text-xs font-medium" } },
+    { id: "products", header: t("productsHeader"), cell: ({ row }) => products(row.original) },
     {
       id: "date",
       header: t("dateHeader"),
@@ -294,17 +309,20 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
           getRowId={(s) => s._id}
           emptyMessage={t("noSales")}
           renderCard={(s) => (
-            <div className="flex items-center justify-between gap-3">
-              <span className="min-w-0">
-                <span className="block font-mono text-xs font-medium">{s.number}</span>
-                <span className="block text-xs text-muted-foreground">
-                  {day.format(s.createdAt)} · {t("totalHeader")} {money(s.totalAmount)} · {t("paidHeader")} {money(s.amountPaid)}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="min-w-0">
+                  <span className="block font-mono text-xs font-medium">{s.number}</span>
+                  <span className="block text-xs text-muted-foreground">
+                    {day.format(s.createdAt)} · {t("totalHeader")} {money(s.totalAmount)} · {t("paidHeader")} {money(s.amountPaid)}
+                  </span>
                 </span>
-              </span>
-              <span className="flex shrink-0 flex-col items-end gap-1">
-                <span className="font-semibold tabular-nums">{money(s.balance)}</span>
-                {statusBadge(s)}
-              </span>
+                <span className="flex shrink-0 flex-col items-end gap-1">
+                  <span className="font-semibold tabular-nums">{money(s.balance)}</span>
+                  {statusBadge(s)}
+                </span>
+              </div>
+              {products(s)}
             </div>
           )}
         />

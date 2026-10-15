@@ -1370,6 +1370,7 @@
     "owes": "Owes {amount}",
     "salesTitle": "Credit sales",
     "saleHeader": "Sale",
+    "productsHeader": "Products",
     "dateHeader": "Date",
     "totalHeader": "Total",
     "paidHeader": "Paid",

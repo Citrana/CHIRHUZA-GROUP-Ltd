@@ -6,7 +6,8 @@ import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUni
 import { requestApproval } from "./lib/approvals";
 import { logAudit } from "./lib/audit";
 import type { Scope } from "./lib/permissions";
-import { MAX_BACKDATE_DAYS, saleTimestamp } from "./lib/sales";
+import { MAX_BACKDATE_DAYS, MAX_SALE_LINES, saleTimestamp } from "./lib/sales";
+import { describeProduct } from "./lib/products";
 import { businessDayOf } from "./lib/time";
 import {
   allocateRepayment,
@@ -61,7 +62,7 @@ export const owed = authedQuery({
   },
 });
 
-/** One customer: their credit sales and payments (within scope). */
+/** One customer: their credit sales (with the products taken) and payments (within scope). */
 export const customer = authedQuery({
   args: { customerId: v.id("customers") },
   handler: async (ctx, { customerId }) => {
@@ -109,6 +110,20 @@ export const customer = authedQuery({
           amountPaid: sale.amountPaid ?? 0,
           balance: saleBalance(sale),
           creditStatus: sale.creditStatus ?? null,
+          // What the customer took on this sale.
+          lines: await Promise.all(
+            (
+              await ctx.db
+                .query("saleItems")
+                .withIndex("by_saleId", (q) => q.eq("saleId", sale._id))
+                .take(MAX_SALE_LINES)
+            ).map(async (item) => ({
+              _id: item._id,
+              qty: item.qty,
+              unitPrice: item.unitPrice,
+              ...(await describeProduct(ctx, item.productId)),
+            })),
+          ),
         })),
       ),
       payments: await Promise.all(
