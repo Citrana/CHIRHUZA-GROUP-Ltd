@@ -273,8 +273,51 @@ narrow.
 ```
 
 Keep filter state in the page, and feed it into the query args (server) or
-filter `data` before passing it in (client). With many filters, fold them
-behind a toggle button on phones, as the audit log does.
+filter `data` before passing it in (client).
+
+### Filters button (`FilterPanel`)
+
+With several filters, put them behind one **Filters** button
+(`src/components/filters/`): a bottom sheet on phones, a drop-down from
+`sm` up, with Clear / Apply. The applied filters show as removable chips.
+The fields edit a draft, and nothing changes until Apply. See
+`src/components/sales/sales-panel.tsx`.
+
+```tsx
+type F = { from: string; to: string; status: string };
+const NONE: F = { from: "", to: "", status: "" };
+const [applied, setApplied] = useState<F>(NONE);
+const dateLabel = useDateRangeLabel();
+
+<DataTable
+  toolbar={
+    <FilterPanel
+      value={applied}
+      onApply={setApplied}
+      emptyValue={NONE}
+      chips={(f) => [
+        ...(dateLabel(f) ? [{ id: "dates", label: dateLabel(f)!, clear: (v: F) => ({ ...v, from: "", to: "" }) }] : []),
+        ...(f.status ? [{ id: "status", label: t(`status.${f.status}`), clear: (v: F) => ({ ...v, status: "" }) }] : []),
+      ]}
+    >
+      {(draft, setDraft) => (
+        <>
+          <DateRangeFilter id="x-dates" value={draft} onChange={(r) => setDraft({ ...draft, ...r })} />
+          <FilterField id="x-status" label={t("statusLabel")}>
+            <NativeSelect id="x-status" value={draft.status} onChange={(e) => setDraft({ ...draft, status: e.target.value })} className="h-11 w-full sm:h-8">
+              …
+            </NativeSelect>
+          </FilterField>
+        </>
+      )}
+    </FilterPanel>
+  }
+/>
+```
+
+`DateRangeFilter` holds the shortcuts (Today … Last month, in Lubumbashi
+time, from `src/lib/date-presets.ts`) and From / To. Its strings, and the
+panel's own strings, live in the `Filters` namespace.
 
 ## Rules
 
