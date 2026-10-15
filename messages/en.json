@@ -222,7 +222,6 @@
       "lockedBadge": "Locked",
       "edit": "Edit permissions",
       "back": "Back to roles",
-      "notFound": "Role not found.",
       "lockedNote": "The Super Admin role is locked: it always holds every permission, so nobody can lock themselves out.",
       "permissionHeader": "Permission",
       "grantedHeader": "Granted",
@@ -686,7 +685,6 @@
     "addToRequisition": "Add to requisition",
     "qtyError": "Whole number from 1.",
     "backToList": "All requisitions",
-    "notFound": "This requisition doesn't exist or you can't see it.",
     "productHeader": "Product",
     "qtyHeader": "Quantity",
     "lineNoteHeader": "Note",
@@ -838,7 +836,6 @@
     "reasonLabel": "Reason",
     "remove": "Remove",
     "backToList": "All batches",
-    "notFound": "This batch doesn't exist or you can't see it.",
     "incomplete": "{count, plural, one {# line still needs} other {# lines still need}} a unit cost, a quantity or a reason.",
     "productHeader": "Product",
     "lineStatusHeader": "Status",
@@ -1636,5 +1633,11 @@
     "showNetProfit": "Show net profit",
     "hideNetProfit": "Hide net profit",
     "hiddenValue": "Hidden"
+  },
+  "NotFound": {
+    "title": "Page not found",
+    "body": "The page you're looking for doesn't exist or has been moved.",
+    "home": "Back to home",
+    "back": "Go back"
   }
 }

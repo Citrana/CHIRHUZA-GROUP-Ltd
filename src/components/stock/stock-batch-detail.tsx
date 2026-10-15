@@ -17,6 +17,7 @@ import {
 import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
+import { notFound } from "next/navigation";
 import { api } from "../../../convex/_generated/api";
 import type { Doc, Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
@@ -168,14 +169,8 @@ export function StockBatchDetail({ service, batchId }: { service: BusinessUnitKe
   );
 
   if (batch === undefined) return <p className="text-sm text-muted-foreground">{t("loading")}</p>;
-  if (batch === null || batch.businessUnitKey !== service) {
-    return (
-      <div className="flex flex-col gap-4">
-        {back}
-        <p className="text-sm text-muted-foreground">{t("notFound")}</p>
-      </div>
-    );
-  }
+  // A wrong link (bad id, another service's batch): the 404 page.
+  if (batch === null || batch.businessUnitKey !== service) notFound();
 
   const money = (minor: number | undefined | null) =>
     minor === undefined || minor === null ? "—" : formatMoney(minor, "USD", locale);

@@ -117,7 +117,7 @@ test("a credit sale: agreed total with a reason, part paid now, the rest owed", 
   expect(payments).toMatchObject([{ amount: 700, method: "cash", kind: "at_sale", customerId: neema }]);
   // The customer's credit page shows the products they took.
   const view = await s.as(s.agent).query(api.credit.customer, { customerId: neema });
-  expect(view.sales[0].lines.map((l) => [l.productName, l.qty, l.unitPrice])).toEqual([
+  expect(view!.sales[0].lines.map((l) => [l.productName, l.qty, l.unitPrice])).toEqual([
     ["P1", 2, 500],
     ["P2", 1, 1500],
   ]);
@@ -186,6 +186,17 @@ test("repayments go to the oldest sales first and can't exceed what's owed", asy
   expect(await rollups(s)).toEqual(incremental);
 });
 
+test("a wrong customer link is just not found", async () => {
+  const { s, customer } = await withShopStock();
+  const neema = await customer("Mama Neema");
+  expect((await s.as(s.agent).query(api.credit.customer, { customerId: neema }))!.businessUnitKey).toBe("hair");
+  // Garbage, an id of another table, a deleted customer: null, never a crash.
+  expect(await s.as(s.agent).query(api.credit.customer, { customerId: "xyz" })).toBeNull();
+  expect(await s.as(s.agent).query(api.credit.customer, { customerId: s.shop })).toBeNull();
+  await s.t.run((ctx) => ctx.db.delete("customers", neema));
+  expect(await s.as(s.agent).query(api.credit.customer, { customerId: neema })).toBeNull();
+});
+
 test("scope: an own_location seller only sees and collects their own location's credit", async () => {
   const { s, other, p1Lot, customer } = await withShopStock();
   const esther = await customer("Esther", s.sales);
@@ -193,7 +204,7 @@ test("scope: an own_location seller only sees and collects their own location's 
 
   expect((await s.as(s.agent).query(api.credit.owed, { businessUnitKey: "hair" })).rows).toEqual([]);
   expect((await s.as(s.chief).query(api.credit.owed, { businessUnitKey: "hair" })).rows).toMatchObject([{ name: "Esther", balance: 500 }]);
-  expect((await s.as(s.agent).query(api.credit.customer, { customerId: esther })).sales).toEqual([]);
+  expect((await s.as(s.agent).query(api.credit.customer, { customerId: esther }))!.sales).toEqual([]);
   await expect(
     s.as(s.agent).mutation(api.credit.recordRepayment, { customerId: esther, amount: 100, method: "cash" }),
   ).rejects.toThrow(/owes nothing here/);
@@ -221,7 +232,7 @@ test("a wrong payment is reversed through an approval, never by its requester", 
   await expect(s.as(s.agent).mutation(api.credit.requestPaymentReversal, { paymentId: payment._id, reason: "Again" })).rejects.toThrow(
     /already waiting/,
   );
-  expect((await s.as(s.agent).query(api.credit.customer, { customerId: nadine })).payments).toMatchObject([
+  expect((await s.as(s.agent).query(api.credit.customer, { customerId: nadine }))!.payments).toMatchObject([
     { amount: 1000, reversed: false, reversalPending: true },
   ]);
   // The requester can't decide it.
@@ -231,7 +242,7 @@ test("a wrong payment is reversed through an approval, never by its requester", 
   expect(await getSale(s, saleId)).toMatchObject({ amountPaid: 0, creditStatus: "open" });
   expect((await getCustomer(s, nadine))!.balance).toBe(1000);
   const view = await s.as(s.agent).query(api.credit.customer, { customerId: nadine });
-  expect(view.payments.map((p) => [p.kind, p.amount, p.reversed])).toEqual([
+  expect(view!.payments.map((p) => [p.kind, p.amount, p.reversed])).toEqual([
     ["reversal", -1000, false],
     ["repayment", 1000, true],
   ]);

@@ -62,13 +62,19 @@ export const owed = authedQuery({
   },
 });
 
-/** One customer: their credit sales (with the products taken) and payments (within scope). */
+/**
+ * One customer: their credit sales (with the products taken) and payments
+ * (within scope). null when the id is invalid or the customer doesn't exist.
+ */
 export const customer = authedQuery({
-  args: { customerId: v.id("customers") },
-  handler: async (ctx, { customerId }) => {
+  // A string, not v.id: it comes from the URL, and a bad one is just "not found".
+  args: { customerId: v.string() },
+  handler: async (ctx, args) => {
     const { scope } = await ctx.requirePermission("sales.view");
-    const customer = await ctx.db.get("customers", customerId);
-    if (!customer) throw new ConvexError("Customer not found.");
+    const customerId = ctx.db.normalizeId("customers", args.customerId);
+    const customer = customerId ? await ctx.db.get("customers", customerId) : null;
+    if (!customerId || !customer) return null;
+    const unit = await ctx.db.get("businessUnits", customer.businessUnitId);
     const sales = (
       await ctx.db
         .query("sales")
@@ -96,6 +102,7 @@ export const customer = authedQuery({
     }
     return {
       _id: customer._id,
+      businessUnitKey: unit?.key ?? null,
       name: customer.name,
       phone: customer.phone ?? null,
       balance: sales.filter((s) => s.creditStatus === "open").reduce((t, s) => t + saleBalance(s), 0),
