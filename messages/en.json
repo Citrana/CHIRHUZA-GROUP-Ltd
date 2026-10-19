@@ -1044,12 +1044,12 @@
       "distributions": "Distributions"
     },
     "title": "Stock",
-    "subtitle": "What's on hand, and who holds it.",
+    "subtitle": "What's left, and who holds it.",
     "subtitleOwn": "What your location and you hold.",
     "accessDenied": "You don't have access to stock.",
     "businessHolder": "Business (unassigned)",
     "totalsLabel": "Totals",
-    "unitsOnHand": "Units on hand",
+    "unitsOnHand": "Units left",
     "stockValue": "Stock value (selling prices)",
     "unpricedNote": "{count, plural, one {# product without a selling price not included} other {# products without a selling price not included}}",
     "unpricedInStock": "{count} in stock",
@@ -1061,12 +1061,12 @@
       "holder": "By holder"
     },
     "productHeader": "Product",
-    "onHandHeader": "On hand",
+    "onHandHeader": "Left",
     "whereHeader": "Where",
     "valueHeader": "Value",
     "lotHeader": "Lot",
     "unitCostHeader": "Unit cost",
-    "receivedHeader": "Received",
+    "receivedHeader": "Bought in",
     "holderHeader": "Holder",
     "holderTypeHeader": "Type",
     "holderTypes": {
@@ -1076,26 +1076,25 @@
     },
     "productsHeader": "Lots",
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
-    "receivedCount": "{count} received",
+    "receivedCount": "{count} bought in",
     "empty": "No stock on hand yet. Stock appears once a purchase batch is received.",
-    "valueHint": "In the tables, value is units on hand × the purchase unit cost. Trip expenses are kept separately.",
+    "valueHint": "In the tables, value is units left × the purchase unit cost. Trip expenses are kept separately.",
     "report": {
       "all": "All",
       "statuses": {
-        "in_stock": "In stock",
-        "low": "Low stock",
-        "out": "Out of stock",
-        "never": "Never stocked"
+        "in_stock": "Available",
+        "low": "Running low",
+        "out": "Sold out",
+        "never": "Not received yet"
       },
       "since": "since {date}",
-      "download": "Download (CSV)",
-      "searchPlaceholder": "Search by name, SKU, length, size or colour",
+      "searchPlaceholder": "Search name, SKU, colour…",
       "empty": "No products match.",
       "productHeader": "Product",
       "statusHeader": "Status",
-      "onHandHeader": "On hand",
+      "onHandHeader": "Left",
       "soldHeader": "Sold",
-      "receivedHeader": "Received",
+      "receivedHeader": "Bought in",
       "lastSoldHeader": "Last sold",
       "soldCount": "{count} sold",
       "loading": "Loading…",
@@ -1112,9 +1111,9 @@
         "transfer": "Transferred",
         "return": "Returned"
       },
-      "thresholdLabel": "Low stock at",
+      "thresholdLabel": "Running low at",
       "thresholdPlaceholder": "e.g. 5",
-      "thresholdHint": "Marked \"Low stock\" when this many or fewer are left. Leave empty for none.",
+      "thresholdHint": "Marked \"Running low\" when this many or fewer are left. Leave empty for none.",
       "thresholdError": "Enter a whole number from 0.",
       "save": "Save",
       "csv": {
@@ -1122,18 +1121,53 @@
         "sku": "SKU",
         "details": "Details",
         "status": "Status",
-        "onHand": "On hand",
-        "received": "Received",
-        "sold": "Sold",
-        "lastReceived": "Last received",
+        "onHand": "Left",
+        "received": "Bought in",
+        "sold": "Sold (all time)",
+        "lastReceived": "Last bought in",
         "lastSold": "Last sold",
-        "outSince": "Out of stock since",
-        "threshold": "Low stock at"
+        "outSince": "Sold out since",
+        "threshold": "Running low at"
+      },
+      "periodLabel": "Period",
+      "periods": {
+        "30": "Last 30 days",
+        "90": "Last 90 days",
+        "all": "All time"
+      },
+      "soldPeriodHeader": {
+        "30": "Sold (30 days)",
+        "90": "Sold (90 days)",
+        "all": "Sold (all time)"
+      },
+      "never": "Never",
+      "emptyFiltered": "No products match these filters",
+      "clearFilters": "Clear filters",
+      "statusFilters": {
+        "available": "Available",
+        "low": "Running low",
+        "out": "Sold out",
+        "never": "Not received yet"
+      },
+      "leftOf": "{left} left of {total}",
+      "leftOnly": "{left} left",
+      "soldAllTime": "Sold (all time)",
+      "showLabel": "Show",
+      "shows": {
+        "all": "All products",
+        "well": "Selling well",
+        "slow": "Selling slowly",
+        "not_selling": "Not selling"
+      },
+      "neverSold": "Never sold",
+      "csvSoldPeriod": {
+        "30": "Sold (30 days)",
+        "90": "Sold (90 days)"
       }
     },
-    "lowOutLabel": "Low / out of stock",
-    "lowCount": "{count} low",
-    "outCount": "{count} out",
+    "lowOutLabel": "Running low / sold out",
+    "lowCount": "{count} running low",
+    "outCount": "{count} sold out",
     "pdf": {
       "download": "Download PDF",
       "preparing": "Preparing…",
@@ -1160,7 +1194,14 @@
       "empty": "No stock on hand.",
       "downloadedBy": "Downloaded by {name} on {date}",
       "page": "Page {page} / {pages}"
-    }
+    },
+    "export": {
+      "label": "Export",
+      "pdf": "Stock report (PDF)",
+      "csv": "Products (CSV)"
+    },
+    "showLow": "Show products running low",
+    "showOut": "Show products sold out"
   },
   "Distributions": {
     "title": "Distributions",
@@ -1603,6 +1644,7 @@
     "footnote": "Margin = sale price − purchase cost of the lot (trip expenses aren't spread into product costs). Dates are in Lubumbashi time (UTC+2); weeks start on Monday. USD.",
     "loss": "Loss",
     "vsPrevious": "vs {range}",
+    "noCompare": "No figures for {range} to compare",
     "deltaUp": "Up {pct}% vs {range}",
     "deltaDown": "Down {pct}% vs {range}",
     "monthToDate": "{month} (month to date)",

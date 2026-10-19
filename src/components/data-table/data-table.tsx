@@ -49,7 +49,8 @@ export type DataTableProps<TData extends RowData> = {
   /** `undefined` while loading. */
   data: TData[] | undefined;
   getRowId: (row: TData) => string;
-  emptyMessage?: string;
+  /** Shown when there are no rows (text, or e.g. a message with a button). */
+  emptyMessage?: ReactNode;
   /**
    * Show a search box. Without `onChange` it filters the loaded rows
    * (client-side); with `onChange` the caller owns the value and filtering
@@ -57,6 +58,8 @@ export type DataTableProps<TData extends RowData> = {
    */
   search?: {
     placeholder?: string;
+    /** Extra classes for the search box (e.g. a wider one). */
+    className?: string;
     value?: string;
     onChange?: (value: string) => void;
   };
@@ -70,6 +73,14 @@ export type DataTableProps<TData extends RowData> = {
    */
   pagination?: DataTablePagination | false;
   initialSorting?: SortingState;
+  /**
+   * Controlled sorting (e.g. kept in the URL): pass both. Without them the
+   * table keeps its own, starting from `initialSorting`.
+   */
+  sorting?: SortingState;
+  onSortingChange?: (sorting: SortingState) => void;
+  /** Rows arrive already sorted (by the caller); headers only report the choice. */
+  manualSorting?: boolean;
   /** Clicking a row toggles this detail view underneath it. */
   renderExpanded?: (row: TData) => ReactNode;
   /**
@@ -111,6 +122,9 @@ export function DataTable<TData extends RowData>({
   toolbar,
   pagination,
   initialSorting = [],
+  sorting: controlledSorting,
+  onSortingChange,
+  manualSorting = false,
   renderExpanded,
   onRowClick,
   renderCard,
@@ -120,7 +134,13 @@ export function DataTable<TData extends RowData>({
   const t = useTranslations("DataTable");
   // Inline expansion only applies when rows don't open something else.
   const renderInline = onRowClick ? undefined : renderExpanded;
-  const [sorting, setSorting] = useState<SortingState>(initialSorting);
+  const [ownSorting, setOwnSorting] = useState<SortingState>(initialSorting);
+  const sorting = controlledSorting ?? ownSorting;
+  const setSorting = (updater: SortingState | ((old: SortingState) => SortingState)) => {
+    const next = typeof updater === "function" ? updater(sorting) : updater;
+    if (onSortingChange) onSortingChange(next);
+    else setOwnSorting(next);
+  };
   const [clientSearch, setClientSearch] = useState("");
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   // Every table paginates unless it opts out with `pagination={false}`.
@@ -160,6 +180,7 @@ export function DataTable<TData extends RowData>({
     // Server pages (and unpaginated tables) arrive ready to show as-is.
     manualPagination: !clientPaging,
     enableSortingRemoval: false,
+    manualSorting,
     // Sorting is opt-in per column (`enableSorting: true`).
     defaultColumn: { enableSorting: false },
   });
@@ -245,6 +266,7 @@ export function DataTable<TData extends RowData>({
               value={searchIsServer ? (search.value ?? "") : clientSearch}
               onChange={search.onChange ?? changeClientSearch}
               placeholder={search.placeholder}
+              className={search.className}
             />
           ) : null}
           {toolbar}

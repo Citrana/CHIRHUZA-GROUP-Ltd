@@ -12,6 +12,8 @@ import {
   type StockRow,
 } from "./lib/inventory";
 import { PRODUCT_PROFILES, productDetails } from "./lib/products";
+import { ALL } from "./lib/analytics";
+import { addBusinessDays, businessDayOf } from "./lib/time";
 
 /**
  * Stock overview (stock.view): what's on hand, by product, by lot and by
@@ -249,6 +251,52 @@ export const productReportExport = authedQuery({
       if (!shown(product, summary)) continue;
       if (status && (summary?.status ?? "never") !== status) continue;
       rows.push(await reportRow(ctx, product, summary, false));
+    }
+    return rows;
+  },
+});
+
+const MAX_PERIOD_STATS = 8000;
+
+/**
+ * Every report line (bounded) with what each product sold in the last
+ * `periodDays` business days (`soldInPeriod`, from the `dailyStats`
+ * rollups; all time = `sold` when omitted). The By product view loads it
+ * once and filters, sorts and pages on the client. stock.view.
+ */
+export const productReportRows = authedQuery({
+  args: {
+    businessUnitKey: businessUnitKeyValidator,
+    periodDays: v.optional(v.union(v.literal(30), v.literal(90))),
+  },
+  handler: async (ctx, { businessUnitKey, periodDays }) => {
+    await ctx.requirePermission("stock.view");
+    const unit = await requireBusinessUnit(ctx, businessUnitKey);
+    const withPhotos = PRODUCT_PROFILES[unit.key].attributes.photo;
+
+    let soldByProduct: Map<string, number> | null = null;
+    if (periodDays) {
+      const from = addBusinessDays(businessDayOf(Date.now()), -(periodDays - 1));
+      const stats = await ctx.db
+        .query("dailyStats")
+        .withIndex("by_unit_location_day", (q) =>
+          q.eq("businessUnitId", unit._id).eq("locationKey", ALL).gte("day", from),
+        )
+        .take(MAX_PERIOD_STATS);
+      soldByProduct = new Map();
+      for (const s of stats) soldByProduct.set(s.productId, (soldByProduct.get(s.productId) ?? 0) + s.unitsSold);
+    }
+
+    const products = await ctx.db
+      .query("products")
+      .withIndex("by_businessUnitId_and_name", (q) => q.eq("businessUnitId", unit._id))
+      .take(MAX_REPORT_ROWS);
+    const rows = [];
+    for (const product of products) {
+      const summary = await summaryOf(ctx, product._id);
+      if (!shown(product, summary)) continue;
+      const row = await reportRow(ctx, product, summary, withPhotos);
+      rows.push({ ...row, soldInPeriod: soldByProduct ? (soldByProduct.get(product._id) ?? 0) : row.sold });
     }
     return rows;
   },

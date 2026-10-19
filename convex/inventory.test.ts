@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { appendOnlyGuardedDb } from "./lib/rbac";
+import { addBusinessDays, businessDayOf } from "./lib/time";
 import {
   applyMovement,
   businessHolderRef,
@@ -219,6 +220,34 @@ test("product stock report: finished products stay listed, with totals, status a
   const p2Lot = (await s.t.run((ctx) => ctx.db.query("inventoryBatches").collect())).find((l) => l.productId === p2)!;
   await move(s, { type: "distribute", inventoryBatchId: p2Lot._id, fromHolderId: business, toHolderId: shop, qty: 1 });
   expect(await s.as(s.chief).query(api.inventory.productReportExport, { businessUnitKey: "hair", status: "out" })).toHaveLength(1);
+});
+
+test("product report rows: sold in the period comes from the rollups, all time from the summary", async () => {
+  const { s, lot, business, shop } = await received();
+  await move(s, { type: "distribute", inventoryBatchId: lot._id, fromHolderId: business, toHolderId: shop, qty: 10 });
+  await s.as(s.agent).mutation(api.sales.create, {
+    businessUnitKey: "hair",
+    paymentMethod: "cash",
+    lines: [{ inventoryBatchId: lot._id, qty: 4, unitPrice: 500 }],
+  });
+  // An older sale (60 days ago) only counts in the 90-day and all-time views.
+  const hairId = lot.businessUnitId;
+  const day = addBusinessDays(businessDayOf(Date.now()), -60);
+  await s.t.run((ctx) =>
+    ctx.db.insert("dailyStats", { businessUnitId: hairId, locationKey: "*", productId: lot.productId, day, unitsSold: 2, revenue: 1000, cost: 0, margin: 1000 }),
+  );
+  const p1 = async (periodDays?: 30 | 90) =>
+    (await s.as(s.chief).query(api.inventory.productReportRows, { businessUnitKey: "hair", ...(periodDays ? { periodDays } : {}) })).find(
+      (r) => r.name === "P1",
+    )!;
+  expect(await p1(30)).toMatchObject({ sold: 4, soldInPeriod: 4, onHand: 6, received: 10 });
+  expect((await p1(90)).soldInPeriod).toBe(6);
+  expect((await p1()).soldInPeriod).toBe(4);
+  // Never-stocked products are listed too.
+  const rows = await s.as(s.chief).query(api.inventory.productReportRows, { businessUnitKey: "hair", periodDays: 30 });
+  expect(rows.find((r) => r.name === "P4")).toMatchObject({ status: "never", soldInPeriod: 0 });
+  // stock.view is required.
+  await expect(s.as(s.agent).query(api.inventory.productReportRows, { businessUnitKey: "hair" })).rejects.toThrow(/stock\.view/);
 });
 
 test("product stock summaries equal a rebuild from the movements", async () => {

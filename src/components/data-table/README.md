@@ -65,11 +65,13 @@ needed.
 | `columns` | `DataTableColumn<Row>[]` | required | Column definitions (see [Columns](#columns)). |
 | `data` | `Row[] \| undefined` | required | The rows. `undefined` shows "Loading…". Pass `useQuery`'s result straight through. |
 | `getRowId` | `(row) => string` | required | Stable id per row (normally `row._id`). Used for keys and expansion. |
-| `emptyMessage` | `string` | "No results." | Shown when there are no rows. Also shown when a search matches nothing. |
-| `search` | `{ placeholder?, value?, onChange? }` | off | Shows a search box. **Without `onChange`:** filters the loaded rows client-side. **With `value` + `onChange`:** you own the text and filter on the server (pass it to your query). |
+| `emptyMessage` | `ReactNode` | "No results." | Shown when there are no rows (text, or a message with a button). Also shown when a search matches nothing. |
+| `search` | `{ placeholder?, className?, value?, onChange? }` | off | Shows a search box. **Without `onChange`:** filters the loaded rows client-side. **With `value` + `onChange`:** you own the text and filter on the server (pass it to your query). |
 | `toolbar` | `ReactNode` | none | Filters or actions shown beside the search box. Wraps on phones. |
 | `pagination` | `{ mode: "client", pageSize?, pageSizeOptions? }`, `{ mode: "server", ...PaginationProps }`, or `false` | **on** (`client`, 10 per page) | See [Pagination](#pagination). `false` turns it off. |
 | `initialSorting` | `SortingState` | `[]` | e.g. `[{ id: "name", desc: false }]`. |
+| `sorting` / `onSortingChange` | `SortingState` / `(s) => void` | - | Controlled sorting, e.g. kept in the URL (Stock's By product report). Pass both. |
+| `manualSorting` | `boolean` | `false` | The caller sorts the rows (e.g. so a CSV export follows the same order); headers only report the choice. |
 | `renderExpanded` | `(row) => ReactNode` | off | Makes rows clickable. A click, Enter or Space toggles this detail view under the row. |
 | `onRowClick` | `(row) => void` | off | Makes rows clickable (click, Enter or Space) and calls this instead, e.g. to open a detail drawer (see the Approvals page). Takes precedence over `renderExpanded`, so use one or the other. |
 | `renderCard` | `(row) => ReactNode` | off | On phones (below `md`) renders one card per row instead of the table. |

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import { isBusinessUnitKey } from "../../../../../convex/lib/businessUnits";
 import { StockNav } from "@/components/stock/stock-nav";
@@ -14,7 +15,10 @@ export default async function StockPage({ params }: Props) {
   return (
     <div className="flex flex-col gap-6">
       <StockNav service={service} />
-      <StockOverview service={service} />
+      {/* The overview reads its filters from the URL (useSearchParams). */}
+      <Suspense>
+        <StockOverview service={service} />
+      </Suspense>
     </div>
   );
 }
