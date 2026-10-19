@@ -1044,12 +1044,12 @@
       "distributions": "Distributions"
     },
     "title": "Stock",
-    "subtitle": "Ce qui est en stock, et qui le détient.",
+    "subtitle": "Ce qui reste, et qui le détient.",
     "subtitleOwn": "Ce que votre site et vous détenez.",
     "accessDenied": "Vous n'avez pas accès au stock.",
     "businessHolder": "Entreprise (non attribué)",
     "totalsLabel": "Totaux",
-    "unitsOnHand": "Unités en stock",
+    "unitsOnHand": "Unités restantes",
     "stockValue": "Valeur du stock (prix de vente)",
     "unpricedNote": "{count, plural, one {# produit sans prix de vente non compté} other {# produits sans prix de vente non comptés}}",
     "unpricedInStock": "{count} en stock",
@@ -1061,12 +1061,12 @@
       "holder": "Par détenteur"
     },
     "productHeader": "Produit",
-    "onHandHeader": "En stock",
+    "onHandHeader": "Restant",
     "whereHeader": "Où",
     "valueHeader": "Valeur",
     "lotHeader": "Lot",
     "unitCostHeader": "Coût unitaire",
-    "receivedHeader": "Reçu",
+    "receivedHeader": "Acheté",
     "holderHeader": "Détenteur",
     "holderTypeHeader": "Type",
     "holderTypes": {
@@ -1076,26 +1076,25 @@
     },
     "productsHeader": "Lots",
     "lotCount": "{count, plural, one {# lot} other {# lots}}",
-    "receivedCount": "{count} reçus",
+    "receivedCount": "{count} achetés",
     "empty": "Aucun stock pour l'instant. Le stock apparaît dès qu'un lot d'achat est réceptionné.",
-    "valueHint": "Dans les tableaux, la valeur est le nombre d'unités × le coût d'achat unitaire. Les dépenses de voyage sont à part.",
+    "valueHint": "Dans les tableaux, la valeur est le nombre d'unités restantes × le coût d'achat unitaire. Les dépenses de voyage sont à part.",
     "report": {
       "all": "Tous",
       "statuses": {
-        "in_stock": "En stock",
-        "low": "Stock bas",
+        "in_stock": "Disponible",
+        "low": "Presque épuisé",
         "out": "Épuisé",
-        "never": "Jamais en stock"
+        "never": "Pas encore reçu"
       },
       "since": "depuis le {date}",
-      "download": "Télécharger (CSV)",
-      "searchPlaceholder": "Rechercher par nom, SKU, longueur, taille ou couleur",
+      "searchPlaceholder": "Rechercher nom, SKU, couleur…",
       "empty": "Aucun produit ne correspond.",
       "productHeader": "Produit",
       "statusHeader": "Statut",
-      "onHandHeader": "En stock",
+      "onHandHeader": "Restant",
       "soldHeader": "Vendus",
-      "receivedHeader": "Reçus",
+      "receivedHeader": "Acheté",
       "lastSoldHeader": "Dernière vente",
       "soldCount": "{count} vendus",
       "loading": "Chargement…",
@@ -1112,9 +1111,9 @@
         "transfer": "Transféré",
         "return": "Retourné"
       },
-      "thresholdLabel": "Stock bas à",
+      "thresholdLabel": "Presque épuisé à",
       "thresholdPlaceholder": "ex. 5",
-      "thresholdHint": "Marqué « Stock bas » quand il en reste ce nombre ou moins. Laisser vide pour aucun.",
+      "thresholdHint": "Marqué « Presque épuisé » quand il en reste ce nombre ou moins. Laisser vide pour aucun.",
       "thresholdError": "Saisissez un nombre entier à partir de 0.",
       "save": "Enregistrer",
       "csv": {
@@ -1122,17 +1121,52 @@
         "sku": "SKU",
         "details": "Détails",
         "status": "Statut",
-        "onHand": "En stock",
-        "received": "Reçus",
-        "sold": "Vendus",
-        "lastReceived": "Dernière réception",
+        "onHand": "Restant",
+        "received": "Acheté",
+        "sold": "Vendus (depuis le début)",
+        "lastReceived": "Dernier achat reçu",
         "lastSold": "Dernière vente",
         "outSince": "Épuisé depuis",
-        "threshold": "Stock bas à"
+        "threshold": "Presque épuisé à"
+      },
+      "periodLabel": "Période",
+      "periods": {
+        "30": "30 derniers jours",
+        "90": "90 derniers jours",
+        "all": "Depuis le début"
+      },
+      "soldPeriodHeader": {
+        "30": "Vendus (30 jours)",
+        "90": "Vendus (90 jours)",
+        "all": "Vendus (depuis le début)"
+      },
+      "never": "Jamais",
+      "emptyFiltered": "Aucun produit ne correspond à ces filtres",
+      "clearFilters": "Effacer les filtres",
+      "statusFilters": {
+        "available": "Disponible",
+        "low": "Presque épuisé",
+        "out": "Épuisé",
+        "never": "Pas encore reçu"
+      },
+      "leftOf": "{left} restants sur {total}",
+      "leftOnly": "{left} restants",
+      "soldAllTime": "Vendus (depuis le début)",
+      "showLabel": "Afficher",
+      "shows": {
+        "all": "Tous les produits",
+        "well": "Se vend bien",
+        "slow": "Se vend lentement",
+        "not_selling": "Ne se vend pas"
+      },
+      "neverSold": "Jamais vendu",
+      "csvSoldPeriod": {
+        "30": "Vendus (30 jours)",
+        "90": "Vendus (90 jours)"
       }
     },
-    "lowOutLabel": "Stock bas / épuisé",
-    "lowCount": "{count} bas",
+    "lowOutLabel": "Presque épuisés / épuisés",
+    "lowCount": "{count} presque épuisés",
     "outCount": "{count} épuisés",
     "pdf": {
       "download": "Télécharger le PDF",
@@ -1160,7 +1194,14 @@
       "empty": "Aucun stock disponible.",
       "downloadedBy": "Téléchargé par {name} le {date}",
       "page": "Page {page} / {pages}"
-    }
+    },
+    "export": {
+      "label": "Exporter",
+      "pdf": "Rapport de stock (PDF)",
+      "csv": "Produits (CSV)"
+    },
+    "showLow": "Afficher les produits presque épuisés",
+    "showOut": "Afficher les produits épuisés"
   },
   "Distributions": {
     "title": "Distributions",
@@ -1603,6 +1644,7 @@
     "footnote": "Marge = prix de vente − coût d'achat du lot (les dépenses de voyage ne sont pas réparties sur les produits). Dates à l'heure de Lubumbashi (UTC+2) ; les semaines commencent le lundi. USD.",
     "loss": "Perte",
     "vsPrevious": "vs {range}",
+    "noCompare": "Aucun chiffre pour {range} à comparer",
     "deltaUp": "En hausse de {pct} % par rapport à {range}",
     "deltaDown": "En baisse de {pct} % par rapport à {range}",
     "monthToDate": "{month} (mois en cours)",

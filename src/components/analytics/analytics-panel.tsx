@@ -36,8 +36,8 @@ function Skeleton({ className }: { className?: string }) {
 }
 
 type Delta = {
-  /** % change vs the previous period (only shown when there is one). */
-  pct: number;
+  /** % change vs the previous period; null when it had no figures to compare with. */
+  pct: number | null;
   /** Costs: going up is bad. */
   inverse?: boolean;
   /** "vs Sep 1 – Sep 7". */
@@ -48,6 +48,9 @@ type Delta = {
 
 /** "▲ 12%" / "▼ 8%": green when it's good news, red (amber on the hero) when not. */
 function DeltaBadge({ delta, anchor }: { delta: Delta; anchor?: boolean }) {
+  if (delta.pct === null) {
+    return <span className={cn("text-xs", anchor ? "text-primary-foreground/70" : "text-muted-foreground")}>{delta.compare}</span>;
+  }
   const up = delta.pct > 0;
   const good = delta.pct === 0 ? null : up !== Boolean(delta.inverse);
   const tone =
@@ -258,11 +261,12 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
 
   const compareLabel = previous ? spanLabel(previous.from, previous.to, shortDay) : "";
   const deltaFor = (key: "sales" | "margin" | "expenses" | "payroll" | "netProfit", inverse = false): Delta | undefined => {
-    // Nothing to compare with (no previous figures): no delta at all.
+    // Still loading the previous period: nothing yet.
     if (!summary || !previous || !previousSummary) return undefined;
     const pct = percentChange(summary[key], previousSummary[key]);
-    if (pct === null) return undefined;
     const range = compareLabel;
+    // The previous period had no figures (e.g. before the platform went live).
+    if (pct === null) return { pct: null, compare: t("noCompare", { range }), aria: t("noCompare", { range }) };
     return {
       pct,
       inverse,

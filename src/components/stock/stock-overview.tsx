@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Building2, ChevronDown, Download, MapPin, User } from "lucide-react";
+import { Building2, ChevronDown, Download, FileSpreadsheet, FileText, MapPin, User } from "lucide-react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
@@ -9,14 +9,19 @@ import { api } from "../../../convex/_generated/api";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import type { HolderType } from "../../../convex/lib/inventory";
 import { formatMoney } from "../../../convex/lib/money";
+import { businessDayOf } from "../../../convex/lib/time";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
-import { ProductStockReport } from "@/components/stock/product-stock-report";
+import { ProductStockReport, type ReportRow } from "@/components/stock/product-stock-report";
+import { useStockFilters } from "@/components/stock/use-stock-filters";
 import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Link } from "@/i18n/navigation";
+import { downloadCsv } from "@/lib/csv";
 import { renderPdf } from "@/lib/pdf/document";
 import { stockSellingValue } from "@/lib/stock-value";
 import { stockPdfContent } from "@/lib/stock-pdf";
+import { STOCK_VIEWS, effectivePeriod, filterReportRows, periodDays, type StatusFilter } from "@/lib/stock-movement";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 
@@ -26,9 +31,6 @@ type LotRow = Overview["byLot"][number];
 type HolderRow = Overview["byHolder"][number];
 type Holder = HolderRow["holder"];
 type Product = ProductRow["product"];
-
-const VIEWS = ["product", "lot", "holder"] as const;
-type View = (typeof VIEWS)[number];
 
 const HOLDER_ICONS: Record<HolderType, typeof Building2> = {
   business: Building2,
@@ -90,9 +92,20 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
   const locale = useLocale();
   const holderLabel = useHolderLabel();
   const canView = useCan("stock.view");
-  const [view, setView] = useState<View>("product");
+  // View, report filters and sorting live in the URL (shareable, Back works).
+  const [filters, setFilters] = useStockFilters();
+  const view = filters.view;
   const counts = useQuery(api.inventory.statusCounts, canView ? { businessUnitKey: service } : "skip");
   const overview = useQuery(api.inventory.overview, canView ? { businessUnitKey: service } : "skip");
+  // The full report (every product) for viewers of all locations.
+  const showReport = view === "product" && overview !== undefined && overview.scope !== "own_location";
+  // "Sold" counts the chosen period only while a "Show" choice is on.
+  const period = effectivePeriod(filters);
+  const days = periodDays(period);
+  const reportRows = useQuery(
+    api.inventory.productReportRows,
+    canView && showReport ? { businessUnitKey: service, ...(days ? { periodDays: days } : {}) } : "skip",
+  );
   // The stock report PDF is built in the browser from `overview` (nothing stored).
   const tUnits = useTranslations("BusinessUnits");
   const me = useQuery(api.users.getCurrentUser);
@@ -202,19 +215,71 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
     }
   }
 
+  /** The report rows on screen (same filters and order) as CSV. */
+  function downloadReportCsv(rows: ReportRow[]) {
+    const visible = filterReportRows(rows, filters).rows;
+    const inPeriod = period !== "all";
+    downloadCsv(`stock-${service}-${businessDayOf(Date.now())}${inPeriod ? `-${period}d` : ""}.csv`, [
+      [
+        t("report.csv.product"),
+        t("report.csv.sku"),
+        t("report.csv.details"),
+        t("report.csv.status"),
+        t("report.csv.onHand"),
+        t("report.csv.received"),
+        t("report.csv.sold"),
+        ...(inPeriod ? [t(`report.csvSoldPeriod.${period}`)] : []),
+        t("report.csv.lastReceived"),
+        t("report.csv.lastSold"),
+        t("report.csv.outSince"),
+        t("report.csv.threshold"),
+      ],
+      ...visible.map((r) => [
+          r.name,
+          r.sku,
+          [r.lengthInches !== null ? `${r.lengthInches}″` : null, r.sizeName, r.colourName].filter(Boolean).join(" · "),
+          t(`report.statuses.${r.status}`),
+          r.onHand,
+          r.received,
+          r.sold,
+          ...(inPeriod ? [r.soldInPeriod] : []),
+          r.lastReceivedAt === null ? null : businessDayOf(r.lastReceivedAt),
+          r.lastSoldAt === null ? null : businessDayOf(r.lastSoldAt),
+          r.outOfStockSince === null ? null : businessDayOf(r.outOfStockSince),
+          r.lowStockThreshold,
+        ]),
+    ]);
+  }
+  const showStatus = (status: StatusFilter) => setFilters({ view: "product", status, show: "" });
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="font-heading text-2xl font-bold text-primary">{t("title")}</h1>
+          <h1 className="scroll-mt-20 font-heading text-2xl font-bold text-primary">{t("title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             {overview?.scope === "own_location" ? t("subtitleOwn") : t("subtitle")}
           </p>
         </div>
-        <Button variant="outline" className="min-h-11" disabled={!overview || pdfBusy} onClick={downloadPdf}>
-          <Download aria-hidden />
-          {pdfBusy ? t("pdf.preparing") : t("pdf.download")}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button variant="outline" className="min-h-11" disabled={!overview || pdfBusy} />}>
+            <Download aria-hidden />
+            {pdfBusy ? t("pdf.preparing") : t("export.label")}
+            <ChevronDown className="size-4" aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>
+            <DropdownMenuItem onClick={downloadPdf}>
+              <FileText className="size-4 text-muted-foreground" aria-hidden />
+              {t("export.pdf")}
+            </DropdownMenuItem>
+            {showReport ? (
+              <DropdownMenuItem disabled={!reportRows} onClick={() => reportRows && downloadReportCsv(reportRows)}>
+                <FileSpreadsheet className="size-4 text-muted-foreground" aria-hidden />
+                {t("export.csv")}
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
       {pdfError ? (
         <p className="text-sm text-destructive" role="alert">
@@ -223,7 +288,7 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
       ) : null}
 
       {overview ? (
-        <section className="grid grid-cols-2 gap-3 sm:max-w-xl" aria-label={t("totalsLabel")}>
+        <section className="grid grid-cols-2 gap-3 sm:grid-cols-3" aria-label={t("totalsLabel")}>
           <div className="rounded-lg border border-border p-3">
             <p className="text-xs text-muted-foreground">{t("unitsOnHand")}</p>
             <p className="text-lg font-semibold tabular-nums">{totalQty}</p>
@@ -245,7 +310,7 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
             ) : null}
           </div>
           {showUnpriced && selling.unpriced.length > 0 ? (
-            <div id="unpriced-products" className="col-span-2 rounded-lg border border-amber-500/40 bg-amber-500/5 p-3">
+            <div id="unpriced-products" className="col-span-2 rounded-lg sm:order-last sm:col-span-3 border border-amber-500/40 bg-amber-500/5 p-3">
               <ul className="flex flex-col divide-y divide-border text-sm">
                 {selling.unpriced.map((p) => (
                   <li key={p.id} className="flex items-center justify-between gap-3 py-2">
@@ -268,30 +333,42 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
             </div>
           ) : null}
           {counts ? (
-            <button
-              type="button"
-              onClick={() => setView("product")}
-              className="col-span-2 rounded-lg border border-border p-3 text-left hover:bg-muted/50"
-            >
+            <div className="col-span-2 rounded-lg border border-border p-3 sm:col-span-1">
               <p className="text-xs text-muted-foreground">{t("lowOutLabel")}</p>
-              <p className="text-lg font-semibold tabular-nums">
-                <span className={counts.low > 0 ? "text-amber-600" : undefined}>{t("lowCount", { count: counts.low })}</span>
-                {" · "}
-                <span className={counts.out > 0 ? "text-destructive" : undefined}>{t("outCount", { count: counts.out })}</span>
+              <p className="flex flex-wrap items-center text-lg font-semibold tabular-nums">
+                <button
+                  type="button"
+                  aria-label={t("showLow")}
+                  aria-pressed={view === "product" && filters.status === "low"}
+                  onClick={() => showStatus("low")}
+                  className={cn("-mx-1 min-h-11 rounded px-1 underline-offset-4 hover:underline", counts.low > 0 && "text-amber-600")}
+                >
+                  {t("lowCount", { count: counts.low })}
+                </button>
+                <span className="px-1.5 text-muted-foreground" aria-hidden>·</span>
+                <button
+                  type="button"
+                  aria-label={t("showOut")}
+                  aria-pressed={view === "product" && filters.status === "out"}
+                  onClick={() => showStatus("out")}
+                  className={cn("-mx-1 min-h-11 rounded px-1 underline-offset-4 hover:underline", counts.out > 0 && "text-destructive")}
+                >
+                  {t("outCount", { count: counts.out })}
+                </button>
               </p>
-            </button>
+            </div>
           ) : null}
         </section>
       ) : null}
 
       <div role="radiogroup" aria-label={t("viewLabel")} className="inline-flex self-start rounded-lg border border-border p-1">
-        {VIEWS.map((v) => (
+        {STOCK_VIEWS.map((v) => (
           <button
             key={v}
             type="button"
             role="radio"
             aria-checked={view === v}
-            onClick={() => setView(v)}
+            onClick={() => setFilters({ view: v })}
             className={cn(
               "min-h-10 rounded-md px-3 text-sm font-medium",
               view === v ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground",
@@ -302,9 +379,9 @@ export function StockOverview({ service }: { service: BusinessUnitKey }) {
         ))}
       </div>
 
-      {view === "product" && overview && overview.scope !== "own_location" ? (
+      {showReport ? (
         // The full report: every product, finished and never-stocked too.
-        <ProductStockReport service={service} />
+        <ProductStockReport service={service} rows={reportRows} filters={filters} setFilters={setFilters} />
       ) : view === "product" ? (
         <DataTable
           columns={productColumns}
