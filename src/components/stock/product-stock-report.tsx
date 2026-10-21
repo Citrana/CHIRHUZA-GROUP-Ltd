@@ -41,6 +41,17 @@ const STATUS_BADGE: Record<StockStatus, string> = {
   never: "bg-muted text-muted-foreground",
 };
 
+/** The phone Sort menu: URL `sort:dir` -> label key. */
+const PHONE_SORTS = [
+  { value: "", label: "name" },
+  { value: "sold:desc", label: "soldDesc" },
+  { value: "sold:asc", label: "soldAsc" },
+  { value: "left:desc", label: "leftDesc" },
+  { value: "left:asc", label: "leftAsc" },
+  { value: "lastSold:desc", label: "lastSoldDesc" },
+  { value: "lastSold:asc", label: "lastSoldAsc" },
+] as const;
+
 /** "11 left of 24" with a thin bar of what remains (amber when running low). */
 function LeftOf({ row }: { row: ReportRow }) {
   const t = useTranslations("Inventory.report");
@@ -199,6 +210,24 @@ export function ProductStockReport({
           {SHOWS.filter((s) => filters.show === s || view === undefined || view.showCounts[s] > 0).map((s) => (
             <option key={s} value={s}>
               {withCount(t(`shows.${s}`), view?.showCounts[s])}
+            </option>
+          ))}
+        </NativeSelect>
+      </label>
+      {/* Phones get cards, not column headers: sorting lives here. */}
+      <label className="flex items-center gap-2 text-sm text-muted-foreground md:hidden">
+        <span className="shrink-0">{t("sortLabel")}</span>
+        <NativeSelect
+          className="h-10 w-auto"
+          value={filters.sort ? `${filters.sort}:${filters.desc ? "desc" : "asc"}` : ""}
+          onChange={(e) => {
+            const [sort, dir] = e.target.value.split(":") as [SortKey | "", string | undefined];
+            setFilters({ sort, desc: dir !== "asc" });
+          }}
+        >
+          {PHONE_SORTS.map(({ value, label }) => (
+            <option key={value} value={value}>
+              {t(`sorts.${label}`)}
             </option>
           ))}
         </NativeSelect>
