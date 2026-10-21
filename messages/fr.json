@@ -1163,6 +1163,16 @@
       "csvSoldPeriod": {
         "30": "Vendus (30 jours)",
         "90": "Vendus (90 jours)"
+      },
+      "sortLabel": "Trier",
+      "sorts": {
+        "name": "Nom",
+        "soldDesc": "Les plus vendus",
+        "soldAsc": "Les moins vendus",
+        "leftDesc": "Le plus en stock",
+        "leftAsc": "Le moins en stock",
+        "lastSoldDesc": "Vendus récemment",
+        "lastSoldAsc": "Pas vendus depuis longtemps"
       }
     },
     "lowOutLabel": "Presque épuisés / épuisés",
@@ -1273,8 +1283,8 @@
     "linesLabel": "Lignes de la vente",
     "goneLine": "Plus en stock ici",
     "removeLine": "Retirer la ligne",
-    "lotLabel": "Lot",
-    "lotOption": "{batch} · {cost} · {date} · {left} restants",
+    "fromLots": "pris dans {lots}",
+    "lotPart": "{batch} ({date}) ×{qty}",
     "qtyLabel": "Quantité",
     "less": "Un de moins",
     "more": "Un de plus",
