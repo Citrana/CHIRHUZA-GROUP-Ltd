@@ -74,3 +74,23 @@ export function saleTimestamp(
   const clock = now - businessDayStartUtc(today);
   return { createdAt: businessDayStartUtc(soldOn) + clock, backdated: true };
 }
+
+/**
+ * Takes `qty` units of one product from its lots at a location, oldest lot
+ * first (the caller passes them in that order), so a seller sells a
+ * product, not a lot. Null when the lots don't hold that many.
+ */
+export function splitOverLots<T extends { onHand: number }>(
+  lots: T[],
+  qty: number,
+): Array<{ lot: T; qty: number }> | null {
+  const parts: Array<{ lot: T; qty: number }> = [];
+  let left = qty;
+  for (const lot of lots) {
+    if (left === 0) break;
+    const part = Math.min(left, lot.onHand);
+    if (part > 0) parts.push({ lot, qty: part });
+    left -= part;
+  }
+  return left > 0 ? null : parts;
+}
