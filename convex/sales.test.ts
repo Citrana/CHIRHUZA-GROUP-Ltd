@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { applyMovement, businessHolderRef, getOrCreateHolder, stockLevelOf } from "./lib/inventory";
-import { lineMargin, saleLineProblems, saleTimestamp } from "./lib/sales";
+import { lineMargin, saleLineProblems, saleTimestamp, splitOverLots } from "./lib/sales";
 import { addBusinessDays, businessDayOf, businessDayStartUtc } from "./lib/time";
 import { PAGE, arrivedMixedBatch, receiveAll, setupStock, type Setup } from "./lib/stock.test.utils";
 import { insertLocation, insertUserWithRole } from "./lib/test.utils";
@@ -113,6 +113,46 @@ test("an agent sells at their own location: stock goes down, cost is snapshotted
     (await ctx.db.query("auditLogs").collect()).find((a) => a.entityTable === "sales" && a.entityId === saleId),
   );
   expect(audit!.after).toMatchObject({ number: "SALE-00001", location: "Goma Shop", totalAmount: 2500, currency: "USD" });
+});
+
+test("one product from two lots: the options list both oldest first, the sale takes each at its own cost", async () => {
+  const { s, p1Lot, shop } = await withShopStock();
+  // A later purchase of P1 arrives and is sent to the same shop.
+  const b2 = await arrivedMixedBatch(s);
+  await receiveAll(s, b2.batchId);
+  const newLot = await s.t.run(async (ctx) => {
+    const lot = (
+      await ctx.db.query("inventoryBatches").withIndex("by_stockBatchId", (q) => q.eq("stockBatchId", b2.batchId)).collect()
+    ).find((l) => l.sourceStockBatchItemId === b2.i1._id)!;
+    await ctx.db.patch("inventoryBatches", lot._id, { unitCost: 300 });
+    const business = await getOrCreateHolder(ctx, s.hairId, businessHolderRef(s.hairId));
+    await applyMovement(ctx, {
+      type: "distribute",
+      inventoryBatchId: lot._id,
+      fromHolderId: business,
+      toHolderId: shop,
+      qty: 5,
+      refTable: "test",
+      refId: "setup",
+      actorId: s.chief,
+    });
+    return lot._id;
+  });
+  const options = await s.as(s.agent).query(api.sales.options, { businessUnitKey: "hair" });
+  const p1Lots = options.lots.filter((l) => l.productName === "P1");
+  expect(p1Lots.map((l) => [l._id, l.onHand])).toEqual([[p1Lot, 6], [newLot, 5]]);
+
+  // The form splits 8 units over the lots, oldest first.
+  const parts = splitOverLots(p1Lots, 8)!;
+  const { saleId } = await sell(
+    s,
+    s.agent,
+    parts.map((p) => ({ inventoryBatchId: p.lot._id, qty: p.qty, unitPrice: 500 })),
+  );
+  expect(await onHand(s, p1Lot, shop)).toBe(0);
+  expect(await onHand(s, newLot, shop)).toBe(3);
+  const items = await s.t.run((ctx) => ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", saleId)).collect());
+  expect(items.map((i) => [i.qty, i.unitCostSnapshot])).toEqual([[6, 200], [2, 300]]);
 });
 
 test("agents are locked to their own location; chiefs and the Super Admin sell anywhere", async () => {

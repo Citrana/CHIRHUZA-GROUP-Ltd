@@ -14,6 +14,7 @@ import {
   MAX_BACKDATE_DAYS,
   PAYMENT_METHODS,
   saleLineProblems,
+  splitOverLots,
   type PaymentMethod,
 } from "../../../convex/lib/sales";
 import {
@@ -44,7 +45,6 @@ type Lot = Options["lots"][number];
 type Line = {
   key: number;
   productId: Id<"products">;
-  lotId: Id<"inventoryBatches">;
   qty: number;
   price: number | null;
   reason: string;
@@ -68,8 +68,9 @@ function productLabel(lot: Pick<Lot, "productName" | "lengthInches" | "sizeName"
 
 /**
  * The phone sale form: where (locked to the seller's own location for
- * own_location sellers), what (search products in stock there, pick the
- * lot, quantity and price), how it's paid. The server re-checks
+ * own_location sellers), what (search products in stock there, quantity
+ * and price - the units come from the product's lots there, oldest
+ * first), how it's paid. The server re-checks
  * everything and refuses to sell stock that isn't there.
  */
 export function SaleForm({ service }: { service: BusinessUnitKey }) {
@@ -139,10 +140,10 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     );
   const date = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: BUSINESS_TIME_ZONE });
   const lots = options?.lots ?? [];
-  const lotById = new Map(lots.map((l) => [l._id, l]));
   const locationId = options?.locationId ?? null;
 
-  // Products in stock here, for the search list (one entry per product).
+  // Products in stock here, for the search list and the lines (one entry
+  // per product; its lots oldest first, as sales.options sorts them).
   const products = new Map<Id<"products">, { first: Lot; onHand: number; lots: Lot[] }>();
   for (const lot of lots) {
     const entry = products.get(lot.productId) ?? { first: lot, onHand: 0, lots: [] };
@@ -166,16 +167,15 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
       )
     : [];
 
-  const usedLots = new Set(lines.map((l) => l.lotId));
   const problemsOf = (line: Line): string[] => {
-    const lot = lotById.get(line.lotId);
-    if (!lot) return ["gone"];
+    const entry = products.get(line.productId);
+    if (!entry) return ["gone"];
     if (line.price === null) return ["price"];
     const problems: string[] = saleLineProblems(
       { qty: line.qty, unitPrice: line.price, discountReason: line.reason },
-      lot.suggestedPrice ?? undefined,
+      entry.first.suggestedPrice ?? undefined,
     );
-    if (line.qty > lot.onHand) problems.push("stock");
+    if (line.qty > entry.onHand) problems.push("stock");
     return problems;
   };
   const linesTotal = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
@@ -220,13 +220,11 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     setDone(null);
     const existing = lines.find((l) => l.productId === productId);
     if (existing) {
-      const lot = lotById.get(existing.lotId);
-      update(existing.key, { qty: Math.min(existing.qty + 1, lot?.onHand ?? existing.qty) });
+      update(existing.key, { qty: Math.min(existing.qty + 1, entry.onHand) });
     } else {
-      const lot = entry.lots.find((l) => !usedLots.has(l._id)) ?? entry.lots[0];
       setLines((prev) => [
         ...prev,
-        { key: nextKey, productId, lotId: lot._id, qty: 1, price: lot.suggestedPrice ?? null, reason: "" },
+        { key: nextKey, productId, qty: 1, price: entry.first.suggestedPrice ?? null, reason: "" },
       ]);
       setNextKey((k) => k + 1);
     }
@@ -269,12 +267,15 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         ...(agreedTotal !== null && agreedTotal !== linesTotal
           ? { agreedTotal, ...(saleReason.trim() ? { saleDiscountReason: saleReason } : {}) }
           : {}),
-        lines: lines.map((l) => ({
-          inventoryBatchId: l.lotId,
-          qty: l.qty,
-          unitPrice: l.price ?? 0,
-          ...(l.reason.trim() ? { discountReason: l.reason } : {}),
-        })),
+        // One server line per lot the units come from, so each keeps its own cost.
+        lines: lines.flatMap((l) =>
+          (splitOverLots(products.get(l.productId)?.lots ?? [], l.qty) ?? []).map((part) => ({
+            inventoryBatchId: part.lot._id,
+            qty: part.qty,
+            unitPrice: l.price ?? 0,
+            ...(l.reason.trim() ? { discountReason: l.reason } : {}),
+          })),
+        ),
       });
       setDone({
         number: result.number,
@@ -452,8 +453,9 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
       {lines.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label={t("linesLabel")}>
           {lines.map((line) => {
-            const lot = lotById.get(line.lotId);
-            const productLots = products.get(line.productId)?.lots ?? [];
+            const entry = products.get(line.productId);
+            const lot = entry?.first;
+            const parts = entry ? splitOverLots(entry.lots, line.qty) : null;
             const problems = problemsOf(line);
             const differs = lot?.suggestedPrice != null && line.price !== null && line.price !== lot.suggestedPrice;
             return (
@@ -474,30 +476,18 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
                     <Trash2 aria-hidden />
                   </Button>
                 </div>
-                <div className="flex flex-col gap-1">
-                  <Label htmlFor={`lot-${line.key}`} className="text-xs text-muted-foreground">
-                    {t("lotLabel")}
-                  </Label>
-                  <NativeSelect
-                    id={`lot-${line.key}`}
-                    value={line.lotId}
-                    onChange={(e) => {
-                      const next = lotById.get(e.target.value as Id<"inventoryBatches">);
-                      if (next) update(line.key, { lotId: next._id, qty: Math.min(line.qty, next.onHand) });
-                    }}
-                  >
-                    {productLots.map((l) => (
-                      <option key={l._id} value={l._id} disabled={l._id !== line.lotId && usedLots.has(l._id)}>
-                        {t("lotOption", {
-                          batch: l.batchNumber ?? "—",
-                          cost: money(l.unitCost),
-                          date: date.format(l.lotDate),
-                          left: l.onHand,
-                        })}
-                      </option>
-                    ))}
-                  </NativeSelect>
-                </div>
+                {entry ? (
+                  <p className="text-xs text-muted-foreground">
+                    {t("inStock", { count: entry.onHand })}
+                    {parts && parts.length > 0
+                      ? ` · ${t("fromLots", {
+                          lots: parts
+                            .map((p) => t("lotPart", { batch: p.lot.batchNumber ?? "—", date: date.format(p.lot.lotDate), qty: p.qty }))
+                            .join(", "),
+                        })}`
+                      : null}
+                  </p>
+                ) : null}
                 <div className="grid grid-cols-2 gap-3">
                   <div className="flex flex-col gap-1">
                     <span className="text-xs text-muted-foreground">{t("qtyLabel")}</span>
@@ -517,7 +507,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
                         type="number"
                         inputMode="numeric"
                         min={1}
-                        max={lot?.onHand}
+                        max={entry?.onHand}
                         step={1}
                         value={line.qty}
                         aria-label={t("qtyLabel")}
@@ -531,7 +521,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
                         size="icon"
                         className="size-11"
                         aria-label={t("more")}
-                        disabled={!lot || line.qty >= lot.onHand}
+                        disabled={!entry || line.qty >= entry.onHand}
                         onClick={() => update(line.key, { qty: line.qty + 1 })}
                       >
                         <Plus aria-hidden />
@@ -586,7 +576,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
                 ) : null}
                 <p className="flex justify-between text-sm">
                   <span className={cn("text-muted-foreground", problems.includes("stock") && "text-destructive")}>
-                    {lot && line.qty > lot.onHand ? t("onlyLeft", { count: lot.onHand }) : t("lineTotal")}
+                    {entry && line.qty > entry.onHand ? t("onlyLeft", { count: entry.onHand }) : t("lineTotal")}
                   </span>
                   <span className="font-medium tabular-nums">{money((line.price ?? 0) * line.qty)}</span>
                 </p>
