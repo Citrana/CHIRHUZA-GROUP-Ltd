@@ -1163,6 +1163,16 @@
       "csvSoldPeriod": {
         "30": "Sold (30 days)",
         "90": "Sold (90 days)"
+      },
+      "sortLabel": "Sort",
+      "sorts": {
+        "name": "Name",
+        "soldDesc": "Most sold",
+        "soldAsc": "Least sold",
+        "leftDesc": "Most left",
+        "leftAsc": "Least left",
+        "lastSoldDesc": "Recently sold",
+        "lastSoldAsc": "Not sold for longest"
       }
     },
     "lowOutLabel": "Running low / sold out",
