@@ -86,7 +86,8 @@ export function nextProductStock(
     ...base,
     onHand,
     received: base.received + (movement.type === "receive" ? movement.qty : 0),
-    sold: base.sold + (movement.type === "sale" ? movement.qty : 0),
+    // A return is units coming back from a sale (an approved correction).
+    sold: base.sold + (movement.type === "sale" ? movement.qty : 0) - (movement.type === "return" ? movement.qty : 0),
   };
   if (movement.type === "receive") next.lastReceivedAt = at;
   if (movement.type === "sale") next.lastSoldAt = at;

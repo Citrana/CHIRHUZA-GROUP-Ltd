@@ -6,6 +6,7 @@ import { deleteApprovedProduct } from "./products";
 import { applyPayrollApproval, applyPayrollRejection } from "./payroll";
 import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals";
 import { applyCreditPaymentReversal } from "./credit";
+import { applySaleEdit } from "./saleEdits";
 import {
   applyDistributionApproval,
   applyDistributionRejection,
@@ -68,7 +69,7 @@ const dispatchDelete: ApprovalHandler = async (ctx, approval, decider) => {
  * `approval.payload` and writes the change.
  */
 export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
-  sale_edit: notImplementedYet,
+  sale_edit: applySaleEdit,
   delete: dispatchDelete,
   expense: notImplementedYet,
   payroll: applyPayrollApproval,

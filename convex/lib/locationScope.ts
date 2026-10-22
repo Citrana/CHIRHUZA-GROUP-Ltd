@@ -12,6 +12,11 @@ import type { Scope } from "./permissions";
  * (business-level).
  */
 
+/** Whether a record at `locationId` is within the caller's scope. */
+export function inScope(scope: Scope, user: Doc<"users">, locationId: Id<"locations">): boolean {
+  return scope === "all_locations" || user.locationId === locationId;
+}
+
 /** Every active location, by name. */
 export async function activeLocations(ctx: QueryCtx): Promise<Doc<"locations">[]> {
   const all = await ctx.db.query("locations").take(500);
