@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ANALYTICS_COLORS, ChartLegend, CostsChart, SalesChart, Sparkline } from "@/components/analytics/analytics-charts";
 import { ProductsSoldTable } from "@/components/analytics/products-sold-table";
+import { FLEET_SERVICES } from "../../../convex/lib/transport";
 import { percentChange, previousRange } from "@/lib/analytics-compare";
 import { analyticsInsights } from "@/lib/analytics-insights";
 import { ConcealToggle, useConcealed } from "@/components/ui/concealable";
@@ -222,6 +223,11 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
 
   const filters = useQuery(api.analytics.filterLocations, canView ? { businessUnitKey: service } : "skip");
   const summary = useQuery(api.analytics.getSummary, args);
+  // Transport runs a fleet, not products: no product reports; sales are contract revenue, payroll is driver pay.
+  const fleet = FLEET_SERVICES.includes(service);
+  const productArgs = fleet ? "skip" : args;
+  const salesLabel = fleet ? t("cards.revenue") : t("cards.sales");
+  const payrollLabel = fleet ? t("cards.driverPay") : t("cards.payroll");
   // The same figures for the period before, for the ▲/▼ on each card.
   const previous = summary ? previousRange(period, summary.from, summary.to) : null;
   const previousSummary = useQuery(
@@ -229,11 +235,11 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
     canView && previous ? { businessUnitKey: service, range: previous, ...location } : "skip",
   );
   const series = useQuery(api.analytics.getTimeSeries, args === "skip" ? "skip" : { ...args, granularity });
-  const mostSold = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "units", order: "desc" });
-  const leastSold = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "units", order: "asc" });
-  const bestMargin = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "margin", order: "desc" });
-  const unsold = useQuery(api.analytics.getUnsoldProducts, args === "skip" ? "skip" : { ...args, limit: 5 });
-  const productSales = useQuery(api.analytics.getProductSales, args);
+  const mostSold = useQuery(api.analytics.getTopProducts, productArgs === "skip" ? "skip" : { ...productArgs, by: "units", order: "desc" });
+  const leastSold = useQuery(api.analytics.getTopProducts, productArgs === "skip" ? "skip" : { ...productArgs, by: "units", order: "asc" });
+  const bestMargin = useQuery(api.analytics.getTopProducts, productArgs === "skip" ? "skip" : { ...productArgs, by: "margin", order: "desc" });
+  const unsold = useQuery(api.analytics.getUnsoldProducts, productArgs === "skip" ? "skip" : { ...productArgs, limit: 5 });
+  const productSales = useQuery(api.analytics.getProductSales, productArgs);
 
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
@@ -455,7 +461,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             sparkline={{ values: spark((p) => p.margin - p.expenses - p.payroll), color: ANALYTICS_COLORS.sales }}
           />
           <StatCard
-            label={t("cards.sales")}
+            label={salesLabel}
             dot={ANALYTICS_COLORS.sales}
             value={summary ? money(summary.sales) : ""}
             loading={loading}
@@ -481,7 +487,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             delta={deltaFor("expenses", true)}
           />
           <StatCard
-            label={t("cards.payroll")}
+            label={payrollLabel}
             dot={ANALYTICS_COLORS.payroll}
             value={summary ? money(summary.payroll) : ""}
             loading={loading}
@@ -531,7 +537,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
           aside={
             <ChartLegend
               items={[
-                { label: t("cards.sales"), color: ANALYTICS_COLORS.sales, shape: "line" },
+                { label: salesLabel, color: ANALYTICS_COLORS.sales, shape: "line" },
                 { label: t("cards.margin"), color: ANALYTICS_COLORS.margin, shape: "line" },
                 ...(zeroDays.length > 0 ? [{ label: t("legend.noSales"), color: ANALYTICS_COLORS.noSales, shape: "dot" as const }] : []),
               ]}
@@ -543,7 +549,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             <SalesChart
               points={points}
               granularity={chartGranularity}
-              labels={{ sales: t("cards.sales"), margin: t("cards.margin") }}
+              labels={{ sales: salesLabel, margin: t("cards.margin") }}
               zeroDays={zeroDays}
               ariaLabel={t("chartLabels.sales", { range: chartRange })}
             />,
@@ -555,7 +561,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             <ChartLegend
               items={[
                 { label: t("cards.expenses"), color: ANALYTICS_COLORS.expenses },
-                { label: t("cards.payroll"), color: ANALYTICS_COLORS.payroll },
+                { label: payrollLabel, color: ANALYTICS_COLORS.payroll },
               ]}
             />
           }
@@ -565,7 +571,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             <CostsChart
               points={points}
               granularity={chartGranularity}
-              labels={{ expenses: t("cards.expenses"), payroll: t("cards.payroll") }}
+              labels={{ expenses: t("cards.expenses"), payroll: payrollLabel }}
               ariaLabel={t("chartLabels.costs", { range: chartRange })}
             />,
           )}
@@ -573,30 +579,35 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
       </div>
 
       {/* Product lists */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <Section title={t("lists.mostSold")}>{productList(mostSold, (p) => t("pieces", { count: p.unitsSold }))}</Section>
-        <Section title={t("lists.leastSold")}>{productList(leastSold, (p) => t("pieces", { count: p.unitsSold }))}</Section>
-        <Section title={t("lists.bestMargin")}>{productList(bestMargin, (p) => money(p.margin))}</Section>
-        <Section title={t("lists.noSales")}>
-          {unsold === undefined ? (
-            listSkeleton
-          ) : unsold.products.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("unsold.none")}</p>
-          ) : (
-            <>
-              {productRows(unsold.products, (p) => t("unsold.inStock", { count: p.onHand }))}
-              {unsold.total > unsold.products.length ? (
-                <p className="text-xs text-muted-foreground">{t("unsold.more", { count: unsold.total - unsold.products.length })}</p>
-              ) : null}
-            </>
-          )}
-        </Section>
-      </div>
+      {fleet ? null : (
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <Section title={t("lists.mostSold")}>{productList(mostSold, (p) => t("pieces", { count: p.unitsSold }))}</Section>
+          <Section title={t("lists.leastSold")}>{productList(leastSold, (p) => t("pieces", { count: p.unitsSold }))}</Section>
+          <Section title={t("lists.bestMargin")}>{productList(bestMargin, (p) => money(p.margin))}</Section>
+          <Section title={t("lists.noSales")}>
+            {unsold === undefined ? (
+              listSkeleton
+            ) : unsold.products.length === 0 ? (
+              <p className="text-sm text-muted-foreground">{t("unsold.none")}</p>
+            ) : (
+              <>
+                {productRows(unsold.products, (p) => t("unsold.inStock", { count: p.onHand }))}
+                {unsold.total > unsold.products.length ? (
+                  <p className="text-xs text-muted-foreground">{t("unsold.more", { count: unsold.total - unsold.products.length })}</p>
+                ) : null}
+              </>
+            )}
+          </Section>
+        </div>
+
+      )}
 
       {/* Every product sold in the range */}
-      <Section title={t("productsSold.title")}>
-        <ProductsSoldTable report={productSales} fileName={productsSoldFileName} />
-      </Section>
+      {fleet ? null : (
+        <Section title={t("productsSold.title")}>
+          <ProductsSoldTable report={productSales} fileName={productsSoldFileName} />
+        </Section>
+      )}
 
       <p className="text-xs text-muted-foreground">{t("footnote")}</p>
     </div>

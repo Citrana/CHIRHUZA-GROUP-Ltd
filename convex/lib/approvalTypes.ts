@@ -16,6 +16,8 @@ export const APPROVAL_TYPES = [
   "distribution",
   "withdrawal",
   "credit_payment_reversal",
+  "contract_payment_reversal",
+  "driver_payment",
 ] as const;
 
 export const approvalTypeValidator = v.union(
@@ -28,6 +30,8 @@ export const approvalTypeValidator = v.union(
   v.literal("distribution"),
   v.literal("withdrawal"),
   v.literal("credit_payment_reversal"),
+  v.literal("contract_payment_reversal"),
+  v.literal("driver_payment"),
 );
 export type ApprovalType = Infer<typeof approvalTypeValidator>;
 

@@ -7,6 +7,12 @@ import { applyPayrollApproval, applyPayrollRejection } from "./payroll";
 import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals";
 import { applyCreditPaymentReversal } from "./credit";
 import {
+  applyContractPaymentReversal,
+  applyDriverPaymentApproval,
+  applyDriverPaymentRejection,
+  deleteApprovedContract,
+} from "./contracts";
+import {
   applyDistributionApproval,
   applyDistributionRejection,
 } from "./distributions";
@@ -43,6 +49,7 @@ const notImplementedYet: ApprovalHandler = async () => {};
  */
 export const DELETE_HANDLERS: Record<string, ApprovalHandler> = {
   products: deleteApprovedProduct,
+  contracts: deleteApprovedContract,
 };
 
 const dispatchDelete: ApprovalHandler = async (ctx, approval, decider) => {
@@ -77,6 +84,8 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   distribution: applyDistributionApproval,
   withdrawal: applyWithdrawalApproval,
   credit_payment_reversal: applyCreditPaymentReversal,
+  contract_payment_reversal: applyContractPaymentReversal,
+  driver_payment: applyDriverPaymentApproval,
 };
 
 /**
@@ -91,4 +100,5 @@ export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalH
   distribution: applyDistributionRejection,
   payroll: applyPayrollRejection,
   withdrawal: applyWithdrawalRejection,
+  driver_payment: applyDriverPaymentRejection,
 };
