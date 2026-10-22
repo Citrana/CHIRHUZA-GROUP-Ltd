@@ -39,6 +39,7 @@ import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { type CelebrationTier, firstName, nextQuote, tierFor } from "@/lib/sale-celebration";
 import { SaleCelebration } from "./sale-celebration";
+import { SalePreviewDialog, type SalePreview } from "./sale-preview-dialog";
 
 type Options = FunctionReturnType<typeof api.sales.options>;
 type Lot = Options["lots"][number];
@@ -122,6 +123,8 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
   const [soldOn, setSoldOn] = useState(today);
   const [submitting, setSubmitting] = useState(false);
+  // The preview shown before recording, to catch mistakes.
+  const [reviewing, setReviewing] = useState(false);
   // Problems are only highlighted once the seller has tried to record.
   const [attempted, setAttempted] = useState(false);
   const canSetPrice = useCan("products.set_price");
@@ -242,12 +245,18 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     }
   }
 
-  async function handleSubmit(event: FormEvent) {
+  function handleSubmit(event: FormEvent) {
     event.preventDefault();
     if (blocker || !locationId) {
       setAttempted(true);
       return;
     }
+    setError(null);
+    setReviewing(true);
+  }
+
+  async function recordSale() {
+    if (blocker || !locationId) return;
     setSubmitting(true);
     setError(null);
     try {
@@ -277,6 +286,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
           })),
         ),
       });
+      setReviewing(false);
       setDone({
         number: result.number,
         total,
@@ -312,8 +322,51 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     }
   }
 
+  const preview: SalePreview | null = reviewing
+    ? {
+        date: longDay(soldOn),
+        backdated: soldOn !== today,
+        location: options?.locations.find((l) => l._id === locationId)?.name ?? "",
+        lines: lines.map((l) => {
+          const lot = products.get(l.productId)?.first;
+          return {
+            key: l.key,
+            label: lot ? productLabel(lot, inches) : t("goneLine"),
+            photoUrl: lot?.photoUrl,
+            qtyAtPrice: t("qtyAtPrice", { qty: l.qty, price: money(l.price ?? 0) }),
+            total: money((l.price ?? 0) * l.qty),
+            reason: l.reason.trim() || null,
+          };
+        }),
+        linesTotal: money(linesTotal),
+        total: money(total),
+        saleDiscountReason: discounted ? saleReason.trim() : null,
+        payment: t(`payments.${payment}`),
+        customer: isCredit ? (creditCustomer?.name ?? null) : customer.trim() || null,
+        credit: isCredit
+          ? {
+              paidNow: money(paidNow ?? 0),
+              paidWith: (paidNow ?? 0) > 0 ? t(`payments.${paidNowMethod}`) : null,
+              balance: money(Math.max(balance, 0)),
+            }
+          : null,
+      }
+    : null;
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-5 pb-28">
+      {preview ? (
+        <SalePreviewDialog
+          open
+          preview={preview}
+          withPhotos={withPhotos}
+          submitting={submitting}
+          blocker={blocker}
+          error={error}
+          onCorrect={() => setReviewing(false)}
+          onConfirm={recordSale}
+        />
+      ) : null}
       {celebration ? (
         <SaleCelebration
           key={celebration.key}
