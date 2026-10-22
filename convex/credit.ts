@@ -1,11 +1,11 @@
 import { v, ConvexError } from "convex/values";
 import { internalMutation } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { requestApproval } from "./lib/approvals";
 import { logAudit } from "./lib/audit";
-import type { Scope } from "./lib/permissions";
+import { inScope } from "./lib/locationScope";
 import { MAX_BACKDATE_DAYS, MAX_SALE_LINES, saleTimestamp } from "./lib/sales";
 import { describeProduct } from "./lib/products";
 import { businessDayOf } from "./lib/time";
@@ -26,10 +26,6 @@ import {
  */
 
 const MAX_OPEN_SALES = 2000;
-
-function inScope(scope: Scope, user: Doc<"users">, locationId: Id<"locations">) {
-  return scope === "all_locations" || user.locationId === locationId;
-}
 
 /** Customers who owe money (within the caller's scope), largest balance first. */
 export const owed = authedQuery({

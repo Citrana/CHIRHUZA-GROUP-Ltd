@@ -237,7 +237,9 @@ test("a wrong payment is reversed through an approval, never by its requester", 
   ]);
   // The requester can't decide it.
   await expect(s.as(s.agent).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" })).rejects.toThrow();
-  await s.as(s.chief).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
+  // Only the Super Admin approves sale corrections by default (2026-10-sale-edits).
+  await expect(s.as(s.chief).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" })).rejects.toThrow();
+  await s.as(s.superAdmin).mutation(api.approvals.decideApproval, { approvalId, decision: "approve" });
 
   expect(await getSale(s, saleId)).toMatchObject({ amountPaid: 0, creditStatus: "open" });
   expect((await getCustomer(s, nadine))!.balance).toBe(1000);

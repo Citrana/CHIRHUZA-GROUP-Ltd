@@ -204,6 +204,17 @@ this repo, now and later — do not relax them for convenience.
   `sales.createdAt` is when it happened (lists/filters use it),
   `recordedAt` when it was entered; backdated sales are flagged in the list
   and the audit. Stock still moves at recording time.
+- A recorded sale is corrected only through the approval engine (type
+  `sale_edit`): anyone with `sales.edit.request` (scoped like sales) asks
+  with a reason (`sales.requestEdit`); `sales.edit.approve` holders (Super
+  Admin only by default) decide. `planSaleEdit` (`convex/lib/saleEdits.ts`)
+  holds the rules for both sides: per-line qty (0 removes it; a raise comes
+  from the same lot at the sale's location) and price, the agreed total,
+  cash <-> mobile money, the customer name (not on credit sales), the date.
+  On approval, `applySaleEdit` reverses the sale's rollups, moves the
+  qty differences through `applyMovement` (`return` / `sale`; a `return`
+  lowers `productStock.sold`), rewrites the lines and the sale, re-applies
+  the rollups and follows a credit sale's balance (`applySaleTotalChange`).
 
 ## Credit
 
@@ -440,8 +451,8 @@ locations/people with Chief Admin approval (`/[service]/stock/distributions`),
 the inventory core with the stock overview by product, lot and holder
 (`/[service]/stock`), and sales (`/[service]/sales`, the phone sale form at
 `/[service]/sales/new`; suggested selling prices set on the price list at
-`/[service]/products/prices`, next to each lot's purchase cost). Sale edits
-and refunds come next), credit sales (customers, agreed totals, part
+`/[service]/products/prices`, next to each lot's purchase cost; sale
+corrections requested from the sales list and approved in Approvals), credit sales (customers, agreed totals, part
 payments and repayments at `/[service]/sales/credit`), payroll (`/[service]/payroll`) and withdrawals
 (`/[service]/withdrawals`), both approved by the Chief Admin, and the
 analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,

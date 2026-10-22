@@ -1,7 +1,7 @@
 "use client";
 
 import { useLocale, useTranslations } from "next-intl";
-import { snapshotCurrency } from "../../../convex/lib/money";
+import { formatMoney, snapshotCurrency, type Currency } from "../../../convex/lib/money";
 import {
   formatSnapshotValue,
   isLineItems,
@@ -34,7 +34,7 @@ export function ChangesTable({
   const empty = t("empty");
   const format = (snapshot: Snapshot, field: string) => {
     const value = snapshot?.[field];
-    if (isLineItems(value)) return <LineItems items={value} />;
+    if (isLineItems(value)) return <LineItems items={value} currency={snapshotCurrency(snapshot, before, after)} />;
     return formatSnapshotValue(field, value, {
       currency: snapshotCurrency(snapshot, before, after),
       locale,
@@ -94,9 +94,13 @@ export function ChangesTable({
   );
 }
 
-/** An `items` list: each line's product, inches and colour, then its pieces. */
-function LineItems({ items }: { items: LineItem[] }) {
+/**
+ * An `items` list: each line's product, inches and colour, then its pieces
+ * (and, for sale lines, the unit price and its reason).
+ */
+function LineItems({ items, currency }: { items: LineItem[]; currency: Currency | null }) {
   const t = useTranslations("Changes");
+  const locale = useLocale();
   return (
     <ul className="flex flex-col divide-y divide-border">
       {items.map((item, i) => (
@@ -117,9 +121,17 @@ function LineItems({ items }: { items: LineItem[] }) {
                 {[item.sku, item.batch].filter(Boolean).join(" · ")}
               </span>
             ) : null}
+            {item.discountReason ? (
+              <span className="block text-xs text-muted-foreground">{item.discountReason}</span>
+            ) : null}
           </span>
-          <span className="shrink-0 font-medium whitespace-nowrap tabular-nums">
+          <span className="shrink-0 text-right font-medium whitespace-nowrap tabular-nums">
             {t("pieces", { count: item.qty })}
+            {currency && Number.isSafeInteger(item.unitPrice) ? (
+              <span className="block text-xs font-normal text-muted-foreground">
+                {t("atPrice", { price: formatMoney(item.unitPrice!, currency, locale) })}
+              </span>
+            ) : null}
           </span>
         </li>
       ))}

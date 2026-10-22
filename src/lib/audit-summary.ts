@@ -84,6 +84,9 @@ export type LineItem = {
   colour?: string | null;
   sku?: string | null;
   batch?: string | null;
+  // Sale lines: price per piece (minor units) and the reason for it.
+  unitPrice?: number;
+  discountReason?: string | null;
 };
 
 export function isLineItems(value: unknown): value is LineItem[] {

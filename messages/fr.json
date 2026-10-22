@@ -440,8 +440,15 @@
       "method": "Payé par",
       "paidOn": "Payé le",
       "reversed": "Annulé",
-      "passwordReset": "Mot de passe réinitialisé"
-    }
+      "passwordReset": "Mot de passe réinitialisé",
+      "soldOn": "Date de la vente",
+      "paymentMethod": "Paiement",
+      "customerName": "Client",
+      "linesTotal": "Total des lignes",
+      "totalAmount": "Total à payer",
+      "saleDiscountReason": "Motif du total réduit"
+    },
+    "atPrice": "à {price} pièce"
   },
   "Approvals": {
     "title": "Approbations",
@@ -1383,7 +1390,22 @@
       "repayment": "Remboursement",
       "reversal": "Correction"
     },
-    "creditLink": "Crédit"
+    "creditLink": "Crédit",
+    "editRequest": "Demander une correction",
+    "editPending": "Une correction de cette vente attend l'approbation.",
+    "editTitle": "Corriger la vente {number}",
+    "editHint": "Modifiez ce qui est faux. Rien ne change avant l'approbation de la correction.",
+    "editNotFound": "Vente introuvable.",
+    "editRemoved": "Retiré de la vente",
+    "editCreditNote": "Vente à crédit : le client et le mode de paiement ne peuvent pas être modifiés.",
+    "editDateHint": "Aujourd'hui ou jusqu'à {days} jours en arrière.",
+    "editReasonLabel": "Pourquoi cette vente doit-elle être corrigée ?",
+    "editReasonPlaceholder": "ex. mauvais prix saisi",
+    "editSubmit": "Envoyer pour approbation",
+    "editSending": "Envoi…",
+    "editSent": "Correction envoyée. Elle sera appliquée après approbation.",
+    "editError": "Impossible d'envoyer la correction. Veuillez réessayer.",
+    "editCancel": "Annuler"
   },
   "Filters": {
     "button": "Filtres",

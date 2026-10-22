@@ -119,11 +119,11 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
   {
     key: "chief_admin",
     name: "Chief Admin",
-    description: "Oversees analytics and approves edits, stock, payroll, withdrawals, expenses and requisitions.",
+    description: "Oversees analytics and approves stock, payroll, withdrawals, expenses and requisitions.",
     permissions: all([
       ...VIEW_KEYS,
       "analytics.view",
-      "sales.edit.approve",
+      "sales.edit.request",
       "stock.approve",
       "payroll.create",
       "payroll.approve",
@@ -147,6 +147,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.distribute",
       "stock.view",
       "sales.view",
+      "sales.edit.request",
       "requisition.view",
       "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
@@ -155,14 +156,14 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
   {
     key: "chief_sales_admin",
     name: "Chief Sales Admin",
-    description: "Records sales, approves sale edits, raises requisitions, and receives and distributes stock.",
+    description: "Records sales, requests sale corrections, raises requisitions, and receives and distributes stock.",
     permissions: all([
       "stock.view",
       "stock.receive",
       "stock.distribute",
       "sales.view",
       "sales.create",
-      "sales.edit.approve",
+      "sales.edit.request",
       "requisition.create",
       "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
@@ -286,6 +287,21 @@ export const SEED_STEPS: readonly SeedStep[] = [
       ["chief_sales_admin", "withdrawals.approve"],
       ["chief_inventory_admin", "withdrawals.approve"],
       ["sales_agent", "withdrawals.approve"],
+    ],
+  },
+  {
+    // Sale corrections: everyone who sees sales may request one; only the
+    // Super Admin approves at first (and hands sales.edit.approve out
+    // later in Manage roles). It also decides credit payment reversals.
+    key: "2026-10-sale-edits",
+    grants: [
+      ["chief_admin", "sales.edit.request", "all_locations"],
+      ["manager_admin", "sales.edit.request", "all_locations"],
+      ["chief_sales_admin", "sales.edit.request", "all_locations"],
+    ],
+    revokes: [
+      ["chief_admin", "sales.edit.approve"],
+      ["chief_sales_admin", "sales.edit.approve"],
     ],
   },
 ];

@@ -26,8 +26,8 @@ async function setup() {
   const shopA = await insertLocation(t, { name: "Shop A" });
   const shopB = await insertLocation(t, { name: "Shop B" });
   // Sales Agents can request. For the engine's scope rules, they're given
-  // sales.edit.approve at own_location here (a type with no handler yet,
-  // so these tests don't depend on any feature's handler).
+  // sales.edit.approve at own_location here (tests that approve a sale_edit
+  // stub its handler, so they don't depend on the feature).
   const agentA = await insertUserWithRole(t, "sales_agent", { email: "a@x.com", name: "Agent A", locationId: shopA });
   const agentB = await insertUserWithRole(t, "sales_agent", { email: "b@x.com", name: "Agent B", locationId: shopB });
   await t.run(async (ctx) => {
@@ -181,6 +181,7 @@ test("an own_location decider can only decide approvals at their location", asyn
   const atShopB = await request(s, s.chief, { type: "sale_edit", locationId: s.shopB });
   const atShopA = await request(s, s.chief, { type: "sale_edit", locationId: s.shopA });
   const asAgentA = s.t.withIdentity({ subject: s.agentA });
+  vi.spyOn(APPROVAL_HANDLERS, "sale_edit").mockResolvedValueOnce(undefined);
 
   await expect(
     asAgentA.mutation(api.approvals.decideApproval, { approvalId: atShopB, decision: "approve" }),
