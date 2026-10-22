@@ -162,6 +162,52 @@ export async function applySalePayment(
   return paymentId;
 }
 
+/**
+ * A credit sale's agreed total changed (an approved sale correction): the
+ * customer's balance moves by the difference and the sale's creditStatus
+ * follows, with audit entries. The new total can't be below what was
+ * already paid - a payment is reversed first. Call it after patching the
+ * sale's totalAmount; `before` is the sale as it was.
+ */
+export async function applySaleTotalChange(
+  ctx: MutationCtx,
+  args: { before: Doc<"sales">; totalAmount: number; actorId: Id<"users"> },
+) {
+  const { before, totalAmount } = args;
+  if (!before.customerId) return;
+  const delta = totalAmount - before.totalAmount;
+  const amountPaid = before.amountPaid ?? 0;
+  if (totalAmount < amountPaid) {
+    throw new ConvexError("The new total is less than what the customer already paid: reverse a payment first.");
+  }
+  const customer = await ctx.db.get("customers", before.customerId);
+  if (!customer) throw new ConvexError("Customer not found.");
+  const creditStatus: CreditStatus = amountPaid >= totalAmount ? "settled" : "open";
+  if (creditStatus !== before.creditStatus) {
+    await ctx.db.patch("sales", before._id, { creditStatus });
+    await logAudit(ctx, {
+      actorId: args.actorId,
+      action: "update",
+      entityTable: "sales",
+      entityId: before._id,
+      businessUnitId: before.businessUnitId,
+      before: { number: before.number, creditStatus: before.creditStatus ?? null },
+      after: { number: before.number, creditStatus },
+    });
+  }
+  if (delta === 0) return;
+  await ctx.db.patch("customers", customer._id, { balance: customer.balance + delta });
+  await logAudit(ctx, {
+    actorId: args.actorId,
+    action: "update",
+    entityTable: "customers",
+    entityId: customer._id,
+    businessUnitId: before.businessUnitId,
+    before: { name: customer.name, balanceAmount: customer.balance, currency: "USD" },
+    after: { name: customer.name, balanceAmount: customer.balance + delta, currency: "USD", sale: before.number },
+  });
+}
+
 /** APPROVAL_HANDLERS.credit_payment_reversal: undoes a wrong payment. */
 export async function applyCreditPaymentReversal(
   ctx: MutationCtx,

@@ -440,8 +440,15 @@
       "method": "Paid with",
       "paidOn": "Paid on",
       "reversed": "Reversed",
-      "passwordReset": "Password reset"
-    }
+      "passwordReset": "Password reset",
+      "soldOn": "Sale date",
+      "paymentMethod": "Payment",
+      "customerName": "Customer",
+      "linesTotal": "Lines total",
+      "totalAmount": "Total to pay",
+      "saleDiscountReason": "Reason for the lower total"
+    },
+    "atPrice": "at {price} each"
   },
   "Approvals": {
     "title": "Approvals",
@@ -1383,7 +1390,22 @@
       "repayment": "Repayment",
       "reversal": "Correction"
     },
-    "creditLink": "Credit"
+    "creditLink": "Credit",
+    "editRequest": "Request correction",
+    "editPending": "A correction of this sale is waiting for approval.",
+    "editTitle": "Correct sale {number}",
+    "editHint": "Change what was wrong. Nothing changes until the correction is approved.",
+    "editNotFound": "Sale not found.",
+    "editRemoved": "Removed from the sale",
+    "editCreditNote": "Credit sale: the customer and payment method can't be changed.",
+    "editDateHint": "Today or up to {days} days back.",
+    "editReasonLabel": "Why does this sale need a correction?",
+    "editReasonPlaceholder": "e.g. wrong price entered",
+    "editSubmit": "Send for approval",
+    "editSending": "Sending…",
+    "editSent": "Correction sent. It will be applied once approved.",
+    "editError": "Could not send the correction. Please try again.",
+    "editCancel": "Cancel"
   },
   "Filters": {
     "button": "Filters",

@@ -1,11 +1,14 @@
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUnits";
 import { nextSequenceNumber } from "./lib/requisitions";
-import { applyMovement, findHolder, getOrCreateHolder } from "./lib/inventory";
-import { filterableLocations, pickableLocations } from "./lib/locationScope";
+import { applyMovement, findHolder, getOrCreateHolder, stockLevelOf } from "./lib/inventory";
+import { filterableLocations, inScope, pickableLocations } from "./lib/locationScope";
+import { requestApproval } from "./lib/approvals";
+import { planSaleEdit, saleEditChangesValidator, saleItemsOf } from "./lib/saleEdits";
 import { applyRollupEvents, saleEvents, unitsSoldOn } from "./lib/analytics";
 import { businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./lib/time";
 import {
@@ -452,6 +455,7 @@ export const list = authedQuery({
           : [];
         return {
           ...sale,
+          pendingEdit: await hasPendingEdit(ctx, sale._id),
           balance: sale.creditStatus ? saleBalance(sale) : null,
           payments,
           locationName: location?.name ?? null,
@@ -475,5 +479,91 @@ export const filterLocations = authedQuery({
     const { scope } = await ctx.requirePermission("sales.view");
     await requireBusinessUnit(ctx, businessUnitKey);
     return await filterableLocations(ctx, scope);
+  },
+});
+
+/** Whether a correction of the sale is waiting for approval. */
+async function hasPendingEdit(ctx: QueryCtx, saleId: Id<"sales">): Promise<boolean> {
+  const approvals = await ctx.db
+    .query("approvals")
+    .withIndex("by_entityTable_and_entityId", (q) => q.eq("entityTable", "sales").eq("entityId", saleId))
+    .order("desc")
+    .take(20);
+  return approvals.some((a) => a.type === "sale_edit" && a.status === "pending");
+}
+
+/**
+ * What the correction form needs: the sale's lines with their product,
+ * price at sale time, suggested price then, and how many more of the lot
+ * the sale's location still holds (for raising a quantity).
+ */
+export const editOptions = authedQuery({
+  args: { saleId: v.id("sales") },
+  handler: async (ctx, { saleId }) => {
+    const sale = await ctx.db.get("sales", saleId);
+    if (!sale) return null;
+    await ctx.requirePermission("sales.edit.request", (scope, user) => inScope(scope, user, sale.locationId));
+    const holder = await findHolder(ctx, sale.businessUnitId, { type: "location", refId: sale.locationId });
+    const items = await saleItemsOf(ctx, sale._id);
+    const lines = await Promise.all(
+      items.map(async (item) => {
+        const product = await ctx.db.get("products", item.productId);
+        const level = holder ? await stockLevelOf(ctx, item.inventoryBatchId, holder._id) : null;
+        return {
+          saleItemId: item._id,
+          ...(await describeProduct(ctx, item.productId)),
+          photoUrl: product?.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          discountReason: item.discountReason ?? null,
+          suggestedPrice: item.suggestedPriceSnapshot ?? null,
+          available: level?.qtyOnHand ?? 0,
+        };
+      }),
+    );
+    return {
+      _id: sale._id,
+      number: sale.number,
+      status: sale.status,
+      soldOn: businessDayOf(sale.createdAt),
+      paymentMethod: sale.paymentMethod,
+      customerName: sale.customerName ?? null,
+      isCredit: sale.paymentMethod === "credit",
+      amountPaid: sale.amountPaid ?? 0,
+      linesTotal: sale.linesTotal ?? sale.totalAmount,
+      totalAmount: sale.totalAmount,
+      saleDiscountReason: sale.saleDiscountReason ?? null,
+      pendingEdit: await hasPendingEdit(ctx, sale._id),
+      lines,
+    };
+  },
+});
+
+/**
+ * Asks for a sale to be corrected (approval type sale_edit, decided by
+ * sales.edit.approve holders - never the requester, except the Super
+ * Admin). Checked now with the same rules as when it's applied
+ * (convex/lib/saleEdits.ts); nothing changes until it's approved.
+ */
+export const requestEdit = authedMutation({
+  args: { saleId: v.id("sales"), reason: v.string(), changes: saleEditChangesValidator },
+  handler: async (ctx, { saleId, reason, changes }) => {
+    const sale = await ctx.db.get("sales", saleId);
+    if (!sale) throw new ConvexError("Sale not found.");
+    await ctx.requirePermission("sales.edit.request", (scope, user) => inScope(scope, user, sale.locationId));
+    const cleanReason = reason.trim();
+    if (!cleanReason) throw new ConvexError("Say why this sale needs a correction.");
+    if (cleanReason.length > 300) throw new ConvexError("The reason is too long.");
+    const plan = await planSaleEdit(ctx, sale, changes, Date.now());
+    if (!plan.changed) throw new ConvexError("Nothing was changed.");
+    return await requestApproval(ctx, {
+      type: "sale_edit",
+      businessUnitId: sale.businessUnitId,
+      locationId: sale.locationId,
+      entityTable: "sales",
+      entityId: sale._id,
+      payload: { before: plan.before, after: plan.after, changes, baseline: plan.baseline },
+      reason: cleanReason,
+    });
   },
 });

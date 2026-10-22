@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HandCoins, Plus } from "lucide-react";
+import { HandCoins, PencilLine, Plus } from "lucide-react";
 import { useQuery, type PaginatedQueryItem } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
@@ -18,11 +18,12 @@ import { DateRangeFilter, useDateRangeLabel } from "@/components/filters/date-ra
 import { FilterField } from "@/components/filters/filter-field";
 import { FilterPanel, type FilterChip } from "@/components/filters/filter-panel";
 import { Badge } from "@/components/ui/badge";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { NativeSelect } from "@/components/ui/native-select";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { useProductLineLabel } from "./use-product-line-label";
+import { SaleEditDialog } from "./sale-edit-dialog";
 
 type SaleRow = PaginatedQueryItem<typeof api.sales.list>;
 
@@ -60,6 +61,8 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
   const locale = useLocale();
   const canView = useCan("sales.view");
   const canSell = useCan("sales.create");
+  const canRequestEdit = useCan("sales.edit.request");
+  const [editing, setEditing] = useState<Id<"sales"> | null>(null);
   const [applied, setApplied] = useState<SalesFilters>(NO_FILTERS);
   const { from, to, locationId, creditStatus } = applied;
   const dateLabel = useDateRangeLabel();
@@ -230,6 +233,16 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
           </ul>
         </div>
       ) : null}
+      {canRequestEdit && sale.status === "completed" ? (
+        sale.pendingEdit ? (
+          <p className="text-muted-foreground">{t("editPending")}</p>
+        ) : (
+          <Button type="button" variant="outline" className="min-h-11 self-start" onClick={() => setEditing(sale._id)}>
+            <PencilLine aria-hidden />
+            {t("editRequest")}
+          </Button>
+        )
+      ) : null}
     </div>
   );
 
@@ -323,6 +336,7 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
         )}
       />
       <p className="text-xs text-muted-foreground">{t("timeZoneNote")}</p>
+      <SaleEditDialog saleId={editing} onClose={() => setEditing(null)} />
     </div>
   );
 }
