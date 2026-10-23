@@ -25,6 +25,7 @@ export const DEFAULT_REQUIRED_PERMISSION: Record<ApprovalType, PermissionKey> = 
   distribution: "stock.approve",
   withdrawal: "withdrawals.approve",
   credit_payment_reversal: "sales.edit.approve",
+  credit_cancel: "sales.credit_cancel.approve",
 };
 
 export type ApprovalRequest = {

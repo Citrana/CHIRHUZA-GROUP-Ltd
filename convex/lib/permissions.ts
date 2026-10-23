@@ -13,6 +13,7 @@ export const PERMISSIONS = [
   { key: "sales.create", module: "sales", description: "Record sales" },
   { key: "sales.edit.request", module: "sales", description: "Request an edit to a sale" },
   { key: "sales.edit.approve", module: "sales", description: "Approve sale edits" },
+  { key: "sales.credit_cancel.approve", module: "sales", description: "Approve cancelling credit debts recorded by mistake" },
 
   { key: "expenses.view", module: "expenses", description: "View expenses" },
   { key: "expenses.request", module: "expenses", description: "Request an expense" },

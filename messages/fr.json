@@ -304,6 +304,9 @@
       "edit": {
         "request": "Demander la modification d'une vente",
         "approve": "Approuver les modifications de ventes"
+      },
+      "credit_cancel": {
+        "approve": "Approuver l'annulation de dettes à crédit enregistrées par erreur"
       }
     },
     "expenses": {
@@ -505,7 +508,8 @@
       "stock_batch": "Lot de stock",
       "distribution": "Distribution de stock",
       "withdrawal": "Retrait",
-      "credit_payment_reversal": "Correction d'un paiement à crédit"
+      "credit_payment_reversal": "Correction d'un paiement à crédit",
+      "credit_cancel": "Dette à crédit annulée (erreur)"
     }
   },
   "ProductCategories": {
@@ -1405,7 +1409,9 @@
     "editSending": "Envoi…",
     "editSent": "Correction envoyée. Elle sera appliquée après approbation.",
     "editError": "Impossible d'envoyer la correction. Veuillez réessayer.",
-    "editCancel": "Annuler"
+    "editCancel": "Annuler",
+    "voided": "Annulée - erreur",
+    "voidedShown": "Annulée par erreur : {reason}"
   },
   "Filters": {
     "button": "Filtres",
@@ -1475,7 +1481,14 @@
     "tooMuch": "C'est plus que ce que le client doit ({owed}).",
     "needAmount": "Saisissez un montant supérieur à 0.",
     "saveError": "Impossible d'enregistrer. Veuillez réessayer.",
-    "oldestFirst": "Un paiement va d'abord à la plus ancienne vente ouverte."
+    "oldestFirst": "Un paiement va d'abord à la plus ancienne vente ouverte.",
+    "statusVoided": "Annulée - erreur",
+    "cancelDebt": "Annuler la dette (enregistrée par erreur)",
+    "cancelDebtHint": "Pour des ventes à crédit enregistrées par erreur. Une fois approuvé, les produits retournent dans le stock de la boutique, les ventes sont marquées comme erreurs et sortent des analyses.",
+    "cancelDebtReason": "Quelle était l'erreur ?",
+    "cancelDebtSent": "Annulation de la dette envoyée pour approbation.",
+    "cancelPending": "Annulation de la dette en attente d'approbation",
+    "paidFirst": "Des paiements ont été enregistrés sur {sales} : signalez-les d'abord comme erreurs, puis annulez la dette."
   },
   "Prices": {
     "title": "Prix",
