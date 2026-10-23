@@ -21,7 +21,8 @@ import {
 /**
  * Credit (CLAUDE.md "Credit"): who owes what, repayments and corrections.
  * Seeing balances needs sales.view, recording a repayment sales.create,
- * requesting a correction sales.edit.request - each scoped like sales:
+ * requesting a correction or cancelling sales recorded by mistake
+ * sales.edit.request - each scoped like sales:
  * own_location users only see and act on their own location's sales.
  */
 
@@ -113,6 +114,8 @@ export const customer = authedQuery({
           amountPaid: sale.amountPaid ?? 0,
           balance: saleBalance(sale),
           creditStatus: sale.creditStatus ?? null,
+          status: sale.status,
+          voidReason: sale.voidReason ?? null,
           // What the customer took on this sale.
           lines: await Promise.all(
             (
@@ -146,6 +149,12 @@ export const customer = authedQuery({
           };
         }),
       ),
+      cancelPending: (
+        await ctx.db
+          .query("approvals")
+          .withIndex("by_entityTable_and_entityId", (q) => q.eq("entityTable", "customers").eq("entityId", customer._id))
+          .take(20)
+      ).some((a) => a.type === "credit_cancel" && a.status === "pending"),
       canRecordPayment: ctx.can("sales.create"),
       canRequestReversal: ctx.can("sales.edit.request"),
     };
@@ -253,6 +262,59 @@ export const requestPaymentReversal = authedMutation({
       payload: {
         before: { ...described, amount: payment.amount, currency: "USD" },
         after: { ...described, amount: 0, currency: "USD", reversed: true },
+      },
+      reason: cleanReason,
+    });
+  },
+});
+
+/**
+ * Asks for a customer's debt to be cancelled because their open credit
+ * sales (within the caller's scope) were recorded by mistake (approval
+ * type credit_cancel, decided by sales.credit_cancel.approve holders - the
+ * Super Admin by default - never the requester, except the Super Admin).
+ * On approval the sales are voided: stock back, out of the analytics
+ * (convex/lib/saleVoids.ts). Sales with payments must have them reversed
+ * first.
+ */
+export const requestCreditCancel = authedMutation({
+  args: { customerId: v.id("customers"), reason: v.string() },
+  handler: async (ctx, { customerId, reason }) => {
+    const { scope } = await ctx.requirePermission("sales.edit.request");
+    const customer = await ctx.db.get("customers", customerId);
+    if (!customer) throw new ConvexError("Customer not found.");
+    const cleanReason = reason.trim();
+    if (!cleanReason) throw new ConvexError("Say why this debt is a mistake.");
+    if (cleanReason.length > 300) throw new ConvexError("The reason is too long.");
+    const openSales = (
+      await ctx.db
+        .query("sales")
+        .withIndex("by_customerId_and_createdAt", (q) => q.eq("customerId", customer._id))
+        .take(MAX_OPEN_SALES)
+    ).filter((sale) => sale.status === "completed" && sale.creditStatus === "open" && inScope(scope, ctx.user, sale.locationId));
+    if (openSales.length === 0) throw new ConvexError("This customer owes nothing here.");
+    const paid = openSales.filter((sale) => (sale.amountPaid ?? 0) > 0);
+    if (paid.length > 0) {
+      throw new ConvexError({
+        code: "PAID_FIRST" as const,
+        message: `Reverse the payments on ${paid.map((s) => s.number).join(", ")} first.`,
+        sales: paid.map((s) => s.number),
+      });
+    }
+    const balanceAmount = openSales.reduce((t, sale) => t + sale.totalAmount, 0);
+    const numbers = openSales.map((sale) => sale.number).join(", ");
+    const locations = new Set(openSales.map((sale) => sale.locationId));
+    return await requestApproval(ctx, {
+      type: "credit_cancel",
+      businessUnitId: customer.businessUnitId,
+      // One location: own_location deciders there may decide it.
+      ...(locations.size === 1 ? { locationId: openSales[0].locationId } : {}),
+      entityTable: "customers",
+      entityId: customer._id,
+      payload: {
+        before: { customer: customer.name, sales: numbers, status: "completed", balanceAmount, currency: "USD" },
+        after: { customer: customer.name, sales: numbers, status: "voided", balanceAmount: 0, currency: "USD" },
+        sales: openSales.map((sale) => ({ saleId: sale._id, number: sale.number, totalAmount: sale.totalAmount, currency: "USD" })),
       },
       reason: cleanReason,
     });

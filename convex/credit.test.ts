@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { appendOnlyGuardedDb } from "./lib/rbac";
-import { applyMovement, businessHolderRef, getOrCreateHolder } from "./lib/inventory";
+import { applyMovement, businessHolderRef, findHolder, getOrCreateHolder, stockLevelOf } from "./lib/inventory";
 import { businessDayOf } from "./lib/time";
 import { arrivedMixedBatch, receiveAll, setupStock, type Setup } from "./lib/stock.test.utils";
 import { insertLocation } from "./lib/test.utils";
@@ -255,6 +255,126 @@ test("a wrong payment is reversed through an approval, never by its requester", 
   // Payments are append-only.
   await expect(s.t.run((ctx) => appendOnlyGuardedDb(ctx).patch("salePayments", payment._id, { amount: 1 }))).rejects.toThrow();
   await expect(s.t.run((ctx) => appendOnlyGuardedDb(ctx).delete("salePayments", payment._id))).rejects.toThrow();
+});
+
+const requestCancel = (s: Setup, who: Id<"users">, customerId: Id<"customers">, reason = "Sold to the wrong customer") =>
+  s.as(who).mutation(api.credit.requestCreditCancel, { customerId, reason });
+const decide = (s: Setup, who: Id<"users">, approvalId: Id<"approvals">, decision: "approve" | "reject" = "approve") =>
+  s.as(who).mutation(api.approvals.decideApproval, { approvalId, decision });
+/** What a lot has at a location. */
+const atLocation = (s: Setup, lot: Id<"inventoryBatches">, locationId: Id<"locations">) =>
+  s.t.run(async (ctx) => {
+    const holder = await findHolder(ctx, s.hairId, { type: "location", refId: locationId });
+    return holder ? ((await stockLevelOf(ctx, lot, holder._id))?.qtyOnHand ?? 0) : 0;
+  });
+async function expectRebuildMatches(s: Setup) {
+  const derived = async () => ({
+    ...(await rollups(s)),
+    productStock: await s.t.run(async (ctx) =>
+      (await ctx.db.query("productStock").collect()).map(({ _id, _creationTime, ...rest }) => {
+        void _id;
+        void _creationTime;
+        return JSON.stringify(rest);
+      }).sort(),
+    ),
+  });
+  const incremental = await derived();
+  await s.t.mutation(internal.analytics.rebuildRollups, { businessUnitKey: "hair" });
+  await s.t.mutation(internal.inventory.rebuildProductStock, { businessUnitKey: "hair" });
+  expect(await derived()).toEqual(incremental);
+}
+
+test("a debt recorded by mistake is cancelled through an approval: stock back, sales voided", async () => {
+  const { s, p1Lot, p2Lot, customer } = await withShopStock();
+  const furaha = await customer("Maman Furaha");
+  const { saleId: first } = await creditSale(s, s.agent, furaha, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1000 }]);
+  const { saleId: second } = await creditSale(s, s.agent, furaha, [{ inventoryBatchId: p1Lot, qty: 2, unitPrice: 500 }]);
+  expect([await atLocation(s, p1Lot, s.shop), await atLocation(s, p2Lot, s.shop)]).toEqual([4, 2]);
+
+  // Asking needs sales.edit.request and a reason; one request at a time.
+  await expect(requestCancel(s, s.inventory, furaha)).rejects.toThrow(/sales\.edit\.request/);
+  await expect(requestCancel(s, s.agent, furaha, "  ")).rejects.toThrow(/Say why/);
+  const approvalId = await requestCancel(s, s.agent, furaha);
+  await expect(requestCancel(s, s.agent, furaha)).rejects.toThrow(/already pending/);
+  expect(await s.t.run((ctx) => ctx.db.get("approvals", approvalId))).toMatchObject({
+    type: "credit_cancel",
+    requiredPermission: "sales.credit_cancel.approve",
+    locationId: s.shop,
+    payload: { before: { balanceAmount: 2000, sales: "SALE-00001, SALE-00002" }, after: { balanceAmount: 0, status: "voided" } },
+  });
+  expect((await s.as(s.agent).query(api.credit.customer, { customerId: furaha }))!.cancelPending).toBe(true);
+
+  // Never the requester; only the Super Admin holds the permission by default.
+  await expect(decide(s, s.agent, approvalId)).rejects.toThrow();
+  await expect(decide(s, s.chief, approvalId)).rejects.toThrow();
+  await decide(s, s.superAdmin, approvalId);
+
+  // The products are back at the shop, the sales are marked as mistakes, nobody owes anything.
+  expect([await atLocation(s, p1Lot, s.shop), await atLocation(s, p2Lot, s.shop)]).toEqual([6, 3]);
+  for (const saleId of [first, second]) {
+    const sale = await getSale(s, saleId);
+    expect(sale).toMatchObject({ status: "voided", voidReason: "Sold to the wrong customer", voidedBy: s.superAdmin });
+    expect(sale!.creditStatus).toBeUndefined();
+  }
+  expect((await getCustomer(s, furaha))!.balance).toBe(0);
+  expect((await s.as(s.agent).query(api.credit.owed, { businessUnitKey: "hair" })).rows).toEqual([]);
+  const view = (await s.as(s.agent).query(api.credit.customer, { customerId: furaha }))!;
+  expect(view.cancelPending).toBe(false);
+  expect(view.sales.map((x) => x.status)).toEqual(["voided", "voided"]);
+  await expect(requestCancel(s, s.agent, furaha)).rejects.toThrow(/owes nothing/);
+
+  // Out of the analytics and the stock report, exactly as a rebuild says.
+  const sales = await s.t.run((ctx) => ctx.db.query("dailyFinance").collect());
+  expect(sales.every((row) => row.sales === 0 && row.saleCost === 0)).toBe(true);
+  await expectRebuildMatches(s);
+  const audit = await s.t.run((ctx) =>
+    ctx.db.query("auditLogs").withIndex("by_entityTable_and_entityId_and_timestamp", (q) => q.eq("entityTable", "sales").eq("entityId", first)).collect(),
+  );
+  expect(audit.at(-1)).toMatchObject({ after: { status: "voided" }, reason: "Sold to the wrong customer" });
+
+  // A voided sale can't be corrected.
+  const [item] = await s.t.run((ctx) => ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", first)).collect());
+  await expect(
+    s.as(s.agent).mutation(api.sales.requestEdit, {
+      saleId: first,
+      reason: "Wrong price",
+      changes: { lines: [{ saleItemId: item._id, qty: 1, unitPrice: 900, discountReason: "Loyal" }] },
+    }),
+  ).rejects.toThrow(/completed/);
+});
+
+test("a debt cancellation: payments reversed first, within scope, and refused if a sale changed", async () => {
+  const { s, other, p1Lot, p2Lot, customer } = await withShopStock();
+  const esther = await customer("Esther B.");
+  const { saleId: here } = await creditSale(s, s.agent, esther, [{ inventoryBatchId: p2Lot, qty: 1, unitPrice: 1000 }], {
+    paidNow: 200,
+    paidNowMethod: "cash",
+  });
+  const { saleId: there } = await creditSale(s, s.sales, esther, [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }], {
+    locationId: other,
+  });
+
+  // Money was recorded on it: that payment is reported as a mistake first.
+  const err = await requestCancel(s, s.agent, esther).then(() => null, (e) => e);
+  expect(err.data).toMatchObject({ code: "PAID_FIRST", sales: ["SALE-00001"] });
+  const [paid] = await s.t.run((ctx) => ctx.db.query("salePayments").withIndex("by_saleId", (q) => q.eq("saleId", here)).collect());
+  const reversal = await s.as(s.agent).mutation(api.credit.requestPaymentReversal, { paymentId: paid._id, reason: "Never paid" });
+  await decide(s, s.superAdmin, reversal);
+
+  // The own_location agent only cancels their own location's sale.
+  const approvalId = await requestCancel(s, s.agent, esther);
+  const approval = await s.t.run((ctx) => ctx.db.get("approvals", approvalId));
+  expect((approval!.payload as { sales: unknown[] }).sales).toMatchObject([{ saleId: here, totalAmount: 1000 }]);
+
+  // Paid meanwhile: the approval is refused and stays pending; rejected, nothing changes.
+  await s.as(s.agent).mutation(api.credit.recordRepayment, { customerId: esther, amount: 100, method: "cash" });
+  await expect(decide(s, s.superAdmin, approvalId)).rejects.toThrow(/changed since/);
+  expect((await s.t.run((ctx) => ctx.db.get("approvals", approvalId)))!.status).toBe("pending");
+  await decide(s, s.superAdmin, approvalId, "reject");
+  expect(await getSale(s, here)).toMatchObject({ status: "completed", creditStatus: "open", amountPaid: 100 });
+  expect(await getSale(s, there)).toMatchObject({ status: "completed", creditStatus: "open" });
+  expect(await atLocation(s, p2Lot, s.shop)).toBe(2);
+  expect((await getCustomer(s, esther))!.balance).toBe(1400);
 });
 
 test("customers: one per name, found by name or phone", async () => {

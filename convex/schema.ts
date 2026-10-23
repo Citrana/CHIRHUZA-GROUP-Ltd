@@ -443,6 +443,11 @@ export default defineSchema({
     saleDiscountReason: v.optional(v.string()),
     amountPaid: v.optional(v.number()),
     creditStatus: v.optional(creditStatusValidator),
+    // A sale voided as a mistake (convex/lib/saleVoids.ts, approval
+    // credit_cancel): why, when and by whom. Its stock went back.
+    voidReason: v.optional(v.string()),
+    voidedAt: v.optional(v.number()),
+    voidedBy: v.optional(v.id("users")),
   })
     .index("by_businessUnitId_and_createdAt", ["businessUnitId", "createdAt"])
     .index("by_locationId_and_createdAt", ["locationId", "createdAt"])
