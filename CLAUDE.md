@@ -238,6 +238,17 @@ this repo, now and later — do not relax them for convenience.
   payment is undone only through the approval engine (type
   `credit_payment_reversal`, requested with `sales.edit.request`, decided
   by `sales.edit.approve` holders): its handler adds the reversal row.
+- A debt recorded by mistake is cancelled only through the approval engine
+  (type `credit_cancel`, `credit.requestCreditCancel`, requested with
+  `sales.edit.request` and a reason for the customer's whole open debt in
+  scope; decided by `sales.credit_cancel.approve` holders, Super Admin only
+  by default). Sales with payments are refused until those are reversed.
+  On approval `voidSale` (`convex/lib/saleVoids.ts`) voids each sale:
+  `return` movements put the stock back at the sale's location, the
+  reversed `saleEvents` take it out of the rollups, the sale becomes
+  `status: "voided"` (`voidReason`, `voidedAt`, `voidedBy`, no
+  `creditStatus`) and leaves the customer's balance. A voided sale can't be
+  corrected.
 - Revenue counts at the sale; payments are cash collected and **never**
   touch the analytics rollups. Who owes what is on `/[service]/sales/credit`
   (`credit.owed`, `credit.customer`), scoped by `sales.view`.

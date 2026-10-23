@@ -39,7 +39,8 @@ function errorMessage(e: unknown, fallback: string): string {
 /**
  * One customer's credit (sales.view): what they owe, their credit sales
  * and payments. Sellers record a payment (split over the oldest open sales
- * first) or report a wrong payment for correction (approval).
+ * first), report a wrong payment for correction, or ask for the debt to
+ * be cancelled because the sales were recorded by mistake (both approvals).
  */
 export function CustomerCredit({ service, customerId }: { service: BusinessUnitKey; customerId: string }) {
   const t = useTranslations("Credit");
@@ -50,6 +51,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   const view = useQuery(api.credit.customer, canView ? { customerId } : "skip");
   const record = useMutation(api.credit.recordRepayment);
   const requestReversal = useMutation(api.credit.requestPaymentReversal);
+  const requestCancel = useMutation(api.credit.requestCreditCancel);
 
   const [today] = useState(() => businessDayOf(Date.now()));
   const [amount, setAmount] = useState<number | null>(null);
@@ -60,6 +62,8 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [correcting, setCorrecting] = useState<Id<"salePayments"> | null>(null);
   const [reason, setReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
@@ -118,8 +122,29 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
     }
   }
 
+  async function submitCancel() {
+    setSaving(true);
+    setMessage(null);
+    try {
+      await requestCancel({ customerId: customer, reason: cancelReason });
+      setMessage({ ok: true, text: t("cancelDebtSent") });
+      setCancelling(false);
+      setCancelReason("");
+    } catch (e) {
+      const data = e instanceof ConvexError ? (e.data as { code?: string; sales?: string[] }) : null;
+      setMessage({
+        ok: false,
+        text: data?.code === "PAID_FIRST" ? t("paidFirst", { sales: (data.sales ?? []).join(", ") }) : errorMessage(e, t("saveError")),
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const statusBadge = (s: SaleRow) =>
-    s.creditStatus === "open" ? (
+    s.status === "voided" ? (
+      <Badge variant="outline">{t("statusVoided")}</Badge>
+    ) : s.creditStatus === "open" ? (
       <Badge variant="destructive">{t("statusOpen")}</Badge>
     ) : (
       <Badge variant="secondary">{t("statusSettled")}</Badge>
@@ -134,6 +159,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
             {lineLabel(line)} · {tSales("qtyAtPrice", { qty: line.qty, price: money(line.unitPrice) })}
           </li>
         ))}
+        {s.voidReason ? <li>{tSales("voidedShown", { reason: s.voidReason })}</li> : null}
       </ul>
     ) : null;
 
@@ -227,6 +253,11 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
         <p className="mt-1 text-sm text-muted-foreground">
           {[view.phone, t("owes", { amount: money(view.balance) })].filter(Boolean).join(" · ")}
         </p>
+        {view.cancelPending ? (
+          <Badge variant="outline" className="mt-2">
+            {t("cancelPending")}
+          </Badge>
+        ) : null}
       </div>
 
       {message ? (
@@ -303,6 +334,42 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
             {saving ? t("recording") : t("recordButton")}
           </Button>
         </form>
+      ) : null}
+
+      {view.canRequestReversal && view.balance > 0 && !view.cancelPending ? (
+        cancelling ? (
+          <div className="flex flex-col gap-3 rounded-lg border border-border p-4">
+            <div>
+              <h2 className="font-heading text-base font-semibold">{t("cancelDebt")}</h2>
+              <p className="text-xs text-muted-foreground">{t("cancelDebtHint")}</p>
+            </div>
+            <div className="flex flex-col gap-1">
+              <Label htmlFor="cancel-debt-reason" required>
+                {t("cancelDebtReason")}
+              </Label>
+              <Input
+                id="cancel-debt-reason"
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                maxLength={300}
+                required
+                className="h-11"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" className="min-h-11" disabled={saving || !cancelReason.trim()} onClick={submitCancel}>
+                {t("sendCorrection")}
+              </Button>
+              <Button type="button" variant="ghost" className="min-h-11" onClick={() => setCancelling(false)}>
+                {t("cancel")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <Button type="button" variant="outline" className="min-h-11 self-start" onClick={() => setCancelling(true)}>
+            {t("cancelDebt")}
+          </Button>
+        )
       ) : null}
 
       <section className="flex flex-col gap-2">

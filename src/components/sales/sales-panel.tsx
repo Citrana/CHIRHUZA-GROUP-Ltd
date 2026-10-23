@@ -36,10 +36,11 @@ function RecordedBadge({ sale }: { sale: SaleRow }) {
   return <Badge variant="outline">{t("recordedBadge", { date: day.format(sale.recordedAt) })}</Badge>;
 }
 
-/** "Owes $30.00" / "Paid" on a credit sale. */
+/** "Owes $30.00" / "Paid" on a credit sale; "Cancelled - mistake" on a voided sale. */
 function CreditBadge({ sale }: { sale: SaleRow }) {
   const t = useTranslations("Sales");
   const locale = useLocale();
+  if (sale.status === "voided") return <Badge variant="outline">{t("voided")}</Badge>;
   if (sale.balance === null) return null;
   return sale.balance > 0 ? (
     <Badge variant="destructive">{t("creditBalance", { amount: formatMoney(sale.balance, "USD", locale) })}</Badge>
@@ -210,6 +211,9 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
           </>
         ) : null}
       </dl>
+      {sale.status === "voided" ? (
+        <p className="text-xs text-muted-foreground">{t("voidedShown", { reason: sale.voidReason ?? "—" })}</p>
+      ) : null}
       {sale.saleDiscountReason && sale.linesTotal !== undefined ? (
         <p className="text-xs text-muted-foreground">
           {t("saleDiscountShown", { lines: money(sale.linesTotal), reason: sale.saleDiscountReason })}

@@ -304,6 +304,9 @@
       "edit": {
         "request": "Request an edit to a sale",
         "approve": "Approve sale edits"
+      },
+      "credit_cancel": {
+        "approve": "Approve cancelling credit debts recorded by mistake"
       }
     },
     "expenses": {
@@ -505,7 +508,8 @@
       "stock_batch": "Stock batch",
       "distribution": "Stock distribution",
       "withdrawal": "Withdrawal",
-      "credit_payment_reversal": "Credit payment correction"
+      "credit_payment_reversal": "Credit payment correction",
+      "credit_cancel": "Credit debt cancelled (mistake)"
     }
   },
   "ProductCategories": {
@@ -1405,7 +1409,9 @@
     "editSending": "Sending…",
     "editSent": "Correction sent. It will be applied once approved.",
     "editError": "Could not send the correction. Please try again.",
-    "editCancel": "Cancel"
+    "editCancel": "Cancel",
+    "voided": "Cancelled - mistake",
+    "voidedShown": "Cancelled as a mistake: {reason}"
   },
   "Filters": {
     "button": "Filters",
@@ -1475,7 +1481,14 @@
     "tooMuch": "That's more than the customer owes ({owed}).",
     "needAmount": "Enter an amount above 0.",
     "saveError": "Could not save. Please try again.",
-    "oldestFirst": "A payment goes to the oldest open sale first."
+    "oldestFirst": "A payment goes to the oldest open sale first.",
+    "statusVoided": "Cancelled - mistake",
+    "cancelDebt": "Cancel the debt (recorded by mistake)",
+    "cancelDebtHint": "For credit sales recorded by mistake. Once approved, the products go back to the shop's stock, the sales are marked as mistakes and leave the analytics.",
+    "cancelDebtReason": "What was the mistake?",
+    "cancelDebtSent": "Debt cancellation sent for approval.",
+    "cancelPending": "Debt cancellation waiting for approval",
+    "paidFirst": "Some payments were recorded on {sales}: report them as mistakes first, then cancel the debt."
   },
   "Prices": {
     "title": "Prices",

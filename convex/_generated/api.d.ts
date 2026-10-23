@@ -39,6 +39,7 @@ import type * as lib_products from "../lib/products.js";
 import type * as lib_rbac from "../lib/rbac.js";
 import type * as lib_requisitions from "../lib/requisitions.js";
 import type * as lib_saleEdits from "../lib/saleEdits.js";
+import type * as lib_saleVoids from "../lib/saleVoids.js";
 import type * as lib_sales from "../lib/sales.js";
 import type * as lib_stockBatches from "../lib/stockBatches.js";
 import type * as lib_time from "../lib/time.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "lib/rbac": typeof lib_rbac;
   "lib/requisitions": typeof lib_requisitions;
   "lib/saleEdits": typeof lib_saleEdits;
+  "lib/saleVoids": typeof lib_saleVoids;
   "lib/sales": typeof lib_sales;
   "lib/stockBatches": typeof lib_stockBatches;
   "lib/time": typeof lib_time;
