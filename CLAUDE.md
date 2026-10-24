@@ -184,6 +184,26 @@ this repo, now and later — do not relax them for convenience.
   approval — if stock ran out meanwhile it throws and the approval stays
   pending.
 
+## Stock counts
+
+- A stock count (`convex/stockCounts.ts`, `convex/lib/stockCounts.ts`)
+  freezes each product's expected quantity at a holder when it starts
+  (`expectedQty`, average lot `unitCost`). It is **blind**: `get` hides
+  expected quantities while counting, except for `stock.count.approve`
+  holders who ask. When a line is counted, `movedSinceSnapshot` = the
+  holder's stock now minus `expectedQty`, so sales/transfers during the
+  count are never taken for losses.
+- Every counted line that differs needs a reason and becomes one
+  `stockAdjustments` row with its **own** approval (type
+  `stock_adjustment`, decided by `stock.count.approve`); matching lines
+  need none. Stock changes only in the handler, through `applyMovement`
+  (`"adjustment"`: missing units leave the oldest lots first, extra units
+  join the newest). The person who counted a line can't approve it (Super
+  Admin exempt, flagged `selfApproved`). Permissions: `stock.count.record`
+  / `.review` / `.approve`, scoped by holder (own location or oneself).
+- Home reminds when the last finished count is older than
+  `stockCountSettings.reminderDays` (default 30).
+
 ## Sales
 
 - A sale takes stock out of **one location** through `applyMovement`
@@ -460,7 +480,8 @@ buyer or the receiving team, approval, shipped/arrived), Goma receiving
 (counting good/damaged/missing units into sellable lots), distributions to
 locations/people with Chief Admin approval (`/[service]/stock/distributions`),
 the inventory core with the stock overview by product, lot and holder
-(`/[service]/stock`), and sales (`/[service]/sales`, the phone sale form at
+(`/[service]/stock`), stock counts (`/[service]/stock/counts`: blind
+counts, review at cost, one approval per difference), and sales (`/[service]/sales`, the phone sale form at
 `/[service]/sales/new`; suggested selling prices set on the price list at
 `/[service]/products/prices`, next to each lot's purchase cost; sale
 corrections requested from the sales list and approved in Approvals), credit sales (customers, agreed totals, part
