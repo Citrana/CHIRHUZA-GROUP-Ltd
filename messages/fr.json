@@ -71,7 +71,9 @@
       "requisitions": "Réquisitions prêtes à l'achat",
       "reviewApprovals": "Examiner les approbations en attente",
       "recordSales": "Enregistrer les ventes du jour",
-      "receiveStock": "Mettre à jour le stock d'un achat récent"
+      "receiveStock": "Mettre à jour le stock d'un achat récent",
+      "stockCount": "Dernier inventaire il y a {days} jours",
+      "noStockCount": "Aucun inventaire fait pour l'instant"
     },
     "metrics": {
       "approvals": "{count} en attente",
@@ -325,7 +327,12 @@
       "set_price": "Fixer les prix à l'achat",
       "receive": "Réceptionner les lots d'achat",
       "distribute": "Distribuer le stock aux sites",
-      "approve": "Approuver les mouvements de stock"
+      "approve": "Approuver les mouvements de stock",
+      "count": {
+        "record": "Commencer des inventaires et saisir les quantités comptées",
+        "review": "Vérifier les inventaires et envoyer les écarts pour approbation",
+        "approve": "Approuver les corrections d'inventaire"
+      }
     },
     "requisition": {
       "view": "Voir les réquisitions",
@@ -449,7 +456,17 @@
       "customerName": "Client",
       "linesTotal": "Total des lignes",
       "totalAmount": "Total à payer",
-      "saleDiscountReason": "Motif du total réduit"
+      "saleDiscountReason": "Motif du total réduit",
+      "holder": "Où",
+      "product": "Produit",
+      "sku": "SKU",
+      "colour": "Couleur",
+      "lengthInches": "Longueur (pouces)",
+      "expected": "Attendu",
+      "counted": "Compté",
+      "difference": "Écart",
+      "countReason": "Raison de l'écart",
+      "differenceCost": "Valeur au coût"
     },
     "atPrice": "à {price} pièce"
   },
@@ -509,7 +526,8 @@
       "distribution": "Distribution de stock",
       "withdrawal": "Retrait",
       "credit_payment_reversal": "Correction d'un paiement à crédit",
-      "credit_cancel": "Dette à crédit annulée (erreur)"
+      "credit_cancel": "Dette à crédit annulée (erreur)",
+      "stock_adjustment": "Correction d'inventaire"
     }
   },
   "ProductCategories": {
@@ -1052,7 +1070,8 @@
       "label": "Sections du stock",
       "overview": "Vue d'ensemble",
       "batches": "Lots d'achat",
-      "distributions": "Distributions"
+      "distributions": "Distributions",
+      "counts": "Inventaires"
     },
     "title": "Stock",
     "subtitle": "Ce qui reste, et qui le détient.",
@@ -1758,5 +1777,129 @@
       "q12": "Merci pour le soin que vous mettez dans chaque vente."
     },
     "dismiss": "Fermer"
+  },
+  "StockCounts": {
+    "title": "Inventaires",
+    "subtitle": "Comptez ce qu'il y a vraiment en rayon et comparez avec ce que dit le système.",
+    "accessDenied": "Vous n'avez pas accès aux inventaires.",
+    "start": "Commencer un inventaire",
+    "reminder": "Rappel",
+    "empty": "Aucun inventaire pour l'instant.",
+    "allStatuses": "Tous les statuts",
+    "statusHeader": "Statut",
+    "dateHeader": "Date",
+    "holderHeader": "Où",
+    "scopeHeader": "Produits",
+    "startedByHeader": "Compté par",
+    "differencesHeader": "Écarts",
+    "valueHeader": "Perdu / trouvé (au coût)",
+    "differencesCount": "{count, plural, =0 {Aucun écart} one {# écart} other {# écarts}}",
+    "progress": "{counted} sur {total} comptés",
+    "scopeAll": "Tous les produits",
+    "scopeSampleOf": "{count, plural, one {# produit au hasard} other {# produits au hasard}}",
+    "statuses": {
+      "counting": "Comptage",
+      "review": "Vérification",
+      "submitted": "En attente d'approbation",
+      "done": "Terminé",
+      "cancelled": "Annulé"
+    },
+    "statusHints": {
+      "counting": "Indiquez combien vous voyez de chaque produit. Vos chiffres sont enregistrés au fur et à mesure : vous pouvez partir et revenir.",
+      "review": "Vérifiez les écarts, donnez une raison pour chacun, puis envoyez-les pour approbation.",
+      "submitted": "Chaque écart attend une approbation. Le stock ne change qu'une fois approuvé.",
+      "done": "Cet inventaire est terminé.",
+      "cancelled": "Cet inventaire a été annulé. Rien n'a changé dans le stock."
+    },
+    "reminderTitle": "Rappel d'inventaire",
+    "reminderHint": "La page d'accueil prévient l'équipe quand le dernier inventaire terminé date de plus longtemps que ceci.",
+    "reminderLabel": "Rappeler après (jours)",
+    "reminderInvalid": "Saisissez un nombre de jours entre 1 et 365.",
+    "save": "Enregistrer",
+    "saving": "Enregistrement…",
+    "saveError": "Enregistrement impossible. Veuillez réessayer.",
+    "startTitle": "Commencer un inventaire",
+    "startHint": "Choisissez où compter et quels produits. Ce que le système attend est enregistré maintenant : les ventes faites pendant l'inventaire ne comptent pas comme des pertes.",
+    "whereLabel": "Où",
+    "holderKinds": {
+      "location": "Une boutique ou un entrepôt",
+      "user": "Une personne",
+      "business": "Stock de l'entreprise"
+    },
+    "businessHint": "Le stock que l'entreprise garde et qui n'a pas encore été envoyé à une boutique ou à une personne.",
+    "selectLocation": "Choisissez une boutique ou un entrepôt",
+    "selectPerson": "Choisissez une personne",
+    "whatLabel": "Quels produits",
+    "scopeKinds": {
+      "all": "Tous les produits",
+      "category": "Une catégorie",
+      "sample": "Quelques-uns au hasard"
+    },
+    "categoryLabel": "Catégorie",
+    "selectCategory": "Choisissez une catégorie",
+    "sampleSizeLabel": "Combien de produits",
+    "sampleHint": "Le système les choisit au hasard parmi les produits présents.",
+    "blindHint": "Les quantités attendues restent cachées pendant le comptage, pour un inventaire honnête.",
+    "missingFields": "Remplissez les champs obligatoires.",
+    "nothingToCount": "Il n'y a rien à cet endroit pour ces produits.",
+    "countOpen": "Un inventaire est déjà en cours à cet endroit. Terminez-le ou annulez-le d'abord.",
+    "starting": "Démarrage…",
+    "startSubmit": "Commencer le comptage",
+    "reasonLabel": "Raison",
+    "chooseReason": "Choisissez une raison",
+    "reasons": {
+      "damaged": "Abîmé",
+      "sample": "Donné en échantillon",
+      "unrecorded_sale": "Vendu sans être enregistré",
+      "miscounted": "Mal compté avant",
+      "transferred": "Déplacé ailleurs",
+      "unknown": "Je ne sais pas"
+    },
+    "notePlaceholder": "Détails (facultatif)",
+    "noteLabel": "Détails",
+    "backToCounts": "Tous les inventaires",
+    "missingReasons": "Donnez d'abord une raison pour chaque écart.",
+    "nothingCounted": "Comptez d'abord au moins un produit.",
+    "productHeader": "Produit",
+    "countedHeader": "Compté",
+    "countFor": "Combien de {product}",
+    "expectedHeader": "Attendu",
+    "movedHeader": "Vendu ou déplacé pendant l'inventaire",
+    "differenceHeader": "Écart",
+    "valueAtCostHeader": "Valeur au coût",
+    "decisionHeader": "Décision",
+    "matches": "Correct",
+    "actionsHeader": "Actions",
+    "recount": "Recompter",
+    "expectedValue": "Attendu : {qty}",
+    "movedShort": "{qty} pendant l'inventaire",
+    "countTitle": "Inventaire {number}",
+    "startedOn": "commencé le {date} par {name}",
+    "hideExpected": "Cacher l'attendu",
+    "showExpected": "Voir l'attendu",
+    "countedSummary": "Comptés",
+    "lostValue": "Manquant (au coût)",
+    "gainedValue": "En trop (au coût)",
+    "noDifferences": "Aucun écart : tout correspond.",
+    "noLines": "Aucun produit dans cet inventaire.",
+    "searchPlaceholder": "Trouver un produit",
+    "showAll": "Tout afficher",
+    "differencesOnly": "Écarts seulement",
+    "pendingHint": "Les écarts attendent une approbation.",
+    "viewApprovals": "Ouvrir les approbations",
+    "cancelCount": "Annuler l'inventaire",
+    "finishCounting": "Terminer le comptage",
+    "sendForApproval": "Envoyer pour approbation",
+    "closeCount": "Clôturer l'inventaire",
+    "finishTitle": "Terminer le comptage ?",
+    "finishHint": "Vous pourrez encore recompter des produits pendant la vérification.",
+    "finishUncounted": "{count, plural, one {# produit n'a pas de chiffre et sera laissé de côté.} other {# produits n'ont pas de chiffre et seront laissés de côté.}} Vous pourrez encore recompter pendant la vérification.",
+    "cancelTitle": "Annuler cet inventaire ?",
+    "cancelHint": "L'inventaire reste dans l'historique comme annulé. Rien ne change dans le stock.",
+    "submitTitle": "Envoyer pour approbation ?",
+    "submitHint": "{count, plural, one {# écart sera envoyé pour approbation.} other {# écarts seront envoyés chacun pour approbation.}} Le stock ne change qu'une fois approuvé, et pas par la personne qui a compté.",
+    "closeTitle": "Clôturer cet inventaire ?",
+    "closeHint": "Tout correspond au système : rien à approuver.",
+    "back": "Retour"
   }
 }
