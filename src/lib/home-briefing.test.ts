@@ -95,3 +95,13 @@ test("'Record today's sales': sellers only, nothing sold today, from 16:00", () 
   expect(rows(none, { hour: 18, canRecordSales: false })).toEqual([]);
   expect(rows(summary(), { hour: 18 })).toEqual([]); // already sold today
 });
+
+test("'Last stock count was N days ago': only past the reminder limit", () => {
+  // today is 2026-10-08
+  const after = (lastCountDay: string | null, reminderDays = 30) => rows(summary({ stockCount: { lastCountDay, reminderDays } }));
+  expect(after("2026-09-08")).toEqual([]); // 30 days: not yet
+  expect(after("2026-09-07")).toEqual([["stockCount", "Last stock count was 31 days ago", null, "warning"]]);
+  expect(after("2026-10-01", 5)).toEqual([["stockCount", "Last stock count was 7 days ago", null, "warning"]]);
+  expect(after(null)).toEqual([["stockCount", "No stock count done yet", null, "warning"]]);
+  expect(rows(summary({ stockCount: null }))).toEqual([]); // no count permission
+});

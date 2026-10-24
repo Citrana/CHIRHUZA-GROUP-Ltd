@@ -5,6 +5,7 @@ import { ALL, monthStart } from "./lib/analytics";
 import { saleBalance } from "./lib/credit";
 import type { Scope } from "./lib/permissions";
 import { addBusinessDays, businessDayOf } from "./lib/time";
+import { DEFAULT_REMINDER_DAYS } from "./lib/stockCounts";
 
 /**
  * The Home briefing of a service, in one query: what needs attention and
@@ -105,6 +106,24 @@ export const summary = authedQuery({
         ).length
       : null;
 
+    // Stock counts: the day of the last finished one, and when to remind.
+    let stockCount: { lastCountDay: string | null; reminderDays: number } | null = null;
+    if (can("stock.count.record") || can("stock.count.review") || can("stock.count.approve")) {
+      const last = await ctx.db
+        .query("stockCounts")
+        .withIndex("by_businessUnitId_and_completedAt", (q) => q.eq("businessUnitId", unit._id).gt("completedAt", 0))
+        .order("desc")
+        .first();
+      const settings = await ctx.db
+        .query("stockCountSettings")
+        .withIndex("by_businessUnitId", (q) => q.eq("businessUnitId", unit._id))
+        .unique();
+      stockCount = {
+        lastCountDay: last?.completedAt ? businessDayOf(last.completedAt) : null,
+        reminderDays: settings?.reminderDays ?? DEFAULT_REMINDER_DAYS,
+      };
+    }
+
     // Credit: what customers still owe (within the sales.view scope).
     let creditOwed: { amount: number; customers: number } | null = null;
     const salesScope = ctx.permissions.get("sales.view");
@@ -189,6 +208,7 @@ export const summary = authedQuery({
       approvalsWaiting,
       stock,
       batchesToReceive,
+      stockCount,
       productsToConfirm,
       requisitionsToBuy,
       requisitionsOpen,

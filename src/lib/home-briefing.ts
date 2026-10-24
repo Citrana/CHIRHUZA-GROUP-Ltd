@@ -38,6 +38,11 @@ export function quoteIndex(day: string): number {
   return (((days % DAILY_QUOTE_COUNT) + DAILY_QUOTE_COUNT) % DAILY_QUOTE_COUNT) + 1;
 }
 
+/** Whole days from business day `from` to `to` (YYYY-MM-DD). */
+export function daysBetween(from: string, to: string): number {
+  return Math.round((Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) / 86_400_000);
+}
+
 /** After this business hour, a seller with no sale today is reminded to record them. */
 export const RECORD_SALES_REMINDER_HOUR = 16;
 
@@ -76,6 +81,18 @@ export function homeAttention(
   }
   if (summary.creditOwed && summary.creditOwed.amount > 0) {
     rows.push({ key: "credit", href: at("/sales/credit"), label: t("attention.credit"), count: ctx.money(summary.creditOwed.amount), severity: "warning" });
+  }
+  if (summary.stockCount) {
+    const { lastCountDay, reminderDays } = summary.stockCount;
+    const days = lastCountDay === null ? null : daysBetween(lastCountDay, summary.today);
+    if (days === null || days > reminderDays) {
+      rows.push({
+        key: "stockCount",
+        href: at("/stock/counts"),
+        label: days === null ? t("attention.noStockCount") : t("attention.stockCount", { days }),
+        severity: "warning",
+      });
+    }
   }
   if (summary.batchesToReceive) {
     rows.push({ key: "receive", href: at("/stock/batches"), label: t("attention.receiveStock"), count: String(summary.batchesToReceive), severity: "neutral" });
