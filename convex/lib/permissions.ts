@@ -29,6 +29,9 @@ export const PERMISSIONS = [
   { key: "stock.receive", module: "stock", description: "Receive purchase batches" },
   { key: "stock.distribute", module: "stock", description: "Distribute stock to locations" },
   { key: "stock.approve", module: "stock", description: "Approve stock movements" },
+  { key: "stock.count.record", module: "stock", description: "Start stock counts and enter counted quantities" },
+  { key: "stock.count.review", module: "stock", description: "Review stock counts and send differences for approval" },
+  { key: "stock.count.approve", module: "stock", description: "Approve stock count corrections" },
 
   { key: "products.view", module: "products", description: "View products" },
   { key: "products.manage", module: "products", description: "Create and edit products" },
@@ -126,6 +129,7 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "analytics.view",
       "sales.edit.request",
       "stock.approve",
+      "stock.count.approve",
       "payroll.create",
       "payroll.approve",
       "expenses.approve",
@@ -147,6 +151,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.receive",
       "stock.distribute",
       "stock.view",
+      "stock.count.record",
+      "stock.count.review",
       "sales.view",
       "sales.edit.request",
       "requisition.view",
@@ -180,6 +186,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
       "stock.view",
       "stock.create",
       "stock.set_price",
+      "stock.count.record",
+      "stock.count.review",
       "payroll.create",
       ...PRODUCTS_AND_WITHDRAWALS,
       "products.settings",
@@ -303,6 +311,18 @@ export const SEED_STEPS: readonly SeedStep[] = [
     revokes: [
       ["chief_admin", "sales.edit.approve"],
       ["chief_sales_admin", "sales.edit.approve"],
+    ],
+  },
+  {
+    // Stock counts: Manager Admin and Chief Inventory Admin count and
+    // review; the Chief Admin approves the corrections.
+    key: "2026-10-stock-counts",
+    grants: [
+      ["manager_admin", "stock.count.record", "all_locations"],
+      ["manager_admin", "stock.count.review", "all_locations"],
+      ["chief_inventory_admin", "stock.count.record", "all_locations"],
+      ["chief_inventory_admin", "stock.count.review", "all_locations"],
+      ["chief_admin", "stock.count.approve", "all_locations"],
     ],
   },
 ];

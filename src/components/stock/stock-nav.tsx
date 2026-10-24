@@ -9,9 +9,10 @@ const TABS = [
   { key: "overview", path: "" },
   { key: "batches", path: "/batches" },
   { key: "distributions", path: "/distributions" },
+  { key: "counts", path: "/counts" },
 ] as const;
 
-/** Tabs across the Stock module: overview, purchase batches, distributions. */
+/** Tabs across the Stock module: overview, purchase batches, distributions, stock counts. */
 export function StockNav({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Inventory.tabs");
   const pathname = usePathname();

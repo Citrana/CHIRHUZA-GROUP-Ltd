@@ -2,6 +2,7 @@
 
 import { useLocale, useTranslations } from "next-intl";
 import { formatMoney, snapshotCurrency, type Currency } from "../../../convex/lib/money";
+import { COUNT_REASONS, type CountReason } from "../../../convex/lib/stockCounts";
 import {
   formatSnapshotValue,
   isLineItems,
@@ -30,11 +31,14 @@ export function ChangesTable({
   className?: string;
 }) {
   const t = useTranslations("Changes");
+  const tReason = useTranslations("StockCounts.reasons");
   const locale = useLocale();
   const empty = t("empty");
   const format = (snapshot: Snapshot, field: string) => {
     const value = snapshot?.[field];
     if (isLineItems(value)) return <LineItems items={value} currency={snapshotCurrency(snapshot, before, after)} />;
+    // A stock count's reason is stored as a key; show it in plain words.
+    if (field === "countReason" && (COUNT_REASONS as readonly unknown[]).includes(value)) return tReason(value as CountReason);
     return formatSnapshotValue(field, value, {
       currency: snapshotCurrency(snapshot, before, after),
       locale,

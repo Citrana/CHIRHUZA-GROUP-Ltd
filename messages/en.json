@@ -71,7 +71,9 @@
       "requisitions": "Requisitions ready to buy",
       "reviewApprovals": "Review pending approvals",
       "recordSales": "Record today's sales",
-      "receiveStock": "Update stock for a recent purchase"
+      "receiveStock": "Update stock for a recent purchase",
+      "stockCount": "Last stock count was {days} days ago",
+      "noStockCount": "No stock count done yet"
     },
     "metrics": {
       "approvals": "{count} waiting",
@@ -325,7 +327,12 @@
       "set_price": "Set prices on purchase",
       "receive": "Receive purchase batches",
       "distribute": "Distribute stock to locations",
-      "approve": "Approve stock movements"
+      "approve": "Approve stock movements",
+      "count": {
+        "record": "Start stock counts and enter counted quantities",
+        "review": "Check stock counts and send differences for approval",
+        "approve": "Approve stock count corrections"
+      }
     },
     "requisition": {
       "view": "View requisitions",
@@ -449,7 +456,17 @@
       "customerName": "Customer",
       "linesTotal": "Lines total",
       "totalAmount": "Total to pay",
-      "saleDiscountReason": "Reason for the lower total"
+      "saleDiscountReason": "Reason for the lower total",
+      "holder": "Where",
+      "product": "Product",
+      "sku": "SKU",
+      "colour": "Colour",
+      "lengthInches": "Length (inches)",
+      "expected": "Expected",
+      "counted": "Counted",
+      "difference": "Difference",
+      "countReason": "Reason for the difference",
+      "differenceCost": "Value at cost"
     },
     "atPrice": "at {price} each"
   },
@@ -509,7 +526,8 @@
       "distribution": "Stock distribution",
       "withdrawal": "Withdrawal",
       "credit_payment_reversal": "Credit payment correction",
-      "credit_cancel": "Credit debt cancelled (mistake)"
+      "credit_cancel": "Credit debt cancelled (mistake)",
+      "stock_adjustment": "Stock count correction"
     }
   },
   "ProductCategories": {
@@ -1052,7 +1070,8 @@
       "label": "Stock sections",
       "overview": "Overview",
       "batches": "Purchase batches",
-      "distributions": "Distributions"
+      "distributions": "Distributions",
+      "counts": "Stock counts"
     },
     "title": "Stock",
     "subtitle": "What's left, and who holds it.",
@@ -1758,5 +1777,129 @@
       "q12": "Thank you for the care you put into every sale."
     },
     "dismiss": "Dismiss"
+  },
+  "StockCounts": {
+    "title": "Stock counts",
+    "subtitle": "Count what is really on the shelves and compare it with what the system says.",
+    "accessDenied": "You don't have access to stock counts.",
+    "start": "Start a count",
+    "reminder": "Reminder",
+    "empty": "No stock counts yet.",
+    "allStatuses": "All statuses",
+    "statusHeader": "Status",
+    "dateHeader": "Date",
+    "holderHeader": "Where",
+    "scopeHeader": "Products",
+    "startedByHeader": "Counted by",
+    "differencesHeader": "Differences",
+    "valueHeader": "Lost / found (at cost)",
+    "differencesCount": "{count, plural, =0 {No differences} one {# difference} other {# differences}}",
+    "progress": "{counted} of {total} counted",
+    "scopeAll": "All products",
+    "scopeSampleOf": "{count, plural, one {# product at random} other {# products at random}}",
+    "statuses": {
+      "counting": "Counting",
+      "review": "Checking",
+      "submitted": "Waiting for approval",
+      "done": "Done",
+      "cancelled": "Cancelled"
+    },
+    "statusHints": {
+      "counting": "Type how many of each product you can see. Your numbers are saved as you go, so you can leave and come back.",
+      "review": "Check the differences, give a reason for each one, then send them for approval.",
+      "submitted": "Each difference waits for approval. Stock changes only once it is approved.",
+      "done": "This count is finished.",
+      "cancelled": "This count was cancelled. Nothing changed in stock."
+    },
+    "reminderTitle": "Count reminder",
+    "reminderHint": "The home page reminds the team when the last finished count is older than this.",
+    "reminderLabel": "Remind after (days)",
+    "reminderInvalid": "Enter a number of days from 1 to 365.",
+    "save": "Save",
+    "saving": "Saving…",
+    "saveError": "Could not save. Please try again.",
+    "startTitle": "Start a stock count",
+    "startHint": "Choose where to count and which products. What the system expects is saved now, so sales made during the count are not counted as losses.",
+    "whereLabel": "Where",
+    "holderKinds": {
+      "location": "A shop or warehouse",
+      "user": "A person",
+      "business": "Business stock"
+    },
+    "businessHint": "Stock the business holds that hasn't been sent to a shop or a person yet.",
+    "selectLocation": "Choose a shop or warehouse",
+    "selectPerson": "Choose a person",
+    "whatLabel": "Which products",
+    "scopeKinds": {
+      "all": "All products",
+      "category": "One category",
+      "sample": "Some at random"
+    },
+    "categoryLabel": "Category",
+    "selectCategory": "Choose a category",
+    "sampleSizeLabel": "How many products",
+    "sampleHint": "The system picks them at random among the products held there.",
+    "blindHint": "The expected numbers stay hidden while counting, so the count is honest.",
+    "missingFields": "Fill in the required fields.",
+    "nothingToCount": "Nothing is held there for these products.",
+    "countOpen": "A count is already open there. Finish or cancel it first.",
+    "starting": "Starting…",
+    "startSubmit": "Start counting",
+    "reasonLabel": "Reason",
+    "chooseReason": "Choose a reason",
+    "reasons": {
+      "damaged": "Damaged",
+      "sample": "Given as a sample",
+      "unrecorded_sale": "Sold but not recorded",
+      "miscounted": "Counted wrong before",
+      "transferred": "Moved somewhere else",
+      "unknown": "Don't know"
+    },
+    "notePlaceholder": "Details (optional)",
+    "noteLabel": "Details",
+    "backToCounts": "All stock counts",
+    "missingReasons": "Give a reason for every difference first.",
+    "nothingCounted": "Count at least one product first.",
+    "productHeader": "Product",
+    "countedHeader": "Counted",
+    "countFor": "How many {product}",
+    "expectedHeader": "Expected",
+    "movedHeader": "Sold or moved during the count",
+    "differenceHeader": "Difference",
+    "valueAtCostHeader": "Value at cost",
+    "decisionHeader": "Decision",
+    "matches": "Matches",
+    "actionsHeader": "Actions",
+    "recount": "Recount",
+    "expectedValue": "Expected: {qty}",
+    "movedShort": "{qty} during count",
+    "countTitle": "Count {number}",
+    "startedOn": "started {date} by {name}",
+    "hideExpected": "Hide expected",
+    "showExpected": "Show expected",
+    "countedSummary": "Counted",
+    "lostValue": "Missing (at cost)",
+    "gainedValue": "Extra (at cost)",
+    "noDifferences": "No differences: everything matches.",
+    "noLines": "No products in this count.",
+    "searchPlaceholder": "Find a product",
+    "showAll": "Show all",
+    "differencesOnly": "Differences only",
+    "pendingHint": "The differences are waiting for approval.",
+    "viewApprovals": "Open Approvals",
+    "cancelCount": "Cancel count",
+    "finishCounting": "Finish counting",
+    "sendForApproval": "Send for approval",
+    "closeCount": "Close count",
+    "finishTitle": "Finish counting?",
+    "finishHint": "You can still recount products while checking.",
+    "finishUncounted": "{count, plural, one {# product has no number and will be left out.} other {# products have no number and will be left out.}} You can still recount while checking.",
+    "cancelTitle": "Cancel this count?",
+    "cancelHint": "The count is kept in the history as cancelled. Nothing changes in stock.",
+    "submitTitle": "Send for approval?",
+    "submitHint": "{count, plural, one {# difference will be sent for approval.} other {# differences will each be sent for approval.}} Stock changes only once approved, and not by the person who counted.",
+    "closeTitle": "Close this count?",
+    "closeHint": "Everything matches the system, so nothing needs approval.",
+    "back": "Back"
   }
 }
