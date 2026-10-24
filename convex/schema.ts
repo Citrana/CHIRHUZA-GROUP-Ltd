@@ -21,6 +21,12 @@ import {
 } from "./lib/inventory";
 import { distributionStatusValidator } from "./lib/distributions";
 import {
+  adjustmentStatusValidator,
+  countReasonValidator,
+  countScopeValidator,
+  countStatusValidator,
+} from "./lib/stockCounts";
+import {
   requisitionItemResolutionValidator,
   requisitionStatusValidator,
 } from "./lib/requisitions";
@@ -384,6 +390,90 @@ export default defineSchema({
   })
     .index("by_inventoryBatchId", ["inventoryBatchId"])
     .index("by_refTable_and_refId", ["refTable", "refId"]),
+
+  // Stock counts (convex/lib/stockCounts.ts): a blind count of what a
+  // holder really has, against a snapshot frozen when it started.
+  stockCounts: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // e.g. CNT-00001, per business unit (numberSequences).
+    number: v.string(),
+    holderId: v.id("holders"),
+    // Set when the holder is a location (scopes own_location users and deciders).
+    locationId: v.optional(v.id("locations")),
+    scope: countScopeValidator,
+    status: countStatusValidator,
+    // UTC ms: when expected quantities were frozen.
+    snapshotAt: v.number(),
+    startedBy: v.id("users"),
+    submittedBy: v.optional(v.id("users")),
+    submittedAt: v.optional(v.number()),
+    // Set only when done (every difference decided): the last count's date.
+    completedAt: v.optional(v.number()),
+    cancelledBy: v.optional(v.id("users")),
+    itemCount: v.number(),
+    countedCount: v.number(),
+    // Set on submit: lines that differed, and their value at purchase cost (cents).
+    diffCount: v.number(),
+    lostCost: v.number(),
+    gainedCost: v.number(),
+    currency: usdValidator,
+  })
+    .index("by_businessUnitId", ["businessUnitId"])
+    .index("by_businessUnitId_and_status", ["businessUnitId", "status"])
+    .index("by_businessUnitId_and_completedAt", ["businessUnitId", "completedAt"])
+    .index("by_holderId_and_status", ["holderId", "status"]),
+
+  stockCountItems: defineTable({
+    stockCountId: v.id("stockCounts"),
+    businessUnitId: v.id("businessUnits"),
+    productId: v.id("products"),
+    // Frozen at the start of the count.
+    expectedQty: v.number(),
+    // Average purchase cost (cents) of the holder's units at the start.
+    unitCost: v.number(),
+    countedQty: v.optional(v.number()),
+    countedAt: v.optional(v.number()),
+    countedBy: v.optional(v.id("users")),
+    // Net units moved in/out between the snapshot and countedAt (sales,
+    // transfers): the holder's stock at countedAt minus expectedQty.
+    movedSinceSnapshot: v.number(),
+    reason: v.optional(countReasonValidator),
+    note: v.optional(v.string()),
+    adjustmentId: v.optional(v.id("stockAdjustments")),
+  })
+    .index("by_stockCountId", ["stockCountId"])
+    .index("by_stockCountId_and_productId", ["stockCountId", "productId"]),
+
+  // One per counted line that differed: applied only through its approval
+  // (type "stock_adjustment"), by applyMovement ("adjustment").
+  stockAdjustments: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    stockCountId: v.id("stockCounts"),
+    stockCountItemId: v.id("stockCountItems"),
+    holderId: v.id("holders"),
+    productId: v.id("products"),
+    // Signed: negative = missing units, positive = extra units.
+    qty: v.number(),
+    // |qty| x the line's unit cost (cents).
+    cost: v.number(),
+    currency: usdValidator,
+    reason: countReasonValidator,
+    note: v.optional(v.string()),
+    status: adjustmentStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    requestedBy: v.id("users"),
+    // Who counted the line: never its approver (except the Super Admin).
+    countedBy: v.id("users"),
+    decidedBy: v.optional(v.id("users")),
+    decidedAt: v.optional(v.number()),
+  }).index("by_stockCountId", ["stockCountId"]),
+
+  // Per-service stock count settings (defaults apply without a row).
+  stockCountSettings: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // Home reminds when the last finished count is older than this.
+    reminderDays: v.number(),
+  }).index("by_businessUnitId", ["businessUnitId"]),
 
   // Stock sent from the business to a location or a person, once the
   // Chief Admin approves (approval type "distribution").

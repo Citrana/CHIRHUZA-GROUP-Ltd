@@ -16,6 +16,7 @@ import {
   applyRequisitionApproval,
   applyRequisitionRejection,
 } from "./requisitions";
+import { applyStockAdjustment, rejectStockAdjustment } from "./stockCounts";
 import {
   applyStockBatchApproval,
   applyStockBatchRejection,
@@ -80,6 +81,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   withdrawal: applyWithdrawalApproval,
   credit_payment_reversal: applyCreditPaymentReversal,
   credit_cancel: applyCreditCancel,
+  stock_adjustment: applyStockAdjustment,
 };
 
 /**
@@ -94,4 +96,5 @@ export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalH
   distribution: applyDistributionRejection,
   payroll: applyPayrollRejection,
   withdrawal: applyWithdrawalRejection,
+  stock_adjustment: rejectStockAdjustment,
 };
