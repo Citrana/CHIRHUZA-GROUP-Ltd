@@ -42,6 +42,7 @@ import type * as lib_saleEdits from "../lib/saleEdits.js";
 import type * as lib_saleVoids from "../lib/saleVoids.js";
 import type * as lib_sales from "../lib/sales.js";
 import type * as lib_stockBatches from "../lib/stockBatches.js";
+import type * as lib_stockCounts from "../lib/stockCounts.js";
 import type * as lib_time from "../lib/time.js";
 import type * as lib_withdrawals from "../lib/withdrawals.js";
 import type * as locations from "../locations.js";
@@ -53,6 +54,7 @@ import type * as requisitions from "../requisitions.js";
 import type * as sales from "../sales.js";
 import type * as seed from "../seed.js";
 import type * as stockBatches from "../stockBatches.js";
+import type * as stockCounts from "../stockCounts.js";
 import type * as users from "../users.js";
 import type * as withdrawals from "../withdrawals.js";
 
@@ -97,6 +99,7 @@ declare const fullApi: ApiFromModules<{
   "lib/saleVoids": typeof lib_saleVoids;
   "lib/sales": typeof lib_sales;
   "lib/stockBatches": typeof lib_stockBatches;
+  "lib/stockCounts": typeof lib_stockCounts;
   "lib/time": typeof lib_time;
   "lib/withdrawals": typeof lib_withdrawals;
   locations: typeof locations;
@@ -108,6 +111,7 @@ declare const fullApi: ApiFromModules<{
   sales: typeof sales;
   seed: typeof seed;
   stockBatches: typeof stockBatches;
+  stockCounts: typeof stockCounts;
   users: typeof users;
   withdrawals: typeof withdrawals;
 }>;
