@@ -70,6 +70,21 @@ export function saleEvents(
   return events;
 }
 
+type EventItem = Pick<Doc<"saleItems">, "productId" | "qty" | "unitPrice" | "unitCostSnapshot" | "saleDiscountShare">;
+
+/**
+ * An exchange's events, on its own day at the sale's location: the returned
+ * units' revenue and cost come out, the given ones go in (revenue moves by
+ * the difference paid or refunded).
+ */
+export function exchangeEvents(
+  exchange: Pick<Doc<"saleExchanges">, "locationId" | "createdAt">,
+  returned: EventItem[],
+  given: EventItem[],
+): RollupEvent[] {
+  return [...saleEvents(exchange, returned, -1), ...saleEvents(exchange, given, 1)];
+}
+
 /** A trip expense (business-level) on the day it was recorded. */
 export function expenseEvent(expense: Pick<Doc<"stockBatchExpenses">, "_creationTime">, amountDelta: number): RollupEvent {
   return { locationId: null, day: businessDayOf(expense._creationTime), finance: { expenses: amountDelta } };
@@ -221,6 +236,20 @@ async function rawEvents(ctx: MutationCtx, businessUnitId: Id<"businessUnits">):
     if (sale.status !== "completed") continue;
     const items = await ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", sale._id)).take(500);
     events.push(...saleEvents(sale, items));
+  }
+  const exchanges = await ctx.db
+    .query("saleExchanges")
+    .withIndex("by_businessUnitId_and_createdAt", (q) => q.eq("businessUnitId", businessUnitId))
+    .take(MAX_SOURCE_ROWS);
+  for (const exchange of exchanges) {
+    const items = await ctx.db.query("saleExchangeItems").withIndex("by_exchangeId", (q) => q.eq("exchangeId", exchange._id)).take(500);
+    events.push(
+      ...exchangeEvents(
+        exchange,
+        items.filter((i) => i.direction === "returned"),
+        items.filter((i) => i.direction === "given"),
+      ),
+    );
   }
   const batches = await ctx.db
     .query("stockBatches")

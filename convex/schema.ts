@@ -9,7 +9,7 @@ import {
   stockBatchStatusValidator,
 } from "./lib/stockBatches";
 import { currencyValidator, usdValidator } from "./lib/money";
-import { paymentMethodValidator, saleStatusValidator } from "./lib/sales";
+import { exchangeDirectionValidator, paymentMethodValidator, saleStatusValidator } from "./lib/sales";
 import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
@@ -478,6 +478,60 @@ export default defineSchema({
     .index("by_saleId", ["saleId"])
     .index("by_inventoryBatchId", ["inventoryBatchId"])
     .index("by_productId", ["productId"]),
+
+  // Exchanges (convex/lib/exchanges.ts): a customer brings products of a
+  // cash / mobile money sale back and takes others, at the sale's location.
+  // Returned units go back into their lot, given ones leave through
+  // applyMovement; the difference is paid (>= 0) or refunded (< 0, after
+  // approval sale_exchange). The sale itself is never rewritten. Append-only.
+  saleExchanges: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // e.g. EXCH-00001, per business unit (numberSequences).
+    number: v.string(),
+    saleId: v.id("sales"),
+    locationId: v.id("locations"),
+    // Who recorded / asked for it; for a refund, who approved it.
+    recordedBy: v.id("users"),
+    approvalId: v.optional(v.id("approvals")),
+    approvedBy: v.optional(v.id("users")),
+    // Cents: what the returned units were paid, the given units' total, and
+    // given - returned (> 0 the customer paid more, < 0 refunded).
+    returnedAmount: v.number(),
+    givenTotal: v.number(),
+    differenceAmount: v.number(),
+    currency: usdValidator,
+    // How the difference was paid or refunded (missing when it is 0).
+    settlementMethod: v.optional(collectionMethodValidator),
+    reason: v.optional(v.string()),
+    // UTC ms of when the stock moved (the exchange's business day).
+    createdAt: v.number(),
+  })
+    .index("by_saleId", ["saleId"])
+    .index("by_businessUnitId_and_createdAt", ["businessUnitId", "createdAt"]),
+
+  // An exchange's lines: units returned (a line of the sale) or given (a lot
+  // at the location). Append-only.
+  saleExchangeItems: defineTable({
+    exchangeId: v.id("saleExchanges"),
+    saleId: v.id("sales"),
+    direction: exchangeDirectionValidator,
+    // Returned lines: the sale line they come from.
+    saleItemId: v.optional(v.id("saleItems")),
+    productId: v.id("products"),
+    inventoryBatchId: v.id("inventoryBatches"),
+    qty: v.number(),
+    // Cents. Returned: the sale line's price and cost snapshot, and these
+    // units' share of its whole-sale discount. Given: the price agreed now and
+    // the lot's cost now.
+    unitPrice: v.number(),
+    unitCostSnapshot: v.number(),
+    suggestedPriceSnapshot: v.optional(v.number()),
+    saleDiscountShare: v.optional(v.number()),
+    discountReason: v.optional(v.string()),
+    currency: usdValidator,
+  })
+    .index("by_exchangeId", ["exchangeId"])
+    .index("by_saleItemId", ["saleItemId"]),
 
   // Customers who buy on credit (convex/lib/credit.ts), per service.
   // `balance` (USD cents) is what they still owe across their credit

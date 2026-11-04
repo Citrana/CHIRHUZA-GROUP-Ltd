@@ -215,6 +215,19 @@ this repo, now and later — do not relax them for convenience.
   qty differences through `applyMovement` (`return` / `sale`; a `return`
   lowers `productStock.sold`), rewrites the lines and the sale, re-applies
   the rollups and follows a credit sale's balance (`applySaleTotalChange`).
+- **Exchanges** (`convex/lib/exchanges.ts`, `sales.exchange`, page
+  `/[service]/sales/[saleId]/exchange`): a customer brings units of a
+  cash / mobile money sale back (up to `MAX_EXCHANGE_DAYS`, 30) and takes
+  other products at the sale's location; scoped by `sales.create` on the
+  sale's location. Returned units go back into their own lot (`return`),
+  given ones leave (`sale`), both through `applyMovement`; the rollups move
+  on the exchange's day through `exchangeEvents` (returned out at what was
+  paid, incl. their `saleDiscountShare`; given in), so revenue moves by the
+  difference. Difference ≥ 0 is recorded at once; a refund (< 0) goes
+  through the approval engine (type `sale_exchange`, `sales.edit.approve`).
+  The sale is never rewritten: `saleExchanges` / `saleExchangeItems` are
+  append-only, and a sale with an exchange can't be corrected (`sale_edit`).
+  `planExchange` holds the rules for both the request and the approval.
 
 ## Credit
 

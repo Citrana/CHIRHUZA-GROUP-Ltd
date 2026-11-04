@@ -20,6 +20,14 @@ import {
   saleTimestamp,
 } from "./lib/sales";
 import { describeProduct } from "./lib/products";
+import { pendingSaleApprovals } from "./lib/sales";
+import {
+  applyExchange,
+  exchangeRefusal,
+  planExchange,
+  returnedSoFar,
+  saleExchangeChangesValidator,
+} from "./lib/exchanges";
 import {
   applySalePayment,
   collectionMethodValidator,
@@ -34,6 +42,42 @@ import {
  * all_locations anywhere (Chief Sales Admin, Super Admin). sales.view lists
  * them, own_location viewers seeing only their location.
  */
+
+/**
+ * Every lot in stock at a location for a service, with its product, source
+ * batch, date, cost, suggested price and quantity on hand (by product name,
+ * oldest lot first): what a sale or an exchange can give out there.
+ */
+async function lotsAt(ctx: QueryCtx, businessUnitId: Id<"businessUnits">, locationId: Id<"locations">) {
+  const lots = [];
+  const holder = await findHolder(ctx, businessUnitId, { type: "location", refId: locationId });
+  if (holder) {
+    const levels = await ctx.db
+      .query("stockLevels")
+      .withIndex("by_holderId", (q) => q.eq("holderId", holder._id))
+      .take(2000);
+    for (const level of levels) {
+      if (level.qtyOnHand <= 0) continue;
+      const lot = await ctx.db.get("inventoryBatches", level.inventoryBatchId);
+      if (!lot) continue;
+      const product = await ctx.db.get("products", lot.productId);
+      const batch = await ctx.db.get("stockBatches", lot.stockBatchId);
+      lots.push({
+        _id: lot._id,
+        productId: lot.productId,
+        ...(await describeProduct(ctx, lot.productId)),
+        suggestedPrice: product?.suggestedPrice ?? null,
+        photoUrl: product?.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
+        batchNumber: batch?.number ?? null,
+        lotDate: lot.createdAt,
+        unitCost: lot.unitCost,
+        onHand: level.qtyOnHand,
+      });
+    }
+  }
+  lots.sort((a, b) => (a.productName ?? "").localeCompare(b.productName ?? "") || a.lotDate - b.lotDate);
+  return lots;
+}
 
 /**
  * What the sale form needs: where the caller may sell (locked to their own
@@ -53,33 +97,7 @@ export const options = authedQuery({
         ? (locations[0] ?? null)
         : (locations.find((l) => l._id === args.locationId) ?? null);
 
-    const lots = [];
-    const holder = location ? await findHolder(ctx, unit._id, { type: "location", refId: location._id }) : null;
-    if (holder) {
-      const levels = await ctx.db
-        .query("stockLevels")
-        .withIndex("by_holderId", (q) => q.eq("holderId", holder._id))
-        .take(2000);
-      for (const level of levels) {
-        if (level.qtyOnHand <= 0) continue;
-        const lot = await ctx.db.get("inventoryBatches", level.inventoryBatchId);
-        if (!lot) continue;
-        const product = await ctx.db.get("products", lot.productId);
-        const batch = await ctx.db.get("stockBatches", lot.stockBatchId);
-        lots.push({
-          _id: lot._id,
-          productId: lot.productId,
-          ...(await describeProduct(ctx, lot.productId)),
-          suggestedPrice: product?.suggestedPrice ?? null,
-          photoUrl: product?.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
-          batchNumber: batch?.number ?? null,
-          lotDate: lot.createdAt,
-          unitCost: lot.unitCost,
-          onHand: level.qtyOnHand,
-        });
-      }
-    }
-    lots.sort((a, b) => (a.productName ?? "").localeCompare(b.productName ?? "") || a.lotDate - b.lotDate);
+    const lots = location ? await lotsAt(ctx, unit._id, location._id) : [];
     return {
       locations: locations.map((l) => ({ _id: l._id, name: l.name })),
       locationLocked: scope === "own_location",
@@ -453,9 +471,18 @@ export const list = authedQuery({
                 .take(100)
             ).map((p) => ({ _id: p._id, amount: p.amount, method: p.method, kind: p.kind, paidAt: p.paidAt }))
           : [];
+        const pending = await pendingSaleApprovals(ctx, sale._id);
+        const exchanges = await exchangesOf(ctx, sale._id);
         return {
           ...sale,
-          pendingEdit: await hasPendingEdit(ctx, sale._id),
+          pendingEdit: pending.has("sale_edit"),
+          pendingExchange: pending.has("sale_exchange"),
+          exchanges,
+          // Whether products can be brought back now (the Exchange button).
+          exchangeable:
+            exchangeRefusal(sale, Date.now()) === null &&
+            pending.size === 0 &&
+            lines.some((l) => l.qty > exchanges.flatMap((e) => e.items).filter((i) => i.saleItemId === l._id).reduce((n, i) => n + i.qty, 0)),
           balance: sale.creditStatus ? saleBalance(sale) : null,
           payments,
           locationName: location?.name ?? null,
@@ -484,12 +511,7 @@ export const filterLocations = authedQuery({
 
 /** Whether a correction of the sale is waiting for approval. */
 async function hasPendingEdit(ctx: QueryCtx, saleId: Id<"sales">): Promise<boolean> {
-  const approvals = await ctx.db
-    .query("approvals")
-    .withIndex("by_entityTable_and_entityId", (q) => q.eq("entityTable", "sales").eq("entityId", saleId))
-    .order("desc")
-    .take(20);
-  return approvals.some((a) => a.type === "sale_edit" && a.status === "pending");
+  return (await pendingSaleApprovals(ctx, saleId)).has("sale_edit");
 }
 
 /**
@@ -565,5 +587,133 @@ export const requestEdit = authedMutation({
       payload: { before: plan.before, after: plan.after, changes, baseline: plan.baseline },
       reason: cleanReason,
     });
+  },
+});
+
+/** A sale's exchanges, oldest first, with their lines described. */
+async function exchangesOf(ctx: QueryCtx, saleId: Id<"sales">) {
+  const exchanges = await ctx.db
+    .query("saleExchanges")
+    .withIndex("by_saleId", (q) => q.eq("saleId", saleId))
+    .take(50);
+  return await Promise.all(
+    exchanges.map(async (exchange) => {
+      const [items, recorder] = await Promise.all([
+        ctx.db
+          .query("saleExchangeItems")
+          .withIndex("by_exchangeId", (q) => q.eq("exchangeId", exchange._id))
+          .take(MAX_SALE_LINES * 2),
+        ctx.db.get("users", exchange.recordedBy),
+      ]);
+      return {
+        _id: exchange._id,
+        number: exchange.number,
+        createdAt: exchange.createdAt,
+        returnedAmount: exchange.returnedAmount,
+        givenTotal: exchange.givenTotal,
+        differenceAmount: exchange.differenceAmount,
+        settlementMethod: exchange.settlementMethod ?? null,
+        reason: exchange.reason ?? null,
+        recordedByName: recorder?.name || recorder?.email || null,
+        items: await Promise.all(
+          items.map(async (item) => ({
+            _id: item._id,
+            direction: item.direction,
+            saleItemId: item.saleItemId ?? null,
+            qty: item.qty,
+            unitPrice: item.unitPrice,
+            ...(await describeProduct(ctx, item.productId)),
+          })),
+        ),
+      };
+    }),
+  );
+}
+
+/**
+ * What the exchange form needs: the sale's lines with how many units can
+ * still be brought back and what each unit was paid (its price less its
+ * share of a whole-sale discount), and every lot in stock at the sale's
+ * location to give instead.
+ */
+export const exchangeOptions = authedQuery({
+  args: { saleId: v.id("sales") },
+  handler: async (ctx, { saleId }) => {
+    const sale = await ctx.db.get("sales", saleId);
+    if (!sale) return null;
+    await ctx.requirePermission("sales.create", (scope, user) => inScope(scope, user, sale.locationId));
+    const items = await saleItemsOf(ctx, sale._id);
+    const lines = await Promise.all(
+      items.map(async (item) => {
+        const product = await ctx.db.get("products", item.productId);
+        const already = await returnedSoFar(ctx, item._id);
+        return {
+          saleItemId: item._id,
+          ...(await describeProduct(ctx, item.productId)),
+          photoUrl: product?.photoFileId ? await ctx.storage.getUrl(product.photoFileId) : null,
+          qty: item.qty,
+          unitPrice: item.unitPrice,
+          saleDiscountShare: item.saleDiscountShare ?? 0,
+          alreadyReturned: already,
+          returnable: item.qty - already,
+        };
+      }),
+    );
+    const pending = await pendingSaleApprovals(ctx, sale._id);
+    const location = await ctx.db.get("locations", sale.locationId);
+    return {
+      _id: sale._id,
+      number: sale.number,
+      createdAt: sale.createdAt,
+      locationName: location?.name ?? null,
+      totalAmount: sale.totalAmount,
+      // Why it can't be exchanged now, if so (shown instead of the form).
+      refusal: exchangeRefusal(sale, Date.now()),
+      pendingEdit: pending.has("sale_edit"),
+      pendingExchange: pending.has("sale_exchange"),
+      lines,
+      lots: await lotsAt(ctx, sale.businessUnitId, sale.locationId),
+    };
+  },
+});
+
+/**
+ * A customer brings products of a sale back and takes others, at the sale's
+ * location (convex/lib/exchanges.ts). Scoped like sales.create. When the
+ * customer pays the difference (or it's even) it's recorded now; a refund
+ * waits for approval (sale_exchange, decided by sales.edit.approve holders).
+ */
+export const exchange = authedMutation({
+  args: { saleId: v.id("sales"), changes: saleExchangeChangesValidator, reason: v.optional(v.string()) },
+  handler: async (ctx, { saleId, changes, reason }) => {
+    const sale = await ctx.db.get("sales", saleId);
+    if (!sale) throw new ConvexError("Sale not found.");
+    await ctx.requirePermission("sales.create", (scope, user) => inScope(scope, user, sale.locationId));
+    const pending = await pendingSaleApprovals(ctx, sale._id);
+    if (pending.has("sale_edit")) throw new ConvexError("A correction of this sale is waiting for approval.");
+    if (pending.has("sale_exchange")) throw new ConvexError("An exchange of this sale is already waiting for approval.");
+    const cleanReason = reason?.trim() || undefined;
+    if (cleanReason && cleanReason.length > 300) throw new ConvexError("The reason is too long.");
+
+    const plan = await planExchange(ctx, sale, changes, Date.now());
+    if (plan.differenceAmount >= 0) {
+      const done = await applyExchange(ctx, sale, plan, {
+        recordedBy: ctx.user._id,
+        actorId: ctx.user._id,
+        ...(cleanReason ? { reason: cleanReason } : {}),
+      });
+      return { status: "completed" as const, ...done, differenceAmount: plan.differenceAmount };
+    }
+    if (!cleanReason) throw new ConvexError("Say why the money is given back.");
+    const approvalId = await requestApproval(ctx, {
+      type: "sale_exchange",
+      businessUnitId: sale.businessUnitId,
+      locationId: sale.locationId,
+      entityTable: "sales",
+      entityId: sale._id,
+      payload: { after: plan.snapshot, changes },
+      reason: cleanReason,
+    });
+    return { status: "pending" as const, approvalId, differenceAmount: plan.differenceAmount };
   },
 });

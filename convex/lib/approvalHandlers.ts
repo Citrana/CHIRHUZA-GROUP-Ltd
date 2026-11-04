@@ -8,6 +8,7 @@ import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals
 import { applyCreditPaymentReversal } from "./credit";
 import { applyCreditCancel } from "./saleVoids";
 import { applySaleEdit } from "./saleEdits";
+import { applySaleExchangeApproval } from "./exchanges";
 import {
   applyDistributionApproval,
   applyDistributionRejection,
@@ -80,6 +81,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   withdrawal: applyWithdrawalApproval,
   credit_payment_reversal: applyCreditPaymentReversal,
   credit_cancel: applyCreditCancel,
+  sale_exchange: applySaleExchangeApproval,
 };
 
 /**

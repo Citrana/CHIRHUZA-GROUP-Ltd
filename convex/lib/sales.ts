@@ -1,4 +1,7 @@
 import { v, type Infer } from "convex/values";
+import type { QueryCtx } from "../_generated/server";
+import type { Id } from "../_generated/dataModel";
+import type { ApprovalType } from "./approvalTypes";
 import { addBusinessDays, businessDayOf, businessDayStartUtc } from "./time";
 
 /**
@@ -21,6 +24,15 @@ export const saleStatusValidator = v.union(v.literal("completed"), v.literal("vo
 export type SaleStatus = Infer<typeof saleStatusValidator>;
 
 export const MAX_SALE_LINES = 100;
+
+/**
+ * Exchanges (convex/lib/exchanges.ts): products of a cash / mobile money
+ * sale can be brought back and swapped for others up to MAX_EXCHANGE_DAYS
+ * business days after the sale.
+ */
+export const MAX_EXCHANGE_DAYS = 30;
+export const exchangeDirectionValidator = v.union(v.literal("returned"), v.literal("given"));
+export type ExchangeDirection = Infer<typeof exchangeDirectionValidator>;
 
 export type SaleLineProblem = "qty" | "price" | "discountReason";
 
@@ -93,4 +105,30 @@ export function splitOverLots<T extends { onHand: number }>(
     left -= part;
   }
   return left > 0 ? null : parts;
+}
+
+/**
+ * The part (cents) of a line's whole-sale discount that `qty` more units
+ * carry, after `already` were returned. Cumulative rounding, so returning
+ * every unit, in any number of exchanges, gives back exactly the line's share.
+ */
+export function returnedDiscountShare(item: { qty: number; saleDiscountShare?: number }, already: number, qty: number) {
+  const share = item.saleDiscountShare ?? 0;
+  const upTo = (n: number) => Math.round((share * n) / item.qty);
+  return upTo(already + qty) - upTo(already);
+}
+
+/** The approval types waiting on a sale (sale_edit, sale_exchange). */
+export async function pendingSaleApprovals(ctx: QueryCtx, saleId: Id<"sales">): Promise<Set<ApprovalType>> {
+  const approvals = await ctx.db
+    .query("approvals")
+    .withIndex("by_entityTable_and_entityId", (q) => q.eq("entityTable", "sales").eq("entityId", saleId))
+    .order("desc")
+    .take(50);
+  return new Set(approvals.filter((a) => a.status === "pending").map((a) => a.type));
+}
+
+/** Whether products of the sale were already exchanged. */
+export async function hasExchange(ctx: QueryCtx, saleId: Id<"sales">): Promise<boolean> {
+  return (await ctx.db.query("saleExchanges").withIndex("by_saleId", (q) => q.eq("saleId", saleId)).first()) !== null;
 }
