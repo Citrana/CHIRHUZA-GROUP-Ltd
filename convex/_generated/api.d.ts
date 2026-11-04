@@ -29,6 +29,7 @@ import type * as lib_auth from "../lib/auth.js";
 import type * as lib_businessUnits from "../lib/businessUnits.js";
 import type * as lib_credit from "../lib/credit.js";
 import type * as lib_distributions from "../lib/distributions.js";
+import type * as lib_exchanges from "../lib/exchanges.js";
 import type * as lib_inventory from "../lib/inventory.js";
 import type * as lib_locationScope from "../lib/locationScope.js";
 import type * as lib_money from "../lib/money.js";
@@ -84,6 +85,7 @@ declare const fullApi: ApiFromModules<{
   "lib/businessUnits": typeof lib_businessUnits;
   "lib/credit": typeof lib_credit;
   "lib/distributions": typeof lib_distributions;
+  "lib/exchanges": typeof lib_exchanges;
   "lib/inventory": typeof lib_inventory;
   "lib/locationScope": typeof lib_locationScope;
   "lib/money": typeof lib_money;

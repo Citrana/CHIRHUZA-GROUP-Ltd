@@ -6,7 +6,15 @@ import { applyMovement, findHolder, getOrCreateHolder, stockLevelOf } from "./in
 import { applyRollupEvents, saleEvents } from "./analytics";
 import { applySaleTotalChange, splitDiscount } from "./credit";
 import { describeProduct } from "./products";
-import { MAX_BACKDATE_DAYS, MAX_SALE_LINES, paymentMethodValidator, saleLineProblems, saleTimestamp } from "./sales";
+import {
+  MAX_BACKDATE_DAYS,
+  MAX_SALE_LINES,
+  hasExchange,
+  paymentMethodValidator,
+  pendingSaleApprovals,
+  saleLineProblems,
+  saleTimestamp,
+} from "./sales";
 import { businessDayOf } from "./time";
 
 /**
@@ -88,6 +96,11 @@ export async function saleItemsOf(ctx: QueryCtx, saleId: Id<"sales">) {
  */
 export async function planSaleEdit(ctx: QueryCtx, sale: Doc<"sales">, changes: SaleEditChanges, now: number) {
   if (sale.status !== "completed") throw new ConvexError("Only a completed sale can be corrected.");
+  // An exchange already moved some of its units: the lines no longer tell the whole story.
+  if (await hasExchange(ctx, sale._id)) throw new ConvexError("Products of this sale were exchanged: it can't be corrected.");
+  if ((await pendingSaleApprovals(ctx, sale._id)).has("sale_exchange")) {
+    throw new ConvexError("An exchange of this sale is waiting for approval.");
+  }
   const items = await saleItemsOf(ctx, sale._id);
   const byId = new Map(changes.lines.map((l) => [l.saleItemId, l]));
   if (byId.size !== changes.lines.length || items.length !== byId.size || items.some((i) => !byId.has(i._id))) {
