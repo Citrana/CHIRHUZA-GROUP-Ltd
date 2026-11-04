@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { HandCoins, PencilLine, Plus } from "lucide-react";
+import { ArrowLeftRight, HandCoins, PencilLine, Plus } from "lucide-react";
 import { useQuery, type PaginatedQueryItem } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
@@ -36,6 +36,14 @@ function RecordedBadge({ sale }: { sale: SaleRow }) {
   return <Badge variant="outline">{t("recordedBadge", { date: day.format(sale.recordedAt) })}</Badge>;
 }
 
+/** "Exchanged" once products of the sale were swapped; "Exchange waiting" for a refund to approve. */
+function ExchangeBadge({ sale }: { sale: SaleRow }) {
+  const t = useTranslations("SaleExchange");
+  if (sale.pendingExchange) return <Badge variant="outline">{t("pendingBadge")}</Badge>;
+  if (sale.exchanges.length === 0) return null;
+  return <Badge variant="secondary">{t("exchangedBadge")}</Badge>;
+}
+
 /** "Owes $30.00" / "Paid" on a credit sale; "Cancelled - mistake" on a voided sale. */
 function CreditBadge({ sale }: { sale: SaleRow }) {
   const t = useTranslations("Sales");
@@ -58,6 +66,7 @@ const NO_FILTERS: SalesFilters = { from: "", to: "", locationId: "", creditStatu
  */
 export function SalesPanel({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Sales");
+  const tExchange = useTranslations("SaleExchange");
   const lineLabel = useProductLineLabel();
   const locale = useLocale();
   const canView = useCan("sales.view");
@@ -145,6 +154,7 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
         <span className="flex flex-col items-start gap-1">
           {t(`payments.${row.original.paymentMethod}`)}
           <CreditBadge sale={row.original} />
+          <ExchangeBadge sale={row.original} />
         </span>
       ),
       meta: { hideBelow: "md" },
@@ -237,16 +247,72 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
           </ul>
         </div>
       ) : null}
-      {canRequestEdit && sale.status === "completed" ? (
-        sale.pendingEdit ? (
-          <p className="text-muted-foreground">{t("editPending")}</p>
-        ) : (
-          <Button type="button" variant="outline" className="min-h-11 self-start" onClick={() => setEditing(sale._id)}>
-            <PencilLine aria-hidden />
-            {t("editRequest")}
-          </Button>
-        )
+      {sale.exchanges.length > 0 ? (
+        <div className="flex flex-col gap-1">
+          <p className="font-medium">{tExchange("historyTitle")}</p>
+          <ul className="flex flex-col divide-y divide-border rounded-md border border-border bg-background">
+            {sale.exchanges.map((exchange) => (
+              <li key={exchange._id} className="flex flex-col gap-1 px-3 py-2">
+                <p className="flex items-center justify-between gap-3">
+                  <span className="font-mono text-xs font-medium">{exchange.number}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {[time.format(exchange.createdAt), exchange.recordedByName].filter(Boolean).join(" · ")}
+                  </span>
+                </p>
+                {exchange.items.map((item) => (
+                  <p key={item._id} className="flex justify-between gap-3 text-xs">
+                    <span className="min-w-0">
+                      <span className="text-muted-foreground">
+                        {item.direction === "returned" ? tExchange("returnedShort") : tExchange("givenShort")}
+                      </span>{" "}
+                      {lineLabel(item)}
+                    </span>
+                    <span className="shrink-0 tabular-nums">{t("qtyAtPrice", { qty: item.qty, price: money(item.unitPrice) })}</span>
+                  </p>
+                ))}
+                <p className="flex justify-between gap-3 text-xs font-medium">
+                  <span>
+                    {exchange.differenceAmount > 0
+                      ? tExchange("customerPaid")
+                      : exchange.differenceAmount < 0
+                        ? tExchange("givenBack")
+                        : tExchange("even")}
+                    {exchange.settlementMethod ? ` · ${t(`payments.${exchange.settlementMethod}`)}` : null}
+                  </span>
+                  <span className={cn("tabular-nums", exchange.differenceAmount < 0 && "text-destructive")}>
+                    {money(Math.abs(exchange.differenceAmount))}
+                  </span>
+                </p>
+                {exchange.reason ? (
+                  <p className="text-xs text-muted-foreground">{tExchange("reasonShown", { reason: exchange.reason })}</p>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        </div>
       ) : null}
+      {sale.pendingExchange ? <p className="text-muted-foreground">{tExchange("pendingExchange")}</p> : null}
+      <div className="flex flex-wrap gap-2">
+        {canRequestEdit && sale.status === "completed" && sale.exchanges.length === 0 && !sale.pendingExchange ? (
+          sale.pendingEdit ? (
+            <p className="text-muted-foreground">{t("editPending")}</p>
+          ) : (
+            <Button type="button" variant="outline" className="min-h-11" onClick={() => setEditing(sale._id)}>
+              <PencilLine aria-hidden />
+              {t("editRequest")}
+            </Button>
+          )
+        ) : null}
+        {canSell && sale.exchangeable ? (
+          <Link
+            href={`/${service}/sales/${sale._id}/exchange`}
+            className={buttonVariants({ variant: "outline", className: "min-h-11" })}
+          >
+            <ArrowLeftRight aria-hidden />
+            {tExchange("action")}
+          </Link>
+        ) : null}
+      </div>
     </div>
   );
 
@@ -335,7 +401,10 @@ export function SalesPanel({ service }: { service: BusinessUnitKey }) {
               {t("pieces", { count: sale.totalQty })} · {t("marginHeader")}{" "}
               <span className={marginClass(sale.margin)}>{money(sale.margin)}</span>
             </p>
-            <CreditBadge sale={sale} />
+            <span className="flex flex-wrap gap-1">
+              <CreditBadge sale={sale} />
+              <ExchangeBadge sale={sale} />
+            </span>
           </div>
         )}
       />
