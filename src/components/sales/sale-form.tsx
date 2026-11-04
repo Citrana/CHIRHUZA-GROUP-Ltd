@@ -1,22 +1,15 @@
 "use client";
 
 import { useState, type FormEvent } from "react";
-import { ArrowLeft, CheckCircle2, Minus, Plus, Trash2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
-import type { FunctionReturnType } from "convex/server";
 import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
-import {
-  MAX_BACKDATE_DAYS,
-  PAYMENT_METHODS,
-  saleLineProblems,
-  splitOverLots,
-  type PaymentMethod,
-} from "../../../convex/lib/sales";
+import { MAX_BACKDATE_DAYS, PAYMENT_METHODS, type PaymentMethod } from "../../../convex/lib/sales";
 import {
   BUSINESS_TIME_ZONE,
   addBusinessDays,
@@ -33,23 +26,24 @@ import { Label } from "@/components/ui/label";
 import { MoneyInput } from "@/components/ui/money-input";
 import { NativeSelect } from "@/components/ui/native-select";
 import { RequiredFieldsHint } from "@/components/ui/required-fields-hint";
-import { ProductPhoto } from "@/components/products/product-photo";
 import { CustomerPicker, type PickedCustomer } from "@/components/sales/customer-picker";
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { type CelebrationTier, firstName, nextQuote, tierFor } from "@/lib/sale-celebration";
 import { SaleCelebration } from "./sale-celebration";
 import { SalePreviewDialog, type SalePreview } from "./sale-preview-dialog";
+import {
+  ProductLineCard,
+  ProductSearchResults,
+  groupLots,
+  lotLines,
+  matchProducts,
+  productLabel,
+  productLineProblems,
+  type ProductLine,
+} from "./product-lines";
 
-type Options = FunctionReturnType<typeof api.sales.options>;
-type Lot = Options["lots"][number];
-type Line = {
-  key: number;
-  productId: Id<"products">;
-  qty: number;
-  price: number | null;
-  reason: string;
-};
+type Line = ProductLine;
 
 const LOCATION_KEY = "sale-location";
 
@@ -59,12 +53,6 @@ function rememberedLocation(): string {
   } catch {
     return "";
   }
-}
-
-function productLabel(lot: Pick<Lot, "productName" | "lengthInches" | "sizeName" | "colourName">, inches: (n: number) => string) {
-  return [lot.productName ?? "—", lot.lengthInches !== null ? inches(lot.lengthInches) : null, lot.sizeName, lot.colourName]
-    .filter(Boolean)
-    .join(" · ");
 }
 
 /**
@@ -127,7 +115,6 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
   const [reviewing, setReviewing] = useState(false);
   // Problems are only highlighted once the seller has tried to record.
   const [attempted, setAttempted] = useState(false);
-  const canSetPrice = useCan("products.set_price");
 
   if (canSell === undefined) return null;
   if (!canSell) return <p className="text-sm text-muted-foreground">{t("cannotSell")}</p>;
@@ -141,46 +128,14 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", timeZone: BUSINESS_TIME_ZONE }).format(
       businessDayStartUtc(day) + 12 * 3600_000,
     );
-  const date = new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", timeZone: BUSINESS_TIME_ZONE });
   const lots = options?.lots ?? [];
   const locationId = options?.locationId ?? null;
 
-  // Products in stock here, for the search list and the lines (one entry
-  // per product; its lots oldest first, as sales.options sorts them).
-  const products = new Map<Id<"products">, { first: Lot; onHand: number; lots: Lot[] }>();
-  for (const lot of lots) {
-    const entry = products.get(lot.productId) ?? { first: lot, onHand: 0, lots: [] };
-    entry.onHand += lot.onHand;
-    entry.lots.push(lot);
-    products.set(lot.productId, entry);
-  }
-  const term = search.trim().toLowerCase();
-  const matches = term
-    ? [...products.values()].filter(({ first }) =>
-        [
-          first.productName,
-          first.sku,
-          first.colourName,
-          first.sizeName,
-          first.lengthInches?.toString(),
-          first.lengthInches ? `${first.lengthInches}"` : null,
-        ]
-          .filter(Boolean)
-          .some((s) => s!.toLowerCase().includes(term)),
-      )
-    : [];
-
-  const problemsOf = (line: Line): string[] => {
-    const entry = products.get(line.productId);
-    if (!entry) return ["gone"];
-    if (line.price === null) return ["price"];
-    const problems: string[] = saleLineProblems(
-      { qty: line.qty, unitPrice: line.price, discountReason: line.reason },
-      entry.first.suggestedPrice ?? undefined,
-    );
-    if (line.qty > entry.onHand) problems.push("stock");
-    return problems;
-  };
+  // Products in stock here, for the search list and the lines.
+  const products = groupLots(lots);
+  const term = search.trim();
+  const matches = matchProducts(products, search);
+  const problemsOf = (line: Line) => productLineProblems(line, products.get(line.productId));
   const linesTotal = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
   const agreedTotal = agreed && agreed.linesTotal === linesTotal ? agreed.value : null;
   const total = agreedTotal ?? linesTotal;
@@ -277,14 +232,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
           ? { agreedTotal, ...(saleReason.trim() ? { saleDiscountReason: saleReason } : {}) }
           : {}),
         // One server line per lot the units come from, so each keeps its own cost.
-        lines: lines.flatMap((l) =>
-          (splitOverLots(products.get(l.productId)?.lots ?? [], l.qty) ?? []).map((part) => ({
-            inventoryBatchId: part.lot._id,
-            qty: part.qty,
-            unitPrice: l.price ?? 0,
-            ...(l.reason.trim() ? { discountReason: l.reason } : {}),
-          })),
-        ),
+        lines: lines.flatMap((l) => lotLines(l, products.get(l.productId))),
       });
       setReviewing(false);
       setDone({
@@ -469,34 +417,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
           <Label htmlFor="sale-search">{t("addProduct")}</Label>
           <DataTableSearch value={search} onChange={setSearch} placeholder={t("searchPlaceholder")} className="sm:max-w-none" />
           {term ? (
-            <ul className="flex flex-col divide-y divide-border rounded-md border border-border" aria-label={t("results")}>
-              {matches.length === 0 ? (
-                <li className="p-3 text-sm text-muted-foreground">{t("noMatch")}</li>
-              ) : (
-                matches.slice(0, 20).map(({ first, onHand }) => (
-                  <li key={first.productId}>
-                    <button
-                      type="button"
-                      onClick={() => addProduct(first.productId)}
-                      className="flex min-h-12 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted"
-                    >
-                      <span className="flex min-w-0 items-center gap-3">
-                        {withPhotos ? <ProductPhoto url={first.photoUrl} size="md" /> : null}
-                        <span className="min-w-0">
-                        <span className="block truncate font-medium">{productLabel(first, inches)}</span>
-                        <span className="block text-xs text-muted-foreground">
-                          {first.sku}
-                          {" · "}
-                          {first.suggestedPrice !== null ? money(first.suggestedPrice) : t("noPriceShort")}
-                        </span>
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-xs text-muted-foreground">{t("inStock", { count: onHand })}</span>
-                    </button>
-                  </li>
-                ))
-              )}
-            </ul>
+            <ProductSearchResults matches={matches} withPhotos={withPhotos} onPick={addProduct} />
           ) : lots.length === 0 && options ? (
             <p className="text-sm text-muted-foreground">{t("noStockHere")}</p>
           ) : null}
@@ -505,137 +426,18 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
 
       {lines.length > 0 ? (
         <section className="flex flex-col gap-3" aria-label={t("linesLabel")}>
-          {lines.map((line) => {
-            const entry = products.get(line.productId);
-            const lot = entry?.first;
-            const parts = entry ? splitOverLots(entry.lots, line.qty) : null;
-            const problems = problemsOf(line);
-            const differs = lot?.suggestedPrice != null && line.price !== null && line.price !== lot.suggestedPrice;
-            return (
-              <div key={line.key} className="flex flex-col gap-3 rounded-lg border border-border p-3">
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-center gap-3">
-                    {withPhotos ? <ProductPhoto url={lot?.photoUrl} size="md" /> : null}
-                    <p className="font-medium">{lot ? productLabel(lot, inches) : t("goneLine")}</p>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="size-11 shrink-0 text-destructive"
-                    aria-label={t("removeLine")}
-                    onClick={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
-                  >
-                    <Trash2 aria-hidden />
-                  </Button>
-                </div>
-                {entry ? (
-                  <p className="text-xs text-muted-foreground">
-                    {t("inStock", { count: entry.onHand })}
-                    {parts && parts.length > 0
-                      ? ` · ${t("fromLots", {
-                          lots: parts
-                            .map((p) => t("lotPart", { batch: p.lot.batchNumber ?? "—", date: date.format(p.lot.lotDate), qty: p.qty }))
-                            .join(", "),
-                        })}`
-                      : null}
-                  </p>
-                ) : null}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">{t("qtyLabel")}</span>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-11"
-                        aria-label={t("less")}
-                        disabled={line.qty <= 1}
-                        onClick={() => update(line.key, { qty: line.qty - 1 })}
-                      >
-                        <Minus aria-hidden />
-                      </Button>
-                      <Input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        max={entry?.onHand}
-                        step={1}
-                        value={line.qty}
-                        aria-label={t("qtyLabel")}
-                        aria-invalid={problems.includes("qty") || problems.includes("stock") || undefined}
-                        onChange={(e) => update(line.key, { qty: Math.max(0, Math.floor(Number(e.target.value) || 0)) })}
-                        className="h-11 w-16 text-center"
-                      />
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="icon"
-                        className="size-11"
-                        aria-label={t("more")}
-                        disabled={!entry || line.qty >= entry.onHand}
-                        onClick={() => update(line.key, { qty: line.qty + 1 })}
-                      >
-                        <Plus aria-hidden />
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">{t("priceLabel")}</span>
-                    <MoneyInput
-                      currency="USD"
-                      valueMinor={line.price}
-                      onCommit={(price) => update(line.key, { price })}
-                      aria-label={t("priceLabel")}
-                      aria-invalid={(attempted && problems.includes("price")) || undefined}
-                      className="h-11"
-                    />
-                    <span className="text-xs text-muted-foreground">
-                      {lot?.suggestedPrice != null ? (
-                        t("suggestedHint", { price: money(lot.suggestedPrice) })
-                      ) : (
-                        <>
-                          {t("noSuggestedPrice")}
-                          {canSetPrice ? (
-                            <>
-                              {" · "}
-                              <Link href={`/${service}/products/prices`} className="text-primary underline-offset-4 hover:underline">
-                                {t("setPrices")}
-                              </Link>
-                            </>
-                          ) : null}
-                        </>
-                      )}
-                    </span>
-                  </div>
-                </div>
-                {differs ? (
-                  <div className="flex flex-col gap-1">
-                    <Label htmlFor={`reason-${line.key}`} required>
-                      {t("discountReasonLabel", { suggested: money(lot!.suggestedPrice!) })}
-                    </Label>
-                    <Input
-                      id={`reason-${line.key}`}
-                      value={line.reason}
-                      onChange={(e) => update(line.key, { reason: e.target.value })}
-                      placeholder={t("discountReasonPlaceholder")}
-                      maxLength={300}
-                      aria-invalid={(attempted && problems.includes("discountReason")) || undefined}
-                      required
-                      className="h-11"
-                    />
-                  </div>
-                ) : null}
-                <p className="flex justify-between text-sm">
-                  <span className={cn("text-muted-foreground", problems.includes("stock") && "text-destructive")}>
-                    {entry && line.qty > entry.onHand ? t("onlyLeft", { count: entry.onHand }) : t("lineTotal")}
-                  </span>
-                  <span className="font-medium tabular-nums">{money((line.price ?? 0) * line.qty)}</span>
-                </p>
-              </div>
-            );
-          })}
+          {lines.map((line) => (
+            <ProductLineCard
+              key={line.key}
+              service={service}
+              line={line}
+              entry={products.get(line.productId)}
+              attempted={attempted}
+              withPhotos={withPhotos}
+              onChange={(patch) => update(line.key, patch)}
+              onRemove={() => setLines((prev) => prev.filter((l) => l.key !== line.key))}
+            />
+          ))}
         </section>
       ) : null}
 
