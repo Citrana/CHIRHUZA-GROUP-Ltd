@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/sheet";
 import { AppHeader } from "@/components/shell/app-header";
 import { ModuleNav } from "@/components/shell/module-nav";
+import { NewSaleFab } from "@/components/shell/new-sale-fab";
 import { setLastService } from "@/lib/service-store";
 
 /**
@@ -95,8 +96,9 @@ export function ServiceShell({
         <aside className="sticky top-14 hidden h-[calc(100dvh-3.5rem)] w-60 shrink-0 border-r border-border md:block">
           <ModuleNav service={service} />
         </aside>
-        <main className="min-w-0 flex-1 p-4 md:p-8">{children}</main>
+        <main className="min-w-0 flex-1 p-4 pb-fab md:p-8 md:pb-fab">{children}</main>
       </div>
+      <NewSaleFab service={service} />
     </>
   );
 }
