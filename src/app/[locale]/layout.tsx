@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Baloo_2, Geist, Geist_Mono } from "next/font/google";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { setRequestLocale } from "next-intl/server";
@@ -27,6 +27,11 @@ const baloo2 = Baloo_2({
 export const metadata: Metadata = {
   title: "CHIRHUZA GROUP Ltd",
   description: "Multi-service business management platform",
+};
+
+// Lets fixed bottom elements read the phone's safe-area inset (home indicator).
+export const viewport: Viewport = {
+  viewportFit: "cover",
 };
 
 export function generateStaticParams() {

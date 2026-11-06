@@ -136,6 +136,13 @@
     @apply font-sans;
   }
 }
+/* Room under page content for the floating New sale button
+   (src/components/shell/new-sale-fab.tsx), plus the phone's safe area, so
+   it never covers the last row or the pagination. */
+@utility pb-fab {
+  padding-bottom: calc(6rem + env(safe-area-inset-bottom));
+}
+
 /* Sale mascot (src/components/sales/sale-celebration.tsx, pixel-mascot.tsx).
    6s in all: hop in, gift pops, wave, blink, time to read, drop out. */
 .mascot-show {

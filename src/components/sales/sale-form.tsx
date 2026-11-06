@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
-import { ArrowLeft, CheckCircle2 } from "lucide-react";
+import { useEffect, useState, type FormEvent } from "react";
+import { ArrowLeft, CheckCircle2, History } from "lucide-react";
 import { ConvexError } from "convex/values";
 import { useMutation, useQuery } from "convex/react";
 import { useLocale, useTranslations } from "next-intl";
@@ -30,6 +30,7 @@ import { CustomerPicker, type PickedCustomer } from "@/components/sales/customer
 import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { type CelebrationTier, firstName, nextQuote, tierFor } from "@/lib/sale-celebration";
+import { isEmptyDraft, parseDraft, saleDraftKey, serializeDraft, type SaleDraft } from "@/lib/sale-draft";
 import { SaleCelebration } from "./sale-celebration";
 import { SalePreviewDialog, type SalePreview } from "./sale-preview-dialog";
 import {
@@ -55,6 +56,16 @@ function rememberedLocation(): string {
   }
 }
 
+/** The saved unfinished sale for this user and service, if any. */
+function loadDraft(key: string): SaleDraft | null {
+  const today = businessDayOf(Date.now());
+  try {
+    return parseDraft(localStorage.getItem(key), { today, earliest: addBusinessDays(today, -MAX_BACKDATE_DAYS) });
+  } catch {
+    return null;
+  }
+}
+
 /**
  * The phone sale form: where (locked to the seller's own location for
  * own_location sellers), what (search products in stock there, quantity
@@ -64,30 +75,48 @@ function rememberedLocation(): string {
  */
 export function SaleForm({ service }: { service: BusinessUnitKey }) {
   const t = useTranslations("Sales");
+  const canSell = useCan("sales.create");
+  const me = useQuery(api.users.getCurrentUser, canSell ? {} : "skip");
+  if (canSell === undefined) return null;
+  if (!canSell) return <p className="text-sm text-muted-foreground">{t("cannotSell")}</p>;
+  if (!me) return null;
+  return <SaleFormBody key={me._id} service={service} userId={me._id} userName={me.name} />;
+}
+
+/**
+ * The form itself, for a seller. The unfinished sale is saved in the
+ * browser as a draft (per user and service) while it's being filled in,
+ * so leaving the page doesn't lose it; recording or discarding clears it.
+ */
+function SaleFormBody({ service, userId, userName }: { service: BusinessUnitKey; userId: string; userName?: string }) {
+  const t = useTranslations("Sales");
   const tProducts = useTranslations("Products");
   const locale = useLocale();
-  const canSell = useCan("sales.create");
-  const [picked, setPicked] = useState(rememberedLocation);
-  const options = useQuery(
-    api.sales.options,
-    canSell ? { businessUnitKey: service, ...(picked ? { locationId: picked as Id<"locations"> } : {}) } : "skip",
-  );
+  const draftKey = saleDraftKey(userId, service);
+  // Read once, on the first render: the initial state below comes from it.
+  const [draft] = useState(() => loadDraft(draftKey));
+  const [restored, setRestored] = useState(() => draft !== null && !isEmptyDraft(draft));
+  const [picked, setPicked] = useState(() => draft?.locationId || rememberedLocation());
+  const options = useQuery(api.sales.options, {
+    businessUnitKey: service,
+    ...(picked ? { locationId: picked as Id<"locations"> } : {}),
+  });
   const create = useMutation(api.sales.create);
-  const [lines, setLines] = useState<Line[]>([]);
-  const [nextKey, setNextKey] = useState(1);
+  const [lines, setLines] = useState<Line[]>(() => draft?.lines ?? []);
+  const [nextKey, setNextKey] = useState(() => Math.max(0, ...(draft?.lines ?? []).map((l) => l.key)) + 1);
   const [search, setSearch] = useState("");
-  const [payment, setPayment] = useState<PaymentMethod>("cash");
+  const [payment, setPayment] = useState<PaymentMethod>(() => draft?.payment ?? "cash");
   // Optional name on a cash / mobile money sale.
-  const [customer, setCustomer] = useState("");
+  const [customer, setCustomer] = useState(() => draft?.customer ?? "");
   // Credit: the customer from the customer list, what they paid now and how.
-  const [creditCustomer, setCreditCustomer] = useState<PickedCustomer | null>(null);
-  const [paidNow, setPaidNow] = useState<number | null>(0);
-  const [paidNowMethod, setPaidNowMethod] = useState<CollectionMethod>("cash");
+  const [creditCustomer, setCreditCustomer] = useState<PickedCustomer | null>(() => draft?.creditCustomer ?? null);
+  const [paidNow, setPaidNow] = useState<number | null>(() => (draft ? draft.paidNow : 0));
+  const [paidNowMethod, setPaidNowMethod] = useState<CollectionMethod>(() => draft?.paidNowMethod ?? "cash");
   // The agreed total, for the lines' total it was entered against: when the
   // lines change, it goes back to following their total. Lower than the
   // lines is a whole-sale discount and needs a reason.
-  const [agreed, setAgreed] = useState<{ value: number; linesTotal: number } | null>(null);
-  const [saleReason, setSaleReason] = useState("");
+  const [agreed, setAgreed] = useState<{ value: number; linesTotal: number } | null>(() => draft?.agreed ?? null);
+  const [saleReason, setSaleReason] = useState(() => draft?.saleReason ?? "");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{
     number: string;
@@ -105,19 +134,47 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     quote: number;
   } | null>(null);
   const [lastQuote, setLastQuote] = useState<number | null>(null);
-  const me = useQuery(api.users.getCurrentUser);
   // The day of the sale: today, or up to MAX_BACKDATE_DAYS back for a sale
   // recorded late. Kept after recording, to enter several late sales.
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
-  const [soldOn, setSoldOn] = useState(today);
+  const [soldOn, setSoldOn] = useState(() => draft?.soldOn ?? today);
   const [submitting, setSubmitting] = useState(false);
   // The preview shown before recording, to catch mistakes.
   const [reviewing, setReviewing] = useState(false);
   // Problems are only highlighted once the seller has tried to record.
   const [attempted, setAttempted] = useState(false);
+  const resolvedLocation = options?.locationId ?? null;
 
-  if (canSell === undefined) return null;
-  if (!canSell) return <p className="text-sm text-muted-foreground">{t("cannotSell")}</p>;
+  // A restored draft from another location than the one the seller now
+  // sells at (e.g. their own location changed): its lines don't apply here.
+  // Checked once, as soon as the server says where the seller sells.
+  const [draftChecked, setDraftChecked] = useState(() => !draft || draft.lines.length === 0);
+  if (!draftChecked && options !== undefined) {
+    setDraftChecked(true);
+    if (resolvedLocation !== draft?.locationId) setLines([]);
+  }
+
+  // Keep the draft in step with the form; an untouched form leaves nothing behind.
+  useEffect(() => {
+    const current: SaleDraft = {
+      locationId: resolvedLocation ?? picked,
+      lines,
+      payment,
+      customer,
+      creditCustomer,
+      paidNow,
+      paidNowMethod,
+      agreed,
+      saleReason,
+      soldOn,
+    };
+    try {
+      if (isEmptyDraft(current)) localStorage.removeItem(draftKey);
+      else localStorage.setItem(draftKey, serializeDraft(current));
+    } catch {
+      // The draft is only a convenience.
+    }
+  }, [draftKey, resolvedLocation, picked, lines, payment, customer, creditCustomer, paidNow, paidNowMethod, agreed, saleReason, soldOn]);
 
   const inches = (n: number) => tProducts("inches", { inches: n });
   // Mode products have a photo: show it so sellers pick the right item.
@@ -210,6 +267,27 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
     setReviewing(true);
   }
 
+  /** Back to an empty form (after recording, or when the draft is discarded). */
+  function resetForm() {
+    setLines([]);
+    setCustomer("");
+    setCreditCustomer(null);
+    setPaidNow(0);
+    setPaidNowMethod("cash");
+    setAgreed(null);
+    setSaleReason("");
+    setPayment("cash");
+    setAttempted(false);
+    setRestored(false);
+  }
+
+  function discardDraft() {
+    resetForm();
+    setSearch("");
+    setSoldOn(today);
+    setDone(null);
+  }
+
   async function recordSale() {
     if (blocker || !locationId) return;
     setSubmitting(true);
@@ -253,15 +331,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
       });
       // The form may stay open past midnight: "today" per the server.
       setToday(result.recordedOn);
-      setLines([]);
-      setCustomer("");
-      setCreditCustomer(null);
-      setPaidNow(0);
-      setPaidNowMethod("cash");
-      setAgreed(null);
-      setSaleReason("");
-      setPayment("cash");
-      setAttempted(false);
+      resetForm();
     } catch (e) {
       const data = e instanceof ConvexError ? (e.data as { code?: string; message?: string } | string) : null;
       setError(typeof data === "object" && data?.message ? data.message : typeof data === "string" ? data : t("saveError"));
@@ -318,7 +388,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
       {celebration ? (
         <SaleCelebration
           key={celebration.key}
-          name={firstName(me?.name)}
+          name={firstName(userName)}
           units={celebration.units}
           location={celebration.location}
           date={celebration.soldOn === today ? null : longDay(celebration.soldOn)}
@@ -338,6 +408,16 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         <h1 className="font-heading text-2xl font-bold text-primary">{t("newTitle")}</h1>
         <RequiredFieldsHint />
       </div>
+
+      {restored ? (
+        <div role="status" className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-muted/40 p-3 text-sm">
+          <History className="size-5 shrink-0 text-primary" aria-hidden />
+          <span className="min-w-0 flex-1">{t("draftRestored")}</span>
+          <Button type="button" variant="outline" className="min-h-11" onClick={discardDraft}>
+            {t("discardDraft")}
+          </Button>
+        </div>
+      ) : null}
 
       {done ? (
         <p role="status" className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 p-3 text-sm">
@@ -588,7 +668,7 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
         </p>
       ) : null}
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 py-3 backdrop-blur md:sticky md:-mx-4">
+      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] backdrop-blur md:sticky md:-mx-4">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3">
           <div className="min-w-0">
             <p className="text-xs text-muted-foreground">{t("itemsCount", { count: lines.reduce((s, l) => s + l.qty, 0) })}</p>

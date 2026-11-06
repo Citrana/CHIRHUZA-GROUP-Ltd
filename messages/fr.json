@@ -44,6 +44,12 @@
     "housing": "Logement",
     "transport": "Transport"
   },
+  "NewSaleFab": {
+    "label": "Nouvelle vente",
+    "shortLabel": "Vente",
+    "hide": "Masquer le bouton Nouvelle vente",
+    "show": "Afficher le bouton Nouvelle vente"
+  },
   "Shell": {
     "modules": "Modules",
     "home": "Accueil",
@@ -1279,6 +1285,8 @@
     "subtitle": "Chaque vente, avec ses lignes et sa marge.",
     "accessDenied": "Vous n'avez pas accès à la liste des ventes.",
     "cannotSell": "Vous ne pouvez pas enregistrer de ventes.",
+    "draftRestored": "Brouillon restauré - vous pouvez reprendre où vous en étiez.",
+    "discardDraft": "Supprimer",
     "new": "Nouvelle vente",
     "newTitle": "Nouvelle vente",
     "backToList": "Toutes les ventes",

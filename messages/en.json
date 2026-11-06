@@ -44,6 +44,12 @@
     "housing": "Housing",
     "transport": "Transport"
   },
+  "NewSaleFab": {
+    "label": "New sale",
+    "shortLabel": "Sale",
+    "hide": "Hide the New sale button",
+    "show": "Show the New sale button"
+  },
   "Shell": {
     "modules": "Modules",
     "home": "Home",
@@ -1279,6 +1285,8 @@
     "subtitle": "Every sale, with its lines and margin.",
     "accessDenied": "You don't have access to the sales list.",
     "cannotSell": "You can't record sales.",
+    "draftRestored": "Draft restored - you can carry on where you left off.",
+    "discardDraft": "Discard",
     "new": "New sale",
     "newTitle": "New sale",
     "backToList": "All sales",
