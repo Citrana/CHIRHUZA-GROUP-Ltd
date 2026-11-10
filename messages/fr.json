@@ -136,7 +136,8 @@
     "expenses": "Dépenses",
     "payroll": "Paie",
     "withdrawals": "Retraits",
-    "approvals": "Approbations"
+    "approvals": "Approbations",
+    "cash": "Caisse"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -301,7 +302,8 @@
     "analytics": "Analyses",
     "admin": "Administration",
     "products": "Produits",
-    "withdrawals": "Retraits"
+    "withdrawals": "Retraits",
+    "cash": "Caisse"
   },
   "Permissions": {
     "sales": {
@@ -370,6 +372,14 @@
     },
     "audit": {
       "view": "Voir le journal d'audit"
+    },
+    "cash": {
+      "view": "Voir l'argent en caisse et l'argent de départ",
+      "opening": {
+        "record": "Ajouter ou annuler de l'argent de départ",
+        "approve": "Approuver l'argent de départ au-dessus de la limite"
+      },
+      "settings": "Définir la limite d'approbation de l'argent de départ"
     }
   },
   "AuditLog": {
@@ -411,7 +421,9 @@
     "entities": {
       "users": "Utilisateur",
       "rolePermissions": "Permission de rôle",
-      "locations": "Site"
+      "locations": "Site",
+      "openingCash": "Argent de départ",
+      "cashSettings": "Réglages de la caisse"
     }
   },
   "Changes": {
@@ -455,7 +467,12 @@
       "customerName": "Client",
       "linesTotal": "Total des lignes",
       "totalAmount": "Total à payer",
-      "saleDiscountReason": "Motif du total réduit"
+      "saleDiscountReason": "Motif du total réduit",
+      "kind": "Type",
+      "receivedBy": "Reçu par",
+      "receivedOn": "Date de réception",
+      "reversedOn": "Annulé le",
+      "approvalThresholdAmount": "Limite d'approbation"
     },
     "atPrice": "à {price} pièce"
   },
@@ -516,7 +533,8 @@
       "withdrawal": "Retrait",
       "credit_payment_reversal": "Correction d'un paiement à crédit",
       "credit_cancel": "Dette à crédit annulée (erreur)",
-      "sale_exchange": "Échange de vente (remboursement)"
+      "sale_exchange": "Échange de vente (remboursement)",
+      "opening_cash": "Argent de départ"
     }
   },
   "ProductCategories": {
@@ -1673,6 +1691,94 @@
     "reasonHeader": "Motif",
     "requestedBy": "Demandé par",
     "empty": "Aucun retrait ne correspond à ces filtres."
+  },
+  "Cash": {
+    "title": "Caisse",
+    "subtitle": "L'argent que vous avez maintenant, et l'argent que vous aviez déjà, qui ne vient pas d'une vente.",
+    "accessDenied": "Vous n'avez pas accès à la caisse.",
+    "onHandTitle": "Argent en caisse",
+    "onHandHint": "Ne compte ni dans les ventes ni dans le bénéfice. Le mobile money et les crédits non payés ne sont pas comptés.",
+    "lines": {
+      "openingCash": "Argent de départ",
+      "cashSales": "Ventes en espèces",
+      "cashCreditPayments": "Crédits payés en espèces",
+      "cashRefunds": "Remboursements en espèces",
+      "withdrawals": "Retraits"
+    },
+    "openingTitle": "Argent de départ",
+    "new": "Ajouter de l'argent de départ",
+    "newTitle": "Ajouter de l'argent de départ",
+    "newHint": "Argent que vous aviez déjà, qui ne vient pas d'une vente.",
+    "amountLabel": "Montant (USD)",
+    "dateLabel": "Date de réception",
+    "receivedByLabel": "Reçu par",
+    "choosePerson": "Choisir une personne",
+    "someoneElse": "Quelqu'un d'autre (écrire le nom)",
+    "receivedByNameLabel": "Nom de la personne",
+    "locationLabel": "Où est l'argent ?",
+    "noLocation": "Aucune boutique (entreprise)",
+    "noOwnLocation": "Vous n'avez pas de site - demandez à un administrateur d'en définir un.",
+    "noteLabel": "Note",
+    "notePlaceholder": "D'où vient cet argent ?",
+    "needsApproval": "Au-dessus de {threshold} : il attendra une approbation avant de compter.",
+    "notInProfit": "L'argent de départ compte seulement dans l'argent en caisse - jamais dans les ventes, la marge ou le bénéfice.",
+    "missingFields": "Remplissez tous les champs obligatoires.",
+    "save": "Enregistrer",
+    "submitForApproval": "Envoyer pour approbation",
+    "saving": "Enregistrement…",
+    "saveError": "Échec de l'enregistrement. Réessayez.",
+    "cancel": "Annuler",
+    "approvedTotal": "Compté",
+    "pendingTotal": "En attente d'approbation",
+    "dateHeader": "Date",
+    "amountHeader": "Montant",
+    "receivedByHeader": "Reçu par",
+    "kindHeader": "Type",
+    "locationHeader": "Site",
+    "statusHeader": "Statut",
+    "kinds": {
+      "record": "Argent de départ",
+      "reversal": "Annulation"
+    },
+    "reversed": "Annulé",
+    "statuses": {
+      "pending": "En attente",
+      "approved": "Approuvé",
+      "rejected": "Rejeté"
+    },
+    "allLocations": "Tous les sites",
+    "allStatuses": "Tous les statuts",
+    "empty": "Pas encore d'argent de départ.",
+    "recordedBy": "Ajouté par",
+    "pendingHint": "En attente d'approbation.",
+    "viewApprovals": "Voir les approbations",
+    "approvedBy": "Approuvé par",
+    "rejectedBy": "Rejeté par",
+    "reversesLabel": "Annule",
+    "reversalLabel": "Annulation",
+    "reversalStatus": {
+      "pending": "En attente d'approbation",
+      "approved": "Faite",
+      "rejected": "Rejetée"
+    },
+    "reverse": "Annuler",
+    "reverseTitle": "Annuler l'argent de départ",
+    "reverseHint": "Cela retire {record} de l'argent en caisse. L'enregistrement reste dans la liste.",
+    "reasonLabel": "Raison",
+    "reasonPlaceholder": "Pourquoi l'annulez-vous ?",
+    "thresholdLabel": "Limite d'approbation (USD)",
+    "thresholdHint": "Les montants au-dessus de {threshold} attendent une approbation. 0 = tout attend.",
+    "download": "Télécharger (CSV)",
+    "csv": {
+      "date": "Date",
+      "kind": "Type",
+      "amount": "Montant (USD)",
+      "receivedBy": "Reçu par",
+      "location": "Site",
+      "note": "Note ou raison",
+      "status": "Statut",
+      "recordedBy": "Ajouté par"
+    }
   },
   "Analytics": {
     "title": "Analyses",
