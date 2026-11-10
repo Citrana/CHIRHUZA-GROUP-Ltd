@@ -9,7 +9,9 @@ import { addBusinessDays, businessDayOf, isBusinessDay } from "./time";
  * - dailyStats: per (unit, locationKey, product, business day): units sold,
  *   revenue, cost, margin;
  * - dailyFinance: per (unit, locationKey, business day): sales, sale cost,
- *   expenses, payroll, withdrawals.
+ *   expenses, payroll, withdrawals, and the cash fields (cash sales, cash
+ *   credit payments, cash refunds, opening cash) that only feed Cash on
+ *   hand - never sales, margin or net profit.
  * `locationKey` is a location id, NONE for business-level money (trip
  * expenses, payroll/withdrawals without a location), or ALL: every change
  * is also added to the ALL row, so "All locations" reads one row per day.
@@ -24,7 +26,18 @@ import { addBusinessDays, businessDayOf, isBusinessDay } from "./time";
 export const ALL = "*";
 export const NONE = "none";
 
-export const FINANCE_FIELDS = ["sales", "saleCost", "expenses", "payroll", "withdrawals"] as const;
+export const FINANCE_FIELDS = [
+  "sales",
+  "saleCost",
+  "expenses",
+  "payroll",
+  "withdrawals",
+  // Cash on hand only (convex/cash.ts): never part of sales or profit.
+  "cashSales",
+  "cashCreditPayments",
+  "cashRefunds",
+  "openingCash",
+] as const;
 export type FinanceField = (typeof FINANCE_FIELDS)[number];
 export type FinanceDelta = Partial<Record<FinanceField, number>>;
 export type ProductDelta = { productId: Id<"products">; units: number; revenue: number; cost: number };
@@ -39,9 +52,13 @@ export type RollupEvent = {
 
 // ---------------------------------------------------------- event builders
 
-/** A sale's rollup events (sign -1 reverses it, for voids/edits). */
+/**
+ * A sale's rollup events (sign -1 reverses it, for voids/edits). A cash
+ * sale's agreed total also counts as cash received (`cashSales`); pass
+ * paymentMethod null for lines that aren't a sale (exchanges).
+ */
 export function saleEvents(
-  sale: Pick<Doc<"sales">, "locationId" | "createdAt">,
+  sale: Pick<Doc<"sales">, "locationId" | "createdAt"> & { paymentMethod: Doc<"sales">["paymentMethod"] | null },
   items: Pick<Doc<"saleItems">, "productId" | "qty" | "unitPrice" | "unitCostSnapshot" | "saleDiscountShare">[],
   sign: 1 | -1 = 1,
 ): RollupEvent[] {
@@ -59,12 +76,14 @@ export function saleEvents(
       cost: sign * item.unitCostSnapshot * item.qty,
     },
   }));
+  const sales = sign * items.reduce((s, i) => s + revenue(i), 0);
   events.push({
     locationId: sale.locationId,
     day,
     finance: {
-      sales: sign * items.reduce((s, i) => s + revenue(i), 0),
+      sales,
       saleCost: sign * items.reduce((s, i) => s + i.unitCostSnapshot * i.qty, 0),
+      ...(sale.paymentMethod === "cash" ? { cashSales: sales } : {}),
     },
   });
   return events;
@@ -75,14 +94,49 @@ type EventItem = Pick<Doc<"saleItems">, "productId" | "qty" | "unitPrice" | "uni
 /**
  * An exchange's events, on its own day at the sale's location: the returned
  * units' revenue and cost come out, the given ones go in (revenue moves by
- * the difference paid or refunded).
+ * the difference paid or refunded). A difference settled in cash is cash
+ * received (> 0, `cashSales`) or refunded (< 0, `cashRefunds`).
  */
 export function exchangeEvents(
-  exchange: Pick<Doc<"saleExchanges">, "locationId" | "createdAt">,
+  exchange: Pick<Doc<"saleExchanges">, "locationId" | "createdAt" | "differenceAmount" | "settlementMethod">,
   returned: EventItem[],
   given: EventItem[],
 ): RollupEvent[] {
-  return [...saleEvents(exchange, returned, -1), ...saleEvents(exchange, given, 1)];
+  const lines = { locationId: exchange.locationId, createdAt: exchange.createdAt, paymentMethod: null };
+  const events = [...saleEvents(lines, returned, -1), ...saleEvents(lines, given, 1)];
+  const difference = exchange.differenceAmount;
+  if (exchange.settlementMethod === "cash" && difference !== 0) {
+    events.push({
+      locationId: exchange.locationId,
+      day: businessDayOf(exchange.createdAt),
+      finance: difference > 0 ? { cashSales: difference } : { cashRefunds: -difference },
+    });
+  }
+  return events;
+}
+
+/**
+ * Money received in cash for a credit sale (at the sale, a repayment, or a
+ * negative reversal), on the day it was received. Cash on hand only: it
+ * never touches sales or profit. Mobile money isn't cash: no event.
+ */
+export function cashPaymentEvent(
+  payment: Pick<Doc<"salePayments">, "locationId" | "amount" | "method" | "paidAt">,
+): RollupEvent | null {
+  if (payment.method !== "cash" || payment.amount === 0) return null;
+  return { locationId: payment.locationId, day: businessDayOf(payment.paidAt), finance: { cashCreditPayments: payment.amount } };
+}
+
+/**
+ * An approved opening cash row (convex/lib/openingCash.ts), on its day: a
+ * record adds to Cash on hand, a reversal takes it back out.
+ */
+export function openingCashEvent(row: Pick<Doc<"openingCash">, "locationId" | "amount" | "date" | "kind">): RollupEvent {
+  return {
+    locationId: row.locationId ?? null,
+    day: businessDayOf(row.date),
+    finance: { openingCash: row.kind === "reversal" ? -row.amount : row.amount },
+  };
 }
 
 /** A trip expense (business-level) on the day it was recorded. */
@@ -200,7 +254,7 @@ export function computeRollups(events: RollupEvent[]): { finance: FinanceRow[]; 
         const key = `${locationKey}|${event.day}`;
         const row =
           finance.get(key) ??
-          ({ locationKey, day: event.day, sales: 0, saleCost: 0, expenses: 0, payroll: 0, withdrawals: 0 } as FinanceRow);
+          ({ locationKey, day: event.day, ...Object.fromEntries(FINANCE_FIELDS.map((f) => [f, 0])) } as FinanceRow);
         for (const f of FINANCE_FIELDS) row[f] += event.finance[f] ?? 0;
         finance.set(key, row);
       }
@@ -233,6 +287,15 @@ async function rawEvents(ctx: MutationCtx, businessUnitId: Id<"businessUnits">):
     .withIndex("by_businessUnitId_and_createdAt", (q) => q.eq("businessUnitId", businessUnitId))
     .take(MAX_SOURCE_ROWS);
   for (const sale of sales) {
+    if (sale.paymentMethod === "credit") {
+      // Cash received for it (any status: a voided sale's payments were
+      // reversed first, so they net out).
+      const payments = await ctx.db.query("salePayments").withIndex("by_saleId", (q) => q.eq("saleId", sale._id)).take(500);
+      for (const payment of payments) {
+        const event = cashPaymentEvent(payment);
+        if (event) events.push(event);
+      }
+    }
     if (sale.status !== "completed") continue;
     const items = await ctx.db.query("saleItems").withIndex("by_saleId", (q) => q.eq("saleId", sale._id)).take(500);
     events.push(...saleEvents(sale, items));
@@ -272,6 +335,13 @@ async function rawEvents(ctx: MutationCtx, businessUnitId: Id<"businessUnits">):
     .take(MAX_SOURCE_ROWS);
   for (const withdrawal of withdrawals) {
     if (withdrawal.status === "approved") events.push(withdrawalEvent(withdrawal));
+  }
+  const openingCash = await ctx.db
+    .query("openingCash")
+    .withIndex("by_businessUnitId_and_date", (q) => q.eq("businessUnitId", businessUnitId))
+    .take(MAX_SOURCE_ROWS);
+  for (const row of openingCash) {
+    if (row.status === "approved") events.push(openingCashEvent(row));
   }
   return events;
 }

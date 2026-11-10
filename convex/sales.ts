@@ -300,7 +300,7 @@ export const create = authedMutation({
       ctx,
       unit._id,
       saleEvents(
-        { locationId: location._id, createdAt },
+        { locationId: location._id, createdAt, paymentMethod: args.paymentMethod },
         lines.map(({ line, lot }, i) => ({
           productId: lot.productId,
           qty: line.qty,

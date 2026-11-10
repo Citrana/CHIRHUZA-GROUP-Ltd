@@ -13,6 +13,7 @@ import { exchangeDirectionValidator, paymentMethodValidator, saleStatusValidator
 import { collectionMethodValidator, creditStatusValidator, salePaymentKindValidator } from "./lib/credit";
 import { payrollStatusValidator } from "./lib/payroll";
 import { withdrawalStatusValidator } from "./lib/withdrawals";
+import { openingCashKindValidator, openingCashStatusValidator } from "./lib/openingCash";
 import {
   holderRefValidator,
   holderTypeValidator,
@@ -625,6 +626,51 @@ export default defineSchema({
     .index("by_locationId_and_date", ["locationId", "date"])
     .index("by_requestedBy", ["requestedBy"]),
 
+  // Opening cash (convex/lib/openingCash.ts): money the owner holds that
+  // can't be traced to a sale. Counts in Cash on hand, never in sales or
+  // profit. Never edited or deleted: a mistake is undone by a "reversal" row
+  // (reversesId). Rows above the unit's threshold (cashSettings) wait for an
+  // approval (type "opening_cash"); only the decision patches status.
+  openingCash: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    kind: openingCashKindValidator,
+    // Where the cash is; missing = business-level cash.
+    locationId: v.optional(v.id("locations")),
+    // Cents, always > 0 (a reversal takes its record's amount back out).
+    amount: v.number(),
+    currency: usdValidator,
+    // UTC ms within the business day the cash was received (a reversal: when
+    // it was asked for).
+    date: v.number(),
+    // Who received it: a user, or just a name (always stored).
+    receivedByUserId: v.optional(v.id("users")),
+    receivedByName: v.string(),
+    // Records: where the money came from. Reversals: why.
+    note: v.optional(v.string()),
+    reason: v.optional(v.string()),
+    reversesId: v.optional(v.id("openingCash")),
+    status: openingCashStatusValidator,
+    approvalId: v.optional(v.id("approvals")),
+    requestedBy: v.id("users"),
+    // UTC ms.
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_businessUnitId_and_date", ["businessUnitId", "date"])
+    .index("by_locationId_and_date", ["locationId", "date"])
+    .index("by_reversesId", ["reversesId"]),
+
+  // Cash settings, one row per business unit (convex/cash.ts). No row = a
+  // threshold of 0: every opening cash amount goes through Approvals.
+  cashSettings: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    // Cents: opening cash (or a reversal) above this needs an approval.
+    openingCashApprovalThreshold: v.number(),
+    currency: usdValidator,
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  }).index("by_businessUnitId", ["businessUnitId"]),
+
   // Analytics rollups (convex/lib/analytics.ts): written ONLY by
   // applyRollupEvent in the same mutation as the source change; rebuilt by
   // analytics:rebuildRollups. locationKey = a location id, "none"
@@ -652,6 +698,12 @@ export default defineSchema({
     expenses: v.number(),
     payroll: v.number(),
     withdrawals: v.number(),
+    // Cash on hand only - never in sales or profit. Optional: rows written
+    // before they existed read as 0 (analytics:rebuildRollups fills them).
+    cashSales: v.optional(v.number()),
+    cashCreditPayments: v.optional(v.number()),
+    cashRefunds: v.optional(v.number()),
+    openingCash: v.optional(v.number()),
   }).index("by_key", ["businessUnitId", "locationKey", "day"]),
 
   numberSequences: defineTable({

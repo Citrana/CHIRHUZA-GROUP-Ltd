@@ -5,6 +5,7 @@ import type { ApprovalType } from "./approvalTypes";
 import { deleteApprovedProduct } from "./products";
 import { applyPayrollApproval, applyPayrollRejection } from "./payroll";
 import { applyWithdrawalApproval, applyWithdrawalRejection } from "./withdrawals";
+import { applyOpeningCashApproval, applyOpeningCashRejection } from "./openingCash";
 import { applyCreditPaymentReversal } from "./credit";
 import { applyCreditCancel } from "./saleVoids";
 import { applySaleEdit } from "./saleEdits";
@@ -82,6 +83,7 @@ export const APPROVAL_HANDLERS: Record<ApprovalType, ApprovalHandler> = {
   credit_payment_reversal: applyCreditPaymentReversal,
   credit_cancel: applyCreditCancel,
   sale_exchange: applySaleExchangeApproval,
+  opening_cash: applyOpeningCashApproval,
 };
 
 /**
@@ -96,4 +98,5 @@ export const APPROVAL_REJECTION_HANDLERS: Partial<Record<ApprovalType, ApprovalH
   distribution: applyDistributionRejection,
   payroll: applyPayrollRejection,
   withdrawal: applyWithdrawalRejection,
+  opening_cash: applyOpeningCashRejection,
 };
