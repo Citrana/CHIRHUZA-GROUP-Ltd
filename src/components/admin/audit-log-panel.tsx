@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 type AuditEntry = PaginatedQueryItem<typeof api.auditLogs.list>;
 
 /** Record types that currently write audit entries. */
-const ENTITY_TABLES = ["users", "rolePermissions", "locations"] as const;
+const ENTITY_TABLES = ["users", "rolePermissions", "locations", "openingCash", "cashSettings"] as const;
 type EntityTable = (typeof ENTITY_TABLES)[number];
 
 function isEntityTable(table: string): table is EntityTable {

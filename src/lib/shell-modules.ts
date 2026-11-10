@@ -3,6 +3,7 @@ import {
   Banknote,
   ChartColumn,
   ClipboardList,
+  Coins,
   Package,
   Receipt,
   ShoppingCart,
@@ -32,6 +33,7 @@ export const SHELL_MODULES = [
   { key: "expenses", permissionModule: "expenses", icon: Receipt, group: "money", comingSoon: true },
   { key: "payroll", permissionModule: "payroll", icon: Wallet, group: "money" },
   { key: "withdrawals", permissionModule: "withdrawals", icon: Banknote, group: "money" },
+  { key: "cash", permissionModule: "cash", icon: Coins, group: "money" },
   // Everyone may have requests to track; the list shows each user only
   // what they may see.
   {
