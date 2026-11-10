@@ -4,10 +4,14 @@ import {
   ALL,
   NONE,
   bucketsBetween,
+  cashPaymentEvent,
   computeRollups,
+  exchangeEvents,
+  openingCashEvent,
   resolveRange,
   saleEvents,
   weekStart,
+  type RollupEvent,
 } from "./analytics";
 
 // Thursday 1 Oct 2026, 10:00 in Lubumbashi (08:00 UTC).
@@ -37,19 +41,22 @@ test("bucketsBetween fills every period", () => {
   expect(bucketsBetween("2026-11-15", "2027-01-02", "month")).toEqual(["2026-11-01", "2026-12-01", "2027-01-01"]);
 });
 
+// The cash-on-hand fields of a finance row (a cash sale's total is cash received).
+const cash = (cashSales: number) => ({ cashSales, cashCreditPayments: 0, cashRefunds: 0, openingCash: 0 });
+
 test("computeRollups adds to the location and to ALL, and drops rows that cancel out", () => {
   const shop = "shop1" as Id<"locations">;
   const p = "p1" as Id<"products">;
-  const sale = { locationId: shop, createdAt: NOW };
+  const sale = { locationId: shop, createdAt: NOW, paymentMethod: "cash" as const };
   const items = [{ productId: p, qty: 2, unitPrice: 500, unitCostSnapshot: 200 }];
   const { finance, stats } = computeRollups([
     ...saleEvents(sale, items),
     { locationId: null, day: "2026-10-01", finance: { expenses: 300 } },
   ]);
   expect(finance).toEqual([
-    { locationKey: shop, day: "2026-10-01", sales: 1000, saleCost: 400, expenses: 0, payroll: 0, withdrawals: 0 },
-    { locationKey: ALL, day: "2026-10-01", sales: 1000, saleCost: 400, expenses: 300, payroll: 0, withdrawals: 0 },
-    { locationKey: NONE, day: "2026-10-01", sales: 0, saleCost: 0, expenses: 300, payroll: 0, withdrawals: 0 },
+    { locationKey: shop, day: "2026-10-01", sales: 1000, saleCost: 400, expenses: 0, payroll: 0, withdrawals: 0, ...cash(1000) },
+    { locationKey: ALL, day: "2026-10-01", sales: 1000, saleCost: 400, expenses: 300, payroll: 0, withdrawals: 0, ...cash(1000) },
+    { locationKey: NONE, day: "2026-10-01", sales: 0, saleCost: 0, expenses: 300, payroll: 0, withdrawals: 0, ...cash(0) },
   ]);
   expect(stats.map((r) => [r.locationKey, r.unitsSold, r.margin])).toEqual([
     [shop, 2, 600],
@@ -57,4 +64,26 @@ test("computeRollups adds to the location and to ALL, and drops rows that cancel
   ]);
   // A sale and its reversal cancel out completely.
   expect(computeRollups([...saleEvents(sale, items), ...saleEvents(sale, items, -1)])).toEqual({ finance: [], stats: [] });
+});
+
+test("cash events: exchanges settled in cash, cash credit payments and opening cash only touch the cash fields", () => {
+  const shop = "shop1" as Id<"locations">;
+  const p = "p1" as Id<"products">;
+  const item = { productId: p, qty: 1, unitPrice: 500, unitCostSnapshot: 200 };
+  const exchange = (differenceAmount: number, settlementMethod?: "cash" | "mobile_money") =>
+    exchangeEvents({ locationId: shop, createdAt: NOW, differenceAmount, settlementMethod }, [item], [{ ...item, unitPrice: 500 + differenceAmount }]);
+  const at = (events: RollupEvent[]) => computeRollups(events).finance.find((r) => r.locationKey === shop);
+  expect(at(exchange(300, "cash"))).toMatchObject({ sales: 300, cashSales: 300, cashRefunds: 0 });
+  expect(at(exchange(-200, "cash"))).toMatchObject({ sales: -200, cashSales: 0, cashRefunds: 200 });
+  expect(at(exchange(300, "mobile_money"))).toMatchObject({ sales: 300, cashSales: 0, cashRefunds: 0 });
+  // A mobile money sale is revenue but not cash.
+  expect(at(saleEvents({ locationId: shop, createdAt: NOW, paymentMethod: "mobile_money" }, [item]))).toMatchObject({ sales: 500, cashSales: 0 });
+
+  expect(cashPaymentEvent({ locationId: shop, amount: 400, method: "mobile_money", paidAt: NOW })).toBeNull();
+  const payment = cashPaymentEvent({ locationId: shop, amount: 400, method: "cash", paidAt: NOW })!;
+  const opening = openingCashEvent({ locationId: undefined, amount: 1000, date: NOW, kind: "record" });
+  const reversal = openingCashEvent({ locationId: undefined, amount: 1000, date: NOW, kind: "reversal" });
+  const { finance } = computeRollups([payment, opening]);
+  expect(finance.find((r) => r.locationKey === ALL)).toMatchObject({ sales: 0, cashCreditPayments: 400, openingCash: 1000 });
+  expect(computeRollups([opening, reversal]).finance).toEqual([]);
 });

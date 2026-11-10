@@ -27,6 +27,7 @@ export const DEFAULT_REQUIRED_PERMISSION: Record<ApprovalType, PermissionKey> = 
   credit_payment_reversal: "sales.edit.approve",
   credit_cancel: "sales.credit_cancel.approve",
   sale_exchange: "sales.edit.approve",
+  opening_cash: "cash.opening.approve",
 };
 
 export type ApprovalRequest = {

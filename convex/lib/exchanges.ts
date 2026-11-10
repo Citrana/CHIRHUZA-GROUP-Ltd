@@ -281,7 +281,11 @@ export async function applyExchange(
     }
   }
 
-  await applyRollupEvents(ctx, sale.businessUnitId, exchangeEvents({ locationId: sale.locationId, createdAt }, returnedItems, givenItems));
+  await applyRollupEvents(ctx, sale.businessUnitId, exchangeEvents(
+      { locationId: sale.locationId, createdAt, differenceAmount: plan.differenceAmount, settlementMethod: plan.settlementMethod },
+      returnedItems,
+      givenItems,
+    ),);
 
   await logAudit(ctx, {
     actorId: args.actorId,
