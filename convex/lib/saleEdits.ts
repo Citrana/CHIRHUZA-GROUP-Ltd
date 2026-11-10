@@ -301,7 +301,7 @@ export async function applySaleEdit(ctx: MutationCtx, approval: Doc<"approvals">
   await applyRollupEvents(
     ctx,
     sale.businessUnitId,
-    saleEvents({ locationId: sale.locationId, createdAt: plan.createdAt }, newItems, 1),
+    saleEvents({ locationId: sale.locationId, createdAt: plan.createdAt, paymentMethod: plan.paymentMethod }, newItems, 1),
   );
 
   if (sale.customerId) {

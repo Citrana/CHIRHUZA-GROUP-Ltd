@@ -3,6 +3,7 @@ import type { MutationCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
 import { logAudit } from "./audit";
 import { businessDayOf } from "./time";
+import { applyRollupEvent, cashPaymentEvent } from "./analytics";
 
 /**
  * Credit sales (CLAUDE.md "Credit"). A credit sale belongs to a customer
@@ -11,7 +12,9 @@ import { businessDayOf } from "./time";
  * `creditStatus` and the customer's `balance` are kept up to date in the
  * same mutation as each payment. A wrong payment is undone by a negative
  * "reversal" row, through the approval engine (credit_payment_reversal).
- * Payments are cash collected, not revenue: they never touch the rollups.
+ * Payments are cash collected, not revenue: they never touch the sales or
+ * profit rollups; a cash payment only adds to Cash on hand
+ * (`cashCreditPayments`, cashPaymentEvent).
  */
 
 export const creditStatusValidator = v.union(v.literal("open"), v.literal("settled"));
@@ -130,6 +133,9 @@ export async function applySalePayment(
     recordedBy: args.actorId,
     ...(args.note ? { note: args.note } : {}),
   });
+  // Cash on hand only (never sales or profit), in the same mutation.
+  const cashEvent = cashPaymentEvent({ locationId: sale.locationId, amount: args.amount, method: args.method, paidAt: args.paidAt });
+  if (cashEvent) await applyRollupEvent(ctx, sale.businessUnitId, cashEvent);
   const creditStatus: CreditStatus = amountPaid >= sale.totalAmount ? "settled" : "open";
   await ctx.db.patch("sales", sale._id, { amountPaid, creditStatus });
   await ctx.db.patch("customers", customer._id, { balance: customer.balance - args.amount });

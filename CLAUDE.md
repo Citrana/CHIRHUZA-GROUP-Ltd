@@ -263,7 +263,8 @@ this repo, now and later — do not relax them for convenience.
   `creditStatus`) and leaves the customer's balance. A voided sale can't be
   corrected.
 - Revenue counts at the sale; payments are cash collected and **never**
-  touch the analytics rollups. Who owes what is on `/[service]/sales/credit`
+  touch the sales or profit rollups (a cash payment only adds to
+  `dailyFinance.cashCreditPayments`, for Cash on hand). Who owes what is on `/[service]/sales/credit`
   (`credit.owed`, `credit.customer`), scoped by `sales.view`.
 - Credit sales recorded before this existed are fixed once by
   `npx convex run credit:backfillLegacyCredit` (idempotent; counts them as
@@ -283,17 +284,43 @@ this repo, now and later — do not relax them for convenience.
   any profit/analytics figure excludes them and shows them separately, so
   owners see the real picture.
 
+## Cash
+
+- **Cash on hand** (`cash.onHand`, page `/[service]/cash`) reads the
+  `dailyFinance` cash fields, all days up to today: opening cash + cash
+  sales (`cashSales`: cash sales' agreed totals and exchange differences
+  paid in cash) + cash credit payments (`cashCreditPayments`) − cash
+  refunds (`cashRefunds`) − withdrawals. Mobile money and unpaid credit
+  aren't cash. These fields **never** count in sales, margin or net profit.
+- **Opening cash** (`openingCash`, `convex/lib/openingCash.ts`,
+  `convex/cash.ts`): money held that can't be traced to a sale - amount,
+  date (not in the future), received by (a user or a typed name),
+  optional location, required note. Owner-only by default: `cash.view`,
+  `cash.opening.record`, `cash.opening.approve`, `cash.settings` belong to
+  the Super Admin alone (kept out of the Chief Admin's `*.view` defaults).
+- An amount above the unit's `cashSettings.openingCashApprovalThreshold`
+  (no row = 0: everything) goes through the approval engine (type
+  `opening_cash`); at or below it applies at once. Either way it is
+  audited.
+- Opening cash is never edited or deleted: a mistake is undone by a
+  `reversal` row (`reverseOpeningCash`, required reason, once per record,
+  same threshold rule). Only `convex/lib/openingCash.ts` (decisions) and
+  `convex/cash.ts` (`approvalId`) patch a row (a test scans the source).
+
 ## Analytics
 
 - Analytics reads **pre-aggregated rollups only** — never scan raw sales
   for charts or totals. `dailyStats` (unit, locationKey, product, day:
   units, revenue, cost, margin) and `dailyFinance` (unit, locationKey,
-  day: sales, saleCost, expenses, payroll, withdrawals), days in
-  Africa/Lubumbashi, USD cents (`convex/lib/analytics.ts`).
+  day: sales, saleCost, expenses, payroll, withdrawals, plus the Cash on
+  hand fields cashSales, cashCreditPayments, cashRefunds, openingCash -
+  optional, read as 0, never in profit), days in Africa/Lubumbashi, USD
+  cents (`convex/lib/analytics.ts`).
 - `applyRollupEvent(s)` is the **only** writer (a test scans the source).
   Every feature that changes money calls it **in the same mutation**,
-  through an event builder (`saleEvents`, `expenseEvent`, `payrollEvent`,
-  `withdrawalEvent`); add a builder for new sources. Each change goes to
+  through an event builder (`saleEvents`, `exchangeEvents`,
+  `expenseEvent`, `payrollEvent`, `withdrawalEvent`, `cashPaymentEvent`,
+  `openingCashEvent`); add a builder for new sources. Each change goes to
   its location key (`"none"` for business-level) **and** to `"*"` (all
   locations). Voids and approved edits apply the reversed event (sign -1)
   then the new one.
@@ -478,7 +505,8 @@ the inventory core with the stock overview by product, lot and holder
 `/[service]/products/prices`, next to each lot's purchase cost; sale
 corrections requested from the sales list and approved in Approvals), credit sales (customers, agreed totals, part
 payments and repayments at `/[service]/sales/credit`), payroll (`/[service]/payroll`) and withdrawals
-(`/[service]/withdrawals`), both approved by the Chief Admin, and the
+(`/[service]/withdrawals`), both approved by the Chief Admin, cash on hand
+and opening cash (`/[service]/cash`, owner only), and the
 analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts, and
 the "Products sold" report - every product sold in any day or range, per

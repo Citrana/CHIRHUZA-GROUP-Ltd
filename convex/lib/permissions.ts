@@ -44,6 +44,11 @@ export const PERMISSIONS = [
   { key: "withdrawals.request", module: "withdrawals", description: "Request a withdrawal" },
   { key: "withdrawals.approve", module: "withdrawals", description: "Approve withdrawals" },
 
+  { key: "cash.view", module: "cash", description: "View cash on hand and opening cash" },
+  { key: "cash.opening.record", module: "cash", description: "Record or reverse opening cash" },
+  { key: "cash.opening.approve", module: "cash", description: "Approve opening cash above the threshold" },
+  { key: "cash.settings", module: "cash", description: "Set the opening cash approval threshold" },
+
   { key: "deletes.approve", module: "approvals", description: "Approve delete requests" },
   { key: "approvals.view_all", module: "approvals", description: "View all approval requests" },
 
@@ -84,7 +89,9 @@ type RoleSeed = {
 const all = (keys: PermissionKey[]) =>
   keys.map((k) => [k, "all_locations"] as const);
 
-const VIEW_KEYS = PERMISSION_KEYS.filter((k) => k.endsWith(".view"));
+// Cash is the owner's (Super Admin's) alone: not part of the Chief Admin's
+// "every view" default.
+const VIEW_KEYS = PERMISSION_KEYS.filter((k) => k.endsWith(".view") && !k.startsWith("cash."));
 
 /**
  * Granted to every role (Sales Agent at own_location, others all_locations).

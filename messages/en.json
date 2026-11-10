@@ -136,7 +136,8 @@
     "expenses": "Expenses",
     "payroll": "Payroll",
     "withdrawals": "Withdrawals",
-    "approvals": "Approvals"
+    "approvals": "Approvals",
+    "cash": "Cash"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -301,7 +302,8 @@
     "analytics": "Analytics",
     "admin": "Administration",
     "products": "Products",
-    "withdrawals": "Withdrawals"
+    "withdrawals": "Withdrawals",
+    "cash": "Cash"
   },
   "Permissions": {
     "sales": {
@@ -370,6 +372,14 @@
     },
     "audit": {
       "view": "View the audit log"
+    },
+    "cash": {
+      "view": "View cash on hand and opening cash",
+      "opening": {
+        "record": "Add or reverse opening cash",
+        "approve": "Approve opening cash above the limit"
+      },
+      "settings": "Set the opening cash approval limit"
     }
   },
   "AuditLog": {
@@ -411,7 +421,9 @@
     "entities": {
       "users": "User",
       "rolePermissions": "Role permission",
-      "locations": "Location"
+      "locations": "Location",
+      "openingCash": "Opening cash",
+      "cashSettings": "Cash settings"
     }
   },
   "Changes": {
@@ -455,7 +467,12 @@
       "customerName": "Customer",
       "linesTotal": "Lines total",
       "totalAmount": "Total to pay",
-      "saleDiscountReason": "Reason for the lower total"
+      "saleDiscountReason": "Reason for the lower total",
+      "kind": "Type",
+      "receivedBy": "Received by",
+      "receivedOn": "Date received",
+      "reversedOn": "Reversed on",
+      "approvalThresholdAmount": "Approval limit"
     },
     "atPrice": "at {price} each"
   },
@@ -516,7 +533,8 @@
       "withdrawal": "Withdrawal",
       "credit_payment_reversal": "Credit payment correction",
       "credit_cancel": "Credit debt cancelled (mistake)",
-      "sale_exchange": "Sale exchange (refund)"
+      "sale_exchange": "Sale exchange (refund)",
+      "opening_cash": "Opening cash"
     }
   },
   "ProductCategories": {
@@ -1673,6 +1691,94 @@
     "reasonHeader": "Reason",
     "requestedBy": "Requested by",
     "empty": "No withdrawals match these filters."
+  },
+  "Cash": {
+    "title": "Cash",
+    "subtitle": "The money you have now, and money you already had that didn't come from a sale.",
+    "accessDenied": "You don't have access to cash.",
+    "onHandTitle": "Cash on hand",
+    "onHandHint": "Not part of sales or profit. Mobile money and unpaid credit are not counted.",
+    "lines": {
+      "openingCash": "Opening cash",
+      "cashSales": "Cash sales",
+      "cashCreditPayments": "Credit paid in cash",
+      "cashRefunds": "Cash refunds",
+      "withdrawals": "Withdrawals"
+    },
+    "openingTitle": "Opening cash",
+    "new": "Add opening cash",
+    "newTitle": "Add opening cash",
+    "newHint": "Money you already had that didn't come from a sale.",
+    "amountLabel": "Amount (USD)",
+    "dateLabel": "Date received",
+    "receivedByLabel": "Received by",
+    "choosePerson": "Choose a person",
+    "someoneElse": "Someone else (type the name)",
+    "receivedByNameLabel": "Name of the person",
+    "locationLabel": "Where is the money?",
+    "noLocation": "No shop (business)",
+    "noOwnLocation": "You have no location - ask an admin to set one.",
+    "noteLabel": "Note",
+    "notePlaceholder": "Where does this money come from?",
+    "needsApproval": "Above {threshold}: it will wait for approval before it counts.",
+    "notInProfit": "Opening cash counts in cash on hand only - never in sales, margin or profit.",
+    "missingFields": "Fill in all the required fields.",
+    "save": "Save",
+    "submitForApproval": "Send for approval",
+    "saving": "Saving…",
+    "saveError": "Couldn't save. Try again.",
+    "cancel": "Cancel",
+    "approvedTotal": "Counted",
+    "pendingTotal": "Waiting for approval",
+    "dateHeader": "Date",
+    "amountHeader": "Amount",
+    "receivedByHeader": "Received by",
+    "kindHeader": "Type",
+    "locationHeader": "Location",
+    "statusHeader": "Status",
+    "kinds": {
+      "record": "Opening cash",
+      "reversal": "Reversal"
+    },
+    "reversed": "Reversed",
+    "statuses": {
+      "pending": "Waiting",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "allLocations": "All locations",
+    "allStatuses": "All statuses",
+    "empty": "No opening cash yet.",
+    "recordedBy": "Added by",
+    "pendingHint": "Waiting for approval.",
+    "viewApprovals": "See approvals",
+    "approvedBy": "Approved by",
+    "rejectedBy": "Rejected by",
+    "reversesLabel": "Cancels",
+    "reversalLabel": "Reversal",
+    "reversalStatus": {
+      "pending": "Waiting for approval",
+      "approved": "Done",
+      "rejected": "Rejected"
+    },
+    "reverse": "Reverse",
+    "reverseTitle": "Reverse opening cash",
+    "reverseHint": "This takes {record} back out of cash on hand. The record stays in the list.",
+    "reasonLabel": "Reason",
+    "reasonPlaceholder": "Why are you reversing it?",
+    "thresholdLabel": "Approval limit (USD)",
+    "thresholdHint": "Amounts above {threshold} wait for approval. 0 = everything waits.",
+    "download": "Download (CSV)",
+    "csv": {
+      "date": "Date",
+      "kind": "Type",
+      "amount": "Amount (USD)",
+      "receivedBy": "Received by",
+      "location": "Location",
+      "note": "Note or reason",
+      "status": "Status",
+      "recordedBy": "Added by"
+    }
   },
   "Analytics": {
     "title": "Analytics",
