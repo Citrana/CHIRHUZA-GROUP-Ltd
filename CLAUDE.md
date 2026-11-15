@@ -233,6 +233,13 @@ this repo, now and later — do not relax them for convenience.
   The sale is never rewritten: `saleExchanges` / `saleExchangeItems` are
   append-only, and a sale with an exchange can't be corrected (`sale_edit`).
   `planExchange` holds the rules for both the request and the approval.
+- **Check sales** (`convex/salesCheck.ts`, `convex/lib/salesCheck.ts`, page
+  `/[service]/sales/check`) is read-only: which shop-days sold a list of
+  products, from the `dailyStats` rollups (never raw sales), scoped by
+  `sales.view` like the sales list. Match by product only (quantities never
+  exclude a day); full matches by fewest extra products, else best
+  partials. A day's sales come from `sales.list`; a wrong date is fixed
+  only through the existing sale correction (`SaleEditDialog`).
 
 ## Credit
 
