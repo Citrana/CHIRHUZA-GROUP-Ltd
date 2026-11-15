@@ -330,6 +330,16 @@ this repo, now and later — do not relax them for convenience.
 - Margin = sale price − purchase cost (`unitCostSnapshot`); net profit =
   margin − expenses − payroll; withdrawals are shown apart, never
   subtracted.
+- **Missing sales days** (`convex/lib/salesDays.ts`, the only place they
+  are computed - Analytics `getSalesDays` and Home both call
+  `salesDaysFor`): a shop's past open day (`locations.openDays`, default
+  Mon-Sat) with no sale in `dailyFinance`, since its first sale, and not
+  marked "Closed / no sales" (`closedSalesDays`, per service; marked /
+  undone with `sales.create` in scope via `convex/salesDays.ts`, never
+  deleted, audited). Warehouses and today are never flagged.
+- Period comparisons (`comparableRange`, `src/lib/analytics-compare.ts`)
+  only compare equal-length periods of at least 3 days; ▲/▼ colours come
+  from `deltaTone` (a cost going down is good news).
 
 ## Append-only tables
 

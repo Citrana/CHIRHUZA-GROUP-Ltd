@@ -5,6 +5,8 @@ import { ALL, monthStart } from "./lib/analytics";
 import { saleBalance } from "./lib/credit";
 import type { Scope } from "./lib/permissions";
 import { addBusinessDays, businessDayOf } from "./lib/time";
+import { salesDaysFor, trackedShops } from "./lib/salesDays";
+import type { Id } from "./_generated/dataModel";
 
 /**
  * The Home briefing of a service, in one query: what needs attention and
@@ -137,6 +139,14 @@ export const summary = authedQuery({
       salesToday = { amount, lastSaleDay };
     }
 
+    // Days without sales this month (shop-days), same scope as today's sales.
+    let missingSalesDays: { count: number } | null = null;
+    if (salesKey) {
+      const shops = await trackedShops(ctx, salesKey === ALL ? null : (salesKey as Id<"locations">));
+      const { missing } = await salesDaysFor(ctx, unit._id, shops, monthStart(today), today, today);
+      missingSalesDays = { count: missing.length };
+    }
+
     // This month's rollup rows per location key (read once per key).
     const monthCache = new Map<string, Awaited<ReturnType<typeof finance>>>();
     const monthRows = async (key: string) => {
@@ -197,6 +207,7 @@ export const summary = authedQuery({
       withdrawals,
       creditOwed,
       salesToday,
+      missingSalesDays,
       monthToDate,
     };
   },
