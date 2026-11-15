@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ANALYTICS_COLORS, ChartLegend, CostsChart, SalesChart, Sparkline } from "@/components/analytics/analytics-charts";
 import { ProductsSoldTable } from "@/components/analytics/products-sold-table";
-import { percentChange, previousRange } from "@/lib/analytics-compare";
+import { comparableRange, deltaTone, percentChange } from "@/lib/analytics-compare";
 import { analyticsInsights } from "@/lib/analytics-insights";
 import { ConcealToggle, useConcealed } from "@/components/ui/concealable";
 import { useCan } from "@/lib/use-can";
@@ -52,13 +52,13 @@ function DeltaBadge({ delta, anchor }: { delta: Delta; anchor?: boolean }) {
     return <span className={cn("text-xs", anchor ? "text-primary-foreground/70" : "text-muted-foreground")}>{delta.compare}</span>;
   }
   const up = delta.pct > 0;
-  const good = delta.pct === 0 ? null : up !== Boolean(delta.inverse);
+  const verdict = deltaTone(delta.pct, { inverse: delta.inverse });
   const tone =
-    good === null
+    verdict === "flat"
       ? anchor
         ? "text-primary-foreground/80"
         : "text-muted-foreground"
-      : good
+      : verdict === "good"
         ? anchor
           ? "text-accent"
           : "text-[color:var(--chart-2)]"
@@ -222,8 +222,9 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
 
   const filters = useQuery(api.analytics.filterLocations, canView ? { businessUnitKey: service } : "skip");
   const summary = useQuery(api.analytics.getSummary, args);
-  // The same figures for the period before, for the ▲/▼ on each card.
-  const previous = summary ? previousRange(period, summary.from, summary.to) : null;
+  // The same figures for the period before, for the ▲/▼ on each card - only
+  // when both periods have the same length and are at least 3 days long.
+  const previous = summary ? comparableRange(period, summary.from, summary.to) : null;
   const previousSummary = useQuery(
     api.analytics.getSummary,
     canView && previous ? { businessUnitKey: service, range: previous, ...location } : "skip",
@@ -361,7 +362,10 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             points,
             granularity: chartGranularity,
             today,
-            topProduct: topProduct ? { label: productName(topProduct), revenue: topProduct.revenue } : null,
+            topProduct:
+              topProduct && productSales
+                ? { label: productName(topProduct), revenue: topProduct.revenue, productsRevenue: productSales.totals.revenue }
+                : null,
           },
           { t: (key, values) => t(key as Parameters<typeof t>[0], values), formatDay: (d) => shortDay.format(asDate(d)) },
         )
