@@ -9,7 +9,6 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { MAX_CLOSED_NOTE_LENGTH } from "../../../convex/lib/salesDays";
 import { MAX_BACKDATE_DAYS } from "../../../convex/lib/sales";
-import { addBusinessDays } from "../../../convex/lib/time";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -24,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { TEXTAREA_CLASS } from "@/components/requisitions/new-requisition-dialog";
 import { Link } from "@/i18n/navigation";
+import { useSaleDateWindow } from "@/lib/use-sale-date-window";
 
 type SalesDays = FunctionReturnType<typeof api.analytics.getSalesDays>;
 type Row = {
@@ -44,12 +44,10 @@ type Row = {
 export function MissingDaysList({
   service,
   data,
-  today,
   showShop,
 }: {
   service: BusinessUnitKey;
   data: SalesDays | undefined;
-  today: string;
   showShop: boolean;
 }) {
   const t = useTranslations("Analytics.missingDays");
@@ -59,7 +57,8 @@ export function MissingDaysList({
   const [failed, setFailed] = useState(false);
   const longDay = new Intl.DateTimeFormat(locale, { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
   const dayLabel = (day: string) => longDay.format(Date.parse(`${day}T12:00:00Z`));
-  const earliest = addBusinessDays(today, -MAX_BACKDATE_DAYS);
+  // Sales can be added back to this day: 7 days, or any past day for the Super Admin.
+  const { earliest } = useSaleDateWindow();
 
   const rows: Row[] | undefined = data
     ? [

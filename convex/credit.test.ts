@@ -3,7 +3,7 @@ import { api, internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { appendOnlyGuardedDb } from "./lib/rbac";
 import { applyMovement, businessHolderRef, findHolder, getOrCreateHolder, stockLevelOf } from "./lib/inventory";
-import { businessDayOf } from "./lib/time";
+import { addBusinessDays, businessDayOf } from "./lib/time";
 import { arrivedMixedBatch, receiveAll, setupStock, type Setup } from "./lib/stock.test.utils";
 import { insertLocation } from "./lib/test.utils";
 
@@ -417,4 +417,16 @@ test("backfill: earlier credit sales get a customer and count as unpaid, once", 
   expect(await getSale(s, a)).toMatchObject({ customerId: customers[0]._id, amountPaid: 0, creditStatus: "open" });
   expect(await s.t.mutation(internal.credit.backfillLegacyCredit, {})).toEqual({ fixed: 0, more: false });
   expect((await getCustomer(s, customers[0]._id))!.balance).toBe(2000);
+});
+
+test("the Super Admin may date a repayment on any past day; others keep the 7 days", async () => {
+  const { s, p1Lot, customer } = await withShopStock();
+  const rose = await customer("Rose");
+  await creditSale(s, s.agent, rose, [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }]);
+  const monthAgo = addBusinessDays(businessDayOf(Date.now()), -30);
+  const repay = (who: Id<"users">) =>
+    s.as(who).mutation(api.credit.recordRepayment, { customerId: rose, amount: 100, method: "mobile_money", paidOn: monthAgo });
+  await expect(repay(s.sales)).rejects.toThrow(/last 7 days/);
+  await repay(s.superAdmin);
+  expect((await getCustomer(s, rose))!.balance).toBe(400);
 });

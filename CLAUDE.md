@@ -200,7 +200,12 @@ this repo, now and later — do not relax them for convenience.
   the suggested one needs a `discountReason`. Only `products.set_price`
   holders set suggested prices. Sales are USD only for now.
 - A sale may be dated up to `MAX_BACKDATE_DAYS` (7) business days back,
-  never in the future (`saleTimestamp`, `convex/lib/sales.ts`):
+  never in the future (`saleTimestamp`, `convex/lib/sales.ts`). The Super
+  Admin may use any past day from `EARLIEST_SALE_DAY` (2026-01-01), for
+  sales, sale corrections (the allowance is the requester's, kept in the
+  approval payload as `anyPastDay`) and credit repayments; the window comes
+  from `earliestSaleDay`, and screens read it from `sales.dateWindow`
+  (`useSaleDateWindow`):
   `sales.createdAt` is when it happened (lists/filters use it),
   `recordedAt` when it was entered; backdated sales are flagged in the list
   and the audit. Stock still moves at recording time.

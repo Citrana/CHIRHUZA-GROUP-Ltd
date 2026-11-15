@@ -6,7 +6,7 @@ import { businessUnitKeyValidator, requireBusinessUnit } from "./lib/businessUni
 import { requestApproval } from "./lib/approvals";
 import { logAudit } from "./lib/audit";
 import { inScope } from "./lib/locationScope";
-import { MAX_BACKDATE_DAYS, MAX_SALE_LINES, saleTimestamp } from "./lib/sales";
+import { MAX_SALE_LINES, saleDateError, saleTimestamp } from "./lib/sales";
 import { describeProduct } from "./lib/products";
 import { businessDayOf } from "./lib/time";
 import {
@@ -164,8 +164,8 @@ export const customer = authedQuery({
 /**
  * Records money a customer paid towards what they owe. It's split over
  * their open credit sales, oldest first (within the caller's scope), and
- * can't be more than they owe there. Dated today or up to
- * MAX_BACKDATE_DAYS back, like sales.
+ * can't be more than they owe there. Dated like sales: today or up to
+ * MAX_BACKDATE_DAYS back (any past day for the Super Admin).
  */
 export const recordRepayment = authedMutation({
   args: {
@@ -184,16 +184,9 @@ export const recordRepayment = authedMutation({
     }
     const note = args.note?.trim() || undefined;
     if (note && note.length > 300) throw new ConvexError("The note is too long.");
-    const when = saleTimestamp(args.paidOn, Date.now());
-    if ("problem" in when) {
-      throw new ConvexError(
-        when.problem === "future"
-          ? "A payment can't be dated in the future."
-          : when.problem === "tooOld"
-            ? `Pick today or one of the last ${MAX_BACKDATE_DAYS} days.`
-            : "The date must be YYYY-MM-DD.",
-      );
-    }
+    const anyPastDay = ctx.isSuperAdmin;
+    const when = saleTimestamp(args.paidOn, Date.now(), { anyPastDay });
+    if ("problem" in when) throw new ConvexError(saleDateError(when.problem, { anyPastDay, kind: "payment" }));
     const openSales = (
       await ctx.db
         .query("sales")

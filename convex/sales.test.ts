@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { api } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { applyMovement, businessHolderRef, getOrCreateHolder, stockLevelOf } from "./lib/inventory";
-import { lineMargin, saleLineProblems, saleTimestamp, splitOverLots } from "./lib/sales";
+import { EARLIEST_SALE_DAY, earliestSaleDay, lineMargin, saleLineProblems, saleTimestamp, splitOverLots } from "./lib/sales";
 import { addBusinessDays, businessDayOf, businessDayStartUtc } from "./lib/time";
 import { PAGE, arrivedMixedBatch, receiveAll, setupStock, type Setup } from "./lib/stock.test.utils";
 import { insertLocation, insertUserWithRole } from "./lib/test.utils";
@@ -494,4 +494,35 @@ test("saleTimestamp keeps the clock time inside the chosen business day", () => 
   // 23:30 in Lubumbashi (21:30 UTC) is still that day.
   const late = Date.UTC(2026, 8, 30, 21, 30);
   expect(businessDayOf((saleTimestamp("2026-09-29", late) as { createdAt: number }).createdAt)).toBe("2026-09-29");
+});
+
+test("the Super Admin may date a sale on any past day from 1 Jan 2026; others keep the 7 days", async () => {
+  const now = Date.UTC(2026, 8, 30, 8, 30);
+  expect(saleTimestamp("2026-01-01", now, { anyPastDay: true })).toMatchObject({ backdated: true });
+  expect(saleTimestamp("2025-12-31", now, { anyPastDay: true })).toEqual({ problem: "tooOld" });
+  expect(saleTimestamp("2026-10-01", now, { anyPastDay: true })).toEqual({ problem: "future" });
+  expect(saleTimestamp("2026-01-01", now)).toEqual({ problem: "tooOld" });
+  expect(earliestSaleDay("2026-09-30")).toBe("2026-09-23");
+  expect(earliestSaleDay("2026-09-30", { anyPastDay: true })).toBe(EARLIEST_SALE_DAY);
+
+  const { s, p1Lot } = await withShopStock();
+  const today = businessDayOf(Date.now());
+  const monthAgo = addBusinessDays(today, -30);
+  const line = [{ inventoryBatchId: p1Lot, qty: 1, unitPrice: 500 }];
+  const { saleId } = await sell(s, s.superAdmin, line, { soldOn: monthAgo, locationId: s.shop });
+  const sale = (await s.t.run((ctx) => ctx.db.get("sales", saleId)))!;
+  expect(businessDayOf(sale.createdAt)).toBe(monthAgo);
+  // Counted on its own day in the rollups.
+  const summary = await s.as(s.superAdmin).query(api.analytics.getSummary, {
+    businessUnitKey: "hair",
+    range: { from: monthAgo, to: monthAgo },
+  });
+  expect(summary.sales).toBe(500);
+  await expect(sell(s, s.superAdmin, line, { soldOn: "2025-12-31", locationId: s.shop })).rejects.toThrow(/from 2026-01-01/);
+  // Anyone else, even selling anywhere: still 7 days.
+  await expect(sell(s, s.sales, line, { soldOn: monthAgo, locationId: s.shop })).rejects.toThrow(/last 7 days/);
+
+  // The date pickers' window.
+  expect(await s.as(s.superAdmin).query(api.sales.dateWindow, {})).toEqual({ today, earliest: EARLIEST_SALE_DAY, anyPastDay: true });
+  expect(await s.as(s.agent).query(api.sales.dateWindow, {})).toEqual({ today, earliest: addBusinessDays(today, -7), anyPastDay: false });
 });

@@ -13,7 +13,8 @@ import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { COLLECTION_METHODS, type CollectionMethod } from "../../../convex/lib/credit";
 import { formatMoney } from "../../../convex/lib/money";
 import { MAX_BACKDATE_DAYS } from "../../../convex/lib/sales";
-import { BUSINESS_TIME_ZONE, addBusinessDays, businessDayOf } from "../../../convex/lib/time";
+import { BUSINESS_TIME_ZONE, businessDayOf } from "../../../convex/lib/time";
+import { useSaleDateWindow } from "@/lib/use-sale-date-window";
 import { Link } from "@/i18n/navigation";
 import { DataTable } from "@/components/data-table/data-table";
 import type { DataTableColumn } from "@/components/data-table/features";
@@ -54,6 +55,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
   const requestCancel = useMutation(api.credit.requestCreditCancel);
 
   const [today] = useState(() => businessDayOf(Date.now()));
+  const dateWindow = useSaleDateWindow();
   const [amount, setAmount] = useState<number | null>(null);
   const [method, setMethod] = useState<CollectionMethod>("cash");
   const [paidOn, setPaidOn] = useState(today);
@@ -74,7 +76,7 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
 
   const money = (cents: number) => formatMoney(cents, "USD", locale);
   const day = new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: BUSINESS_TIME_ZONE });
-  const earliest = addBusinessDays(today, -MAX_BACKDATE_DAYS);
+  const earliest = dateWindow.earliest;
 
   async function submitPayment(event: FormEvent) {
     event.preventDefault();
@@ -304,7 +306,11 @@ export function CustomerCredit({ service, customerId }: { service: BusinessUnitK
                 }}
                 className="h-11"
               />
-              <span className="text-xs text-muted-foreground">{t("dateHint", { days: MAX_BACKDATE_DAYS })}</span>
+              <span className="text-xs text-muted-foreground">
+                {dateWindow.anyPastDay
+                  ? t("dateHintAny", { date: day.format(Date.parse(`${earliest}T12:00:00Z`)) })
+                  : t("dateHint", { days: MAX_BACKDATE_DAYS })}
+              </span>
             </div>
           </div>
           <fieldset className="flex flex-col gap-1">

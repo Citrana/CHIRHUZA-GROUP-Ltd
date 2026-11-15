@@ -283,3 +283,16 @@ test("requests are scoped like sales; the Super Admin may approve their own, fla
   );
   expect(decision!.after).toMatchObject({ selfApproved: true });
 });
+
+test("a Super Admin's correction may move a sale to any past day; the approval keeps that", async () => {
+  const { s, saleId } = await withSale();
+  const changes = await unchanged(s, saleId);
+  const monthAgo = addBusinessDays(businessDayOf(Date.now()), -30);
+  await expect(requestEdit(s, s.agent, saleId, { ...changes, soldOn: monthAgo })).rejects.toThrow(/last 7 days/);
+  const approvalId = await requestEdit(s, s.superAdmin, saleId, { ...changes, soldOn: monthAgo }, "Recorded on the wrong day");
+  const approval = await s.t.run((ctx) => ctx.db.get("approvals", approvalId));
+  expect(approval!.payload).toMatchObject({ anyPastDay: true });
+  await decide(s, s.superAdmin, approvalId);
+  expect(businessDayOf((await getSale(s, saleId))!.createdAt)).toBe(monthAgo);
+  await expectRebuildMatches(s);
+});

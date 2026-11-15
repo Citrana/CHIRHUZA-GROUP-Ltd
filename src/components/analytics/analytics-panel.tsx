@@ -588,7 +588,7 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
       {/* Missing sales days: add the sales, or mark the day closed */}
       <Section title={t("missingDays.title")}>
         <p className="-mt-1 mb-2 text-xs text-muted-foreground">{t("missingDays.hint")}</p>
-        <MissingDaysList service={service} data={salesDays} today={today} showShop={!locationId && !filters?.locked} />
+        <MissingDaysList service={service} data={salesDays} showShop={!locationId && !filters?.locked} />
       </Section>
 
       {/* Product lists */}
