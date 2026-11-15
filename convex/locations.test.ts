@@ -121,3 +121,23 @@ test("list returns every location (shared by all services); listOptions only act
   const options = await asAdmin.query(api.locations.listOptions, {});
   expect(options.map((o) => o.name)).toEqual(["B shop", "C warehouse"]);
 });
+
+test("open days: Monday to Saturday by default, cleaned, audited when changed", async () => {
+  const { t, asAdmin } = await setup();
+  const fields = { name: "Shop", type: "shop" as const, address: "", active: true };
+  const locationId = await asAdmin.mutation(api.locations.create, fields);
+  expect((await t.run((ctx) => ctx.db.get("locations", locationId)))?.openDays).toEqual([1, 2, 3, 4, 5, 6]);
+
+  await asAdmin.mutation(api.locations.update, { locationId, ...fields, openDays: [0, 6, 6, 1] });
+  expect((await t.run((ctx) => ctx.db.get("locations", locationId)))?.openDays).toEqual([0, 1, 6]);
+  await expect(asAdmin.mutation(api.locations.update, { locationId, ...fields, openDays: [] })).rejects.toThrow();
+  await expect(asAdmin.mutation(api.locations.update, { locationId, ...fields, openDays: [7] })).rejects.toThrow();
+  // Left out: unchanged, and no audit entry.
+  await asAdmin.mutation(api.locations.update, { locationId, ...fields });
+
+  const updates = (await t.run((ctx) => ctx.db.query("auditLogs").collect())).filter(
+    (a) => a.entityTable === "locations" && a.action === "update",
+  );
+  expect(updates).toHaveLength(1);
+  expect(updates[0]).toMatchObject({ before: { openDays: [1, 2, 3, 4, 5, 6] }, after: { openDays: [0, 1, 6] } });
+});

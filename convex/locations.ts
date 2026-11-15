@@ -3,6 +3,7 @@ import { internalQuery } from "./_generated/server";
 import { authedMutation, authedQuery } from "./lib/rbac";
 import { diff, snapshot } from "./lib/audit";
 import { locationTypeValidator } from "./lib/businessUnits";
+import { DEFAULT_OPEN_DAYS, cleanOpenDays, openDaysOf } from "./lib/salesDays";
 
 function cleanName(name: string): string {
   const trimmed = name.trim();
@@ -54,6 +55,7 @@ export const create = authedMutation({
     type: locationTypeValidator,
     address: v.string(),
     active: v.boolean(),
+    openDays: v.optional(v.array(v.number())),
   },
   handler: async (ctx, args) => {
     await ctx.requirePermission("locations.manage");
@@ -62,6 +64,7 @@ export const create = authedMutation({
       type: args.type,
       address: args.address.trim(),
       active: args.active,
+      openDays: cleanOpenDays(args.openDays ?? DEFAULT_OPEN_DAYS),
     };
     const locationId = await ctx.db.insert("locations", location);
     await ctx.audit({
@@ -82,6 +85,8 @@ export const update = authedMutation({
     type: locationTypeValidator,
     address: v.string(),
     active: v.boolean(),
+    // Weekdays it opens (0 = Sunday); left out = unchanged.
+    openDays: v.optional(v.array(v.number())),
   },
   handler: async (ctx, { locationId, ...args }) => {
     await ctx.requirePermission("locations.manage");
@@ -94,8 +99,9 @@ export const update = authedMutation({
       type: args.type,
       address: args.address.trim(),
       active: args.active,
+      openDays: args.openDays ? cleanOpenDays(args.openDays) : openDaysOf(existing).slice(),
     };
-    const changes = diff(snapshot(existing, Object.keys(next) as Array<keyof typeof next>), next);
+    const changes = diff({ ...snapshot(existing, ["name", "type", "address", "active"]), openDays: openDaysOf(existing) }, next);
     if (!changes) {
       return;
     }

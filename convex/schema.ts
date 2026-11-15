@@ -89,6 +89,9 @@ export default defineSchema({
     type: locationTypeValidator,
     address: v.string(),
     active: v.boolean(),
+    // Weekdays the location opens (0 = Sunday ... 6 = Saturday). Missing =
+    // Monday to Saturday (DEFAULT_OPEN_DAYS, convex/lib/salesDays.ts).
+    openDays: v.optional(v.array(v.number())),
   }),
 
   // RBAC tables are global (no businessUnitId): roles and permissions are
@@ -670,6 +673,21 @@ export default defineSchema({
     updatedBy: v.id("users"),
     updatedAt: v.number(),
   }).index("by_businessUnitId", ["businessUnitId"]),
+
+  // A past open day a shop marked "Closed / no sales" for one service, so it
+  // isn't flagged as a missing sales day (convex/lib/salesDays.ts). One row
+  // per (unit, location, day); undoing sets active false - never deleted.
+  closedSalesDays: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    locationId: v.id("locations"),
+    day: v.string(),
+    note: v.optional(v.string()),
+    active: v.boolean(),
+    markedBy: v.id("users"),
+    markedAt: v.number(),
+    clearedBy: v.optional(v.id("users")),
+    clearedAt: v.optional(v.number()),
+  }).index("by_unit_location_day", ["businessUnitId", "locationId", "day"]),
 
   // Analytics rollups (convex/lib/analytics.ts): written ONLY by
   // applyRollupEvent in the same mutation as the source change; rebuilt by

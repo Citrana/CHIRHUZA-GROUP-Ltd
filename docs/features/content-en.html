@@ -1,0 +1,237 @@
+<section class="cover">
+  <div class="brand">CHIRHUZA GROUP Ltd</div>
+  <h1>Business management platform<br>Features guide</h1>
+  <p class="lead">Every feature of the platform in simple words: what it does, where to find it and who can use it.</p>
+  <div class="meta">
+    For every team member.<br>
+    Services covered: Hair and Fashion (Mode).<br>
+    Last updated: {{updated}}
+  </div>
+</section>
+
+<h2 id="contents">Contents</h2>
+<ol class="toc">
+  <li><a href="#start"><span class="n">1</span>Getting started</a></li>
+  <li><a href="#home"><span class="n">2</span>Home</a></li>
+  <li><a href="#roles"><span class="n">3</span>Roles and permissions</a></li>
+  <li><a href="#products"><span class="n">4</span>Products and prices</a></li>
+  <li><a href="#requisitions"><span class="n">5</span>Requisitions</a></li>
+  <li><a href="#stock"><span class="n">6</span>Stock</a></li>
+  <li><a href="#sales"><span class="n">7</span>Sales</a></li>
+  <li><a href="#credit"><span class="n">8</span>Credit</a></li>
+  <li><a href="#payroll"><span class="n">9</span>Payroll</a></li>
+  <li><a href="#withdrawals"><span class="n">10</span>Withdrawals</a></li>
+  <li><a href="#cash"><span class="n">11</span>Cash</a></li>
+  <li><a href="#approvals"><span class="n">12</span>Approvals</a></li>
+  <li><a href="#analytics"><span class="n">13</span>Analytics</a></li>
+  <li><a href="#admin"><span class="n">14</span>Administration</a></li>
+  <li><a href="#rules"><span class="n">15</span>Rules that protect your data</a></li>
+</ol>
+<div class="note"><strong>About this guide.</strong> Words in <span class="ui">boxes</span> are exactly what you see on the screen. This guide is updated every time a feature is added or changed. Download the latest copy from <span class="ui">Features guide (PDF)</span> in the side menu. For step-by-step training, see the training guide.</div>
+
+<!-- 1 -->
+<h2 id="start"><span class="num">1</span>Getting started</h2>
+<div class="block"><h4>What it is</h4><p>One platform for the whole business: products, stock, purchases, sales, credit, payroll, withdrawals, cash and results.</p></div>
+<div class="block"><h4>Where to find it</h4>
+<ul>
+  <li>Log in with your email and password. Accounts are created by the Super Admin. On your first login you choose a new password.</li>
+  <li>Choose a service on <span class="ui">Choose a service</span>: <strong>Hair</strong> or <strong>Fashion</strong> (<em>Mode</em>). Housing and Transport are coming soon. Use <span class="ui">Switch service</span> at the top to change.</li>
+  <li>The side menu shows only the modules your role allows. On a phone, open it with the menu button.</li>
+  <li>Change the language (English / French) at the top of the screen.</li>
+</ul></div>
+<div class="block"><h4>Good to know</h4>
+<ul>
+  <li>Built for phones first: long lists turn into cards and buttons are easy to tap.</li>
+  <li><strong>Locations</strong> (shops and warehouses) are shared by every service. Each service keeps its own stock, sales and figures at a shop.</li>
+  <li>All amounts are in US dollars (USD). Days are counted in Lubumbashi time.</li>
+  <li>The <span class="ui">New sale</span> button floats at the bottom right for people who can sell.</li>
+</ul></div>
+
+<!-- 2 -->
+<h2 id="home"><span class="num">2</span>Home</h2>
+<div class="block"><h4>What it is</h4><p>Your daily briefing for the service: a greeting, a quote of the day, what needs your attention, and your modules with one figure each.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li><span class="ui">Needs attention</span> lists only what you can act on, most urgent first: <span class="ui">Out of stock</span>, <span class="ui">Low stock</span>, <span class="ui">Review pending approvals</span>, <span class="ui">Record today's sales</span> (from 16:00 if nothing was sold today), <span class="ui">Customers owe money</span>, days without sales this month, stock to receive, products to confirm, requisitions ready to buy.</li>
+  <li>Each row disappears once it's dealt with. When nothing is left you see <span class="ui">All caught up</span>.</li>
+  <li>Module cards show one figure, e.g. sales today, units on hand, approvals waiting.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Everyone. Each person sees only the figures their role allows.</p></div>
+
+<!-- 3 -->
+<h2 id="roles"><span class="num">3</span>Roles and permissions</h2>
+<div class="block"><h4>What it is</h4><p>Each person has one role. The role decides what they can see and do. There are six roles: Super Admin, Chief Admin, Manager Admin, Chief Sales Admin, Chief Inventory Admin and Sales Agent.</p></div>
+<table>
+  <tr><th>What</th><th class="c">Super Admin</th><th class="c">Chief Admin</th><th class="c">Manager</th><th class="c">Chief Sales</th><th class="c">Chief Inventory</th><th class="c">Sales Agent</th></tr>
+  <tr><td>Record sales, credit payments, exchanges</td><td class="c yes">anywhere</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">anywhere</td><td class="c no">—</td><td class="c own">own shop</td></tr>
+  <tr><td>View sales</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c own">own shop</td></tr>
+  <tr><td>Create requisitions</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Buy abroad (purchase batches)</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c yes">✓</td><td class="c no">—</td></tr>
+  <tr><td>Receive and distribute stock</td><td class="c yes">✓</td><td class="c no">—</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Approve requisitions, batches, distributions, payroll, withdrawals</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Approve sale corrections, refunds, credit corrections</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Analytics, audit log</td><td class="c yes">✓</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Cash</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+  <tr><td>Users, roles, locations</td><td class="c yes">✓</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td><td class="c no">—</td></tr>
+</table>
+<div class="block"><h4>Good to know</h4>
+<ul>
+  <li>Each permission has a reach: <strong>own location</strong> (only the shop set on the person's account) or <strong>all locations</strong>.</li>
+  <li>The Super Admin can change any role in <span class="ui">Manage roles</span>, except the Super Admin role.</li>
+  <li><strong>Nobody approves their own request.</strong> Only the Super Admin may, and it is marked in the audit log.</li>
+</ul></div>
+
+<!-- 4 -->
+<h2 id="products"><span class="num">4</span>Products and prices</h2>
+<div class="block"><h4>What it is</h4><p>The catalogue of what each service sells, and the selling prices.</p></div>
+<div class="block"><h4>Where to find it</h4><p><span class="ui">Products</span> → <span class="ui">Catalogue</span> and <span class="ui">Prices</span>. Lists of lengths, sizes and colours are in <span class="ui">Product settings</span> at the bottom of the side menu.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li>Each product gets an automatic code (SKU), e.g. HAIR-00001 or FASH-00001.</li>
+  <li><strong>Hair</strong> products are told apart by length, colour and texture. <strong>Fashion</strong> products by size and colour, with one photo (up to 5 MB).</li>
+  <li>A product made by someone who can't confirm products waits as pending until a chief confirms it.</li>
+  <li><span class="ui">Prices</span> shows each product's selling price next to its purchase cost, stock and last sale. The selling price fills the sale form automatically.</li>
+  <li>A <strong>low stock level</strong> can be set per product. Below it, the product shows as <span class="ui">Low stock</span>.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Most roles create products. Chiefs confirm them. Chief Admin and Chief Sales Admin set prices. Chief Admin and Chief Inventory Admin manage <span class="ui">Product settings</span>.</p></div>
+<div class="block"><h4>Good to know</h4><p>A product already used in stock or a requisition is archived, never deleted. Deleting an unused product needs an approval.</p></div>
+
+<!-- 5 -->
+<h2 id="requisitions"><span class="num">5</span>Requisitions</h2>
+<div class="block"><h4>What it is</h4><p>A shop's request for stock to buy.</p></div>
+<div class="block"><h4>How it works</h4>
+<ol class="steps">
+  <li><span class="ui">Requisitions</span> → <span class="ui">New requisition</span>: choose the location, add products and quantities. Or leave it empty and describe the need in the note. The buyer then chooses the products.</li>
+  <li><span class="ui">Submit for approval</span>. The Chief Admin approves or rejects it in <span class="ui">Approvals</span>. A rejected one can be revised and sent again.</li>
+  <li>Approved requisitions appear under <span class="ui">Ready to purchase</span>. Then they become Purchasing, then Closed. Products the buyer adds are marked <span class="ui">Added by buyer</span>.</li>
+</ol></div>
+<div class="block"><h4>Who can use it</h4><p>Chief Sales Admin creates. Chief Admin approves.</p></div>
+
+<!-- 6 -->
+<h2 id="stock"><span class="num">6</span>Stock</h2>
+<div class="block"><h4>What it is</h4><p>Everything about stock: buying abroad, receiving in Goma, sending to shops and people, and seeing what is where.</p></div>
+<div class="block"><h4>Where to find it</h4><p><span class="ui">Stock</span> → <span class="ui">Overview</span>, <span class="ui">Purchase batches</span>, <span class="ui">Distributions</span>.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li><strong>Purchase batches</strong> (one buying trip): the buyer adds approved requisition lines and extra products, with the quantity and unit cost of each, or why it wasn't bought. Trip expenses (transport, freight, customs…) are added with a receipt, at any time. Then <span class="ui">Mark as purchased</span> → approval → <span class="ui">Mark shipped</span> → <span class="ui">Mark arrived</span>.</li>
+  <li><strong>Receiving in Goma</strong>: for each line, count the good and damaged pieces. Missing pieces are calculated for you. <span class="ui">Confirm receipt</span>. Only good pieces become sellable stock, as a <em>lot</em> at its purchase cost.</li>
+  <li><strong>Distributions</strong>: send stock from the business to a shop or a person. The Chief Admin approves it, and the stock moves only then.</li>
+  <li><strong>Overview</strong>: units on hand, stock value, and three views: <span class="ui">By product</span> (status In stock / Low stock / Out of stock / Never stocked, with history and CSV), <span class="ui">By lot</span> and <span class="ui">By holder</span>.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Chief Inventory Admin buys. Manager Admin and Chief Sales Admin receive and distribute. Chief Admin approves. Stock is visible to most roles, but not to Sales Agents.</p></div>
+<div class="block"><h4>Good to know</h4><p>Trip expenses never change product costs. Stock can never go below zero. A distribution approved after the stock ran out is refused and nothing moves.</p></div>
+
+<!-- 7 -->
+<h2 id="sales"><span class="num">7</span>Sales</h2>
+<div class="block"><h4>What it is</h4><p>Recording sales on the phone in the shop, and the list of every sale.</p></div>
+<div class="block"><h4>How it works</h4>
+<ol class="steps">
+  <li><span class="ui">Sales</span> → <span class="ui">New sale</span>. Pick the day: today, or up to 7 days back for a sale recorded late.</li>
+  <li>Search a product, choose the lot, the quantity and the price. The selling price is filled in. A different price needs a short reason.</li>
+  <li>The <strong>agreed total</strong> can be lowered for a whole-sale discount, with a reason.</li>
+  <li>Payment: <span class="ui">Cash</span>, <span class="ui">Mobile money</span> or <span class="ui">Credit</span> (see Credit). Check the sale, then record it.</li>
+</ol></div>
+<div class="block"><h4>Fixing a sale</h4>
+<ul>
+  <li><span class="ui">Request correction</span> on a sale: change quantities, prices, the total, cash ↔ mobile money, the customer name or the date, with a reason. Nothing changes until the Super Admin approves.</li>
+  <li><span class="ui">Exchange products</span> (cash and mobile money sales, up to 30 days): the customer brings products back and takes others. If the customer pays the difference, it's recorded at once. Money given back needs approval.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Sales Agents sell in their own shop only. Chief Sales Admin and Super Admin sell anywhere.</p></div>
+<div class="block"><h4>Good to know</h4><p>You can't sell more than the shop holds: if two people sell the last piece at once, only one sale goes through. Margins always use the purchase cost at the time of the sale.</p></div>
+
+<!-- 8 -->
+<h2 id="credit"><span class="num">8</span>Credit</h2>
+<div class="block"><h4>What it is</h4><p>Sales paid later: who owes what, and every payment received.</p></div>
+<div class="block"><h4>Where to find it</h4><p><span class="ui">Sales</span> → <span class="ui">Credit</span>: total owed, customers who still owe, their open sales and payments.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li>In a credit sale, pick the customer or add a <span class="ui">New customer</span>, and enter what was <span class="ui">Paid now</span> (0 or more).</li>
+  <li><span class="ui">Record a payment</span> later. A payment goes to the oldest open sale first, and never more than what is owed.</li>
+  <li>A wrong payment: <span class="ui">Report a mistake</span>. It is cancelled after approval.</li>
+  <li>A debt recorded by mistake: <span class="ui">Cancel the debt (recorded by mistake)</span>. After approval the stock goes back to the shop and the sale is marked cancelled.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Those who can sell record payments. Corrections and debt cancellations are approved by the Super Admin.</p></div>
+<div class="block"><h4>Good to know</h4><p>The sale counts in sales on the day it was made. Payments are cash collected, not extra sales.</p></div>
+
+<!-- 9 -->
+<h2 id="payroll"><span class="num">9</span>Payroll</h2>
+<div class="block"><h4>What it is</h4><p>Salaries and payments to staff.</p></div>
+<div class="block"><h4>How it works</h4><p><span class="ui">Payroll</span> → <span class="ui">New payroll entry</span>: who was paid (a user or a typed name), the month, the amount, the location and a note. It waits for the Chief Admin's approval.</p></div>
+<div class="block"><h4>Who can use it</h4><p>Most roles submit entries (Sales Agents for their own shop). The Chief Admin approves.</p></div>
+<div class="block"><h4>Good to know</h4><p>Salaries are private: only the Chief Admin and Super Admin see every entry. Others see only what they submitted.</p></div>
+
+<!-- 10 -->
+<h2 id="withdrawals"><span class="num">10</span>Withdrawals</h2>
+<div class="block"><h4>What it is</h4><p>Money taken out for no business purpose, e.g. a family expense.</p></div>
+<div class="block"><h4>How it works</h4><p><span class="ui">Withdrawals</span> → <span class="ui">New withdrawal</span>: amount, who took it, date, location and reason. The Chief Admin approves it.</p></div>
+<div class="block"><h4>Good to know</h4><p>A withdrawal is <strong>never</strong> counted as a business cost. It is shown apart from profit, so owners see the real picture.</p></div>
+
+<!-- 11 -->
+<h2 id="cash"><span class="num">11</span>Cash</h2>
+<div class="block"><h4>What it is</h4><p>The cash the business has now: <span class="ui">Cash on hand</span>.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li>Cash on hand = <span class="ui">Opening cash</span> + <span class="ui">Cash sales</span> + <span class="ui">Credit paid in cash</span> − <span class="ui">Cash refunds</span> − <span class="ui">Withdrawals</span>. Mobile money and unpaid credit are not counted.</li>
+  <li><span class="ui">Add opening cash</span> for money you already had that didn't come from a sale: amount, date, who received it, where it is, and a note.</li>
+  <li>Amounts above the <span class="ui">Approval limit (USD)</span> wait for approval. A mistake is undone with <span class="ui">Reverse</span>, never deleted.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>The Super Admin (owner) only, by default.</p></div>
+<div class="block"><h4>Good to know</h4><p>Cash figures never count in sales, margin or profit.</p></div>
+
+<!-- 12 -->
+<h2 id="approvals"><span class="num">12</span>Approvals</h2>
+<div class="block"><h4>What it is</h4><p>One place for every decision before a change takes effect.</p></div>
+<div class="block"><h4>How it works</h4><p>Open <span class="ui">Approvals</span> (the menu shows a number when something waits). Open a request, see who asked, why and what changes, then <span class="ui">Approve</span> or <span class="ui">Reject</span>. Your own requests are under <span class="ui">Requested by me</span>.</p></div>
+<table>
+  <tr><th>Request</th><th>Decided by (default)</th></tr>
+  <tr><td>Requisition, stock batch, stock distribution, payroll, withdrawal, deletion</td><td>Chief Admin</td></tr>
+  <tr><td>Sale edit, sale exchange (refund), credit payment correction</td><td>Super Admin</td></tr>
+  <tr><td>Credit debt cancelled (mistake), opening cash</td><td>Super Admin</td></tr>
+</table>
+<div class="block"><h4>Good to know</h4><p>If the change can't be applied any more (e.g. the stock is gone), the approval is refused and nothing changes.</p></div>
+
+<!-- 13 -->
+<h2 id="analytics"><span class="num">13</span>Analytics</h2>
+<div class="block"><h4>What it is</h4><p>The results of the service: sales, margin, costs, profit, products and days without sales.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li>Pick a period (<span class="ui">Day</span>, <span class="ui">Week</span>, <span class="ui">Month</span>, <span class="ui">Custom</span>) and a location (all or one shop).</li>
+  <li>Cards: <span class="ui">Net profit</span> (hidden until you tap <span class="ui">Show net profit</span>), <span class="ui">Total sales</span>, <span class="ui">Margin</span>, <span class="ui">Expenses</span>, <span class="ui">Payroll</span>, and <span class="ui">Withdrawals</span> shown apart.</li>
+  <li>▲/▼ compares with the period before, only when both periods are the same length and at least 3 days long. Green is good news: a cost going down is green.</li>
+  <li><span class="ui">Highlights</span>: short notes, e.g. no sales since a date, the share of the margin taken by costs, the best product's share of revenue (never above 100%).</li>
+  <li>Charts: <span class="ui">Sales over time</span> and <span class="ui">Costs over time</span>. Lists: <span class="ui">Most sold</span>, <span class="ui">Least sold</span>, <span class="ui">Top profit contributors</span>, <span class="ui">Unsold stock</span>. The <span class="ui">Products sold</span> report has <span class="ui">Download (CSV)</span>.</li>
+</ul></div>
+<h3>Days with no sales</h3>
+<div class="block"><h4>What it is</h4><p>A list of the shop days where no sale was recorded, so forgotten sales get added.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li>A day counts as having no sales when it is a past <strong>open day</strong> of the shop, nothing was sold, and nobody marked it closed. Counting starts from the shop's first sale. Today is never counted.</li>
+  <li>On the sales chart: a small amber dot for each such day. Closed days are shaded.</li>
+  <li>Under the chart, <span class="ui">Days with no sales</span>: <span class="ui">Add sales</span> opens the sale form with the day and shop filled in (up to 7 days back). Or <span class="ui">Mark as closed / no sales</span>, with an optional note (e.g. public holiday). <span class="ui">Undo</span> brings the day back.</li>
+  <li>Home shows the number of days without sales this month.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Analytics: Chief Admin and Super Admin. Marking a day closed: whoever can record sales at that shop. The Home row: whoever sees the shop's sales.</p></div>
+<div class="block"><h4>Good to know</h4><p>Each service marks its own days: a shop can sell hair but no clothes on the same day. The opening days are set per shop in <span class="ui">Locations</span>.</p></div>
+
+<!-- 14 -->
+<h2 id="admin"><span class="num">14</span>Administration</h2>
+<div class="block"><h4>What it is</h4><p>Managing people, roles, locations, and checking the history of changes. In the <span class="ui">Admin</span> menu at the top.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li><span class="ui">Manage users</span>: create a user (name, email, role, location). A strong password is shown once, to give to the person. Change role or location, <span class="ui">Block</span> / <span class="ui">Unblock</span>.</li>
+  <li><span class="ui">Manage roles</span>: turn permissions on or off per role, with <strong>own location</strong> or <strong>all locations</strong>.</li>
+  <li><span class="ui">Locations</span>: shops and warehouses, shared by every service. Set <span class="ui">Days we open</span> for each shop (Monday to Saturday by default). Retire a location by unticking <span class="ui">Active</span>. Locations are never deleted.</li>
+  <li><span class="ui">Audit log</span>: every change, who did it, when, before and after.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>Users, roles and locations: Super Admin. Audit log: Chief Admin and Super Admin.</p></div>
+
+<!-- 15 -->
+<h2 id="rules"><span class="num">15</span>Rules that protect your data</h2>
+<ul>
+  <li><strong>Everything is recorded.</strong> Every add, change and delete goes to the audit log, which can't be edited.</li>
+  <li><strong>Nothing is deleted straight away.</strong> A delete waits for an approval. Records in use are archived instead.</li>
+  <li><strong>Mistakes are undone with a correction</strong>, not by erasing: a reversal, a correction request or an exchange.</li>
+  <li><strong>Stock never goes below zero</strong>, and two people can't sell the same last piece.</li>
+  <li><strong>Nobody approves their own request</strong> (Super Admin excepted, and marked).</li>
+  <li><strong>Withdrawals and cash are never profit.</strong> Profit = margin − expenses − payroll.</li>
+</ul>

@@ -24,11 +24,19 @@ export function analyticsInsights(
     points: Array<{ start: string; sales: number }>;
     granularity: "day" | "week" | "month";
     today: string;
-    topProduct: { label: string; revenue: number } | null;
+    /** Days every shop was closed (closed weekday or marked): no sale expected. */
+    closedDays?: readonly string[];
+    /**
+     * The best-selling product, and the revenue of every product sold in the
+     * same report (its share's base - not the period's sales, which also
+     * count returned products whose revenue went negative).
+     */
+    topProduct: { label: string; revenue: number; productsRevenue: number } | null;
   },
   { t, formatDay }: { t: Translate; formatDay: (day: string) => string },
 ): Insight[] {
   const { summary, previous, points, granularity, today, topProduct } = input;
+  const closed = new Set(input.closedDays ?? []);
   const out: Insight[] = [];
   const warn = (text: string) => out.push({ text, tone: "warning" });
   const info = (text: string) => out.push({ text, tone: "info" });
@@ -38,7 +46,9 @@ export function analyticsInsights(
     warn(t("insights.noSalesPeriod"));
   } else if (granularity === "day" && points.some((p) => p.start === today)) {
     const last = [...points].reverse().find((p) => p.sales > 0 && p.start <= today);
-    if (last && last.start < today) warn(t("insights.noSalesSince", { date: formatDay(last.start) }));
+    // Only when an open day went by since (a closed Sunday isn't news).
+    const openDayMissed = last && points.some((p) => p.start > last.start && p.start < today && !closed.has(p.start));
+    if (last && openDayMissed) warn(t("insights.noSalesSince", { date: formatDay(last.start) }));
   }
 
   // What costs took out of the margin.
@@ -64,8 +74,9 @@ export function analyticsInsights(
   }
 
   // How much the best-selling product weighs.
-  if (summary.sales > 0 && topProduct && topProduct.revenue > 0) {
-    info(t("insights.topShare", { product: topProduct.label, pct: Math.round((topProduct.revenue / summary.sales) * 100) }));
+  if (summary.sales > 0 && topProduct && topProduct.revenue > 0 && topProduct.productsRevenue > 0) {
+    const pct = Math.min(100, Math.round((topProduct.revenue / topProduct.productsRevenue) * 100));
+    info(t("insights.topShare", { product: topProduct.label, pct }));
   }
   return out.slice(0, 3);
 }

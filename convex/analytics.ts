@@ -12,6 +12,9 @@ import {
   resolveRange,
 } from "./lib/analytics";
 import { productDetails } from "./lib/products";
+import { chartDays, salesDaysFor, trackedShops } from "./lib/salesDays";
+import { inScope } from "./lib/locationScope";
+import { businessDayOf } from "./lib/time";
 import { findHolder } from "./lib/inventory";
 
 /**
@@ -256,6 +259,31 @@ export const getTimeSeries = authedQuery({
       bucket.withdrawals += row.withdrawals;
     }
     return { from: s.from, to: s.to, granularity: args.granularity, points: [...buckets.values()] };
+  },
+});
+
+/**
+ * Missing sales days for the range (convex/lib/salesDays.ts): past open
+ * days of the shop(s) with no sale and not marked "Closed / no sales",
+ * the days marked closed, and per day whether the chart shows it as
+ * missing or closed. `canMark`: the caller may mark / undo it there
+ * (sales.create in scope).
+ */
+export const getSalesDays = authedQuery({
+  args: commonArgs,
+  handler: async (ctx, args) => {
+    const s = await scopeOf(ctx, args);
+    const shops = await trackedShops(ctx, s.locationKey === ALL ? null : (s.locationKey as Id<"locations">));
+    const { perShop, missing, marked } = await salesDaysFor(ctx, s.unitId, shops, s.from, s.to, businessDayOf(Date.now()));
+    const markScope = ctx.permissions.get("sales.create");
+    const canMark = (locationId: Id<"locations">) => markScope !== undefined && inScope(markScope, ctx.user, locationId);
+    return {
+      from: s.from,
+      to: s.to,
+      missing: missing.map((m) => ({ ...m, canMark: canMark(m.locationId) })),
+      marked: marked.map((m) => ({ ...m, canMark: canMark(m.locationId) })),
+      days: shops.length > 0 ? chartDays(perShop) : [],
+    };
   },
 });
 

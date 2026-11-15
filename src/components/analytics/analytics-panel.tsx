@@ -14,7 +14,8 @@ import { Label } from "@/components/ui/label";
 import { NativeSelect } from "@/components/ui/native-select";
 import { ANALYTICS_COLORS, ChartLegend, CostsChart, SalesChart, Sparkline } from "@/components/analytics/analytics-charts";
 import { ProductsSoldTable } from "@/components/analytics/products-sold-table";
-import { percentChange, previousRange } from "@/lib/analytics-compare";
+import { MissingDaysList } from "@/components/analytics/missing-days-list";
+import { comparableRange, deltaTone, percentChange } from "@/lib/analytics-compare";
 import { analyticsInsights } from "@/lib/analytics-insights";
 import { ConcealToggle, useConcealed } from "@/components/ui/concealable";
 import { useCan } from "@/lib/use-can";
@@ -52,13 +53,13 @@ function DeltaBadge({ delta, anchor }: { delta: Delta; anchor?: boolean }) {
     return <span className={cn("text-xs", anchor ? "text-primary-foreground/70" : "text-muted-foreground")}>{delta.compare}</span>;
   }
   const up = delta.pct > 0;
-  const good = delta.pct === 0 ? null : up !== Boolean(delta.inverse);
+  const verdict = deltaTone(delta.pct, { inverse: delta.inverse });
   const tone =
-    good === null
+    verdict === "flat"
       ? anchor
         ? "text-primary-foreground/80"
         : "text-muted-foreground"
-      : good
+      : verdict === "good"
         ? anchor
           ? "text-accent"
           : "text-[color:var(--chart-2)]"
@@ -222,8 +223,9 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
 
   const filters = useQuery(api.analytics.filterLocations, canView ? { businessUnitKey: service } : "skip");
   const summary = useQuery(api.analytics.getSummary, args);
-  // The same figures for the period before, for the ▲/▼ on each card.
-  const previous = summary ? previousRange(period, summary.from, summary.to) : null;
+  // The same figures for the period before, for the ▲/▼ on each card - only
+  // when both periods have the same length and are at least 3 days long.
+  const previous = summary ? comparableRange(period, summary.from, summary.to) : null;
   const previousSummary = useQuery(
     api.analytics.getSummary,
     canView && previous ? { businessUnitKey: service, range: previous, ...location } : "skip",
@@ -234,6 +236,8 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
   const bestMargin = useQuery(api.analytics.getTopProducts, args === "skip" ? "skip" : { ...args, by: "margin", order: "desc" });
   const unsold = useQuery(api.analytics.getUnsoldProducts, args === "skip" ? "skip" : { ...args, limit: 5 });
   const productSales = useQuery(api.analytics.getProductSales, args);
+  // Missing sales days and closed days (shops' open days, "Closed / no sales" marks).
+  const salesDays = useQuery(api.analytics.getSalesDays, args);
 
   if (canView === undefined) return null;
   if (!canView) return <p className="text-sm text-muted-foreground">{t("accessDenied")}</p>;
@@ -336,7 +340,10 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
 
   const points = series?.points ?? [];
   const chartGranularity = series?.granularity ?? granularity;
-  const zeroDays = chartGranularity === "day" ? points.filter((p) => p.sales === 0 && p.start <= today).map((p) => p.start) : [];
+  // Per day only: missing sales days get a dot, closed days are shaded.
+  const perDay = chartGranularity === "day" ? (salesDays?.days ?? []) : [];
+  const missingDays = perDay.filter((d) => d.missing).map((d) => d.day);
+  const closedDays = perDay.filter((d) => d.closed).map((d) => d.day);
   const spark = (pick: (p: (typeof points)[number]) => number) => points.map(pick);
   const chartRange = summary ? spanLabel(summary.from, summary.to, dayLabel) : "";
   const hasActivity = (keys: Array<"sales" | "expenses" | "payroll">) => points.some((p) => keys.some((k) => p[k] !== 0));
@@ -361,7 +368,11 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
             points,
             granularity: chartGranularity,
             today,
-            topProduct: topProduct ? { label: productName(topProduct), revenue: topProduct.revenue } : null,
+            closedDays,
+            topProduct:
+              topProduct && productSales
+                ? { label: productName(topProduct), revenue: topProduct.revenue, productsRevenue: productSales.totals.revenue }
+                : null,
           },
           { t: (key, values) => t(key as Parameters<typeof t>[0], values), formatDay: (d) => shortDay.format(asDate(d)) },
         )
@@ -533,7 +544,8 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
               items={[
                 { label: t("cards.sales"), color: ANALYTICS_COLORS.sales, shape: "line" },
                 { label: t("cards.margin"), color: ANALYTICS_COLORS.margin, shape: "line" },
-                ...(zeroDays.length > 0 ? [{ label: t("legend.noSales"), color: ANALYTICS_COLORS.noSales, shape: "dot" as const }] : []),
+                ...(missingDays.length > 0 ? [{ label: t("legend.noSales"), color: ANALYTICS_COLORS.noSales, shape: "dot" as const }] : []),
+                ...(closedDays.length > 0 ? [{ label: t("legend.closed"), color: ANALYTICS_COLORS.closed, shape: "box" as const }] : []),
               ]}
             />
           }
@@ -544,7 +556,8 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
               points={points}
               granularity={chartGranularity}
               labels={{ sales: t("cards.sales"), margin: t("cards.margin") }}
-              zeroDays={zeroDays}
+              missingDays={missingDays}
+              closedDays={closedDays}
               ariaLabel={t("chartLabels.sales", { range: chartRange })}
             />,
           )}
@@ -571,6 +584,12 @@ export function AnalyticsPanel({ service }: { service: BusinessUnitKey }) {
           )}
         </Section>
       </div>
+
+      {/* Missing sales days: add the sales, or mark the day closed */}
+      <Section title={t("missingDays.title")}>
+        <p className="-mt-1 mb-2 text-xs text-muted-foreground">{t("missingDays.hint")}</p>
+        <MissingDaysList service={service} data={salesDays} today={today} showShop={!locationId && !filters?.locked} />
+      </Section>
 
       {/* Product lists */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

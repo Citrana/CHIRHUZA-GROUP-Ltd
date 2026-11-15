@@ -77,7 +77,8 @@
       "requisitions": "Réquisitions prêtes à l'achat",
       "reviewApprovals": "Examiner les approbations en attente",
       "recordSales": "Enregistrer les ventes du jour",
-      "receiveStock": "Mettre à jour le stock d'un achat récent"
+      "receiveStock": "Mettre à jour le stock d'un achat récent",
+      "missingDays": "{count, plural, one {# jour} other {# jours}} sans ventes ce mois-ci"
     },
     "metrics": {
       "approvals": "{count} en attente",
@@ -149,7 +150,8 @@
     "manageRoles": "Gérer les rôles",
     "manageLocations": "Sites",
     "auditLog": "Journal d'audit",
-    "productSettings": "Paramètres produits"
+    "productSettings": "Paramètres produits",
+    "featuresGuide": "Guide des fonctionnalités (PDF)"
   },
   "Auth": {
     "logout": "Se déconnecter",
@@ -263,7 +265,10 @@
       "saving": "Enregistrement…",
       "saveError": "Impossible d'enregistrer le site. Vérifiez le nom et réessayez.",
       "searchPlaceholder": "Rechercher des sites…",
-      "sharedHint": "Les sites sont partagés par tous les services : une boutique sert la Coiffure comme la Mode, avec un stock et des ventes séparés pour chacun."
+      "sharedHint": "Les sites sont partagés par tous les services : une boutique sert la Coiffure comme la Mode, avec un stock et des ventes séparés pour chacun.",
+      "openDaysLabel": "Jours d'ouverture",
+      "openDaysHint": "Les jours sans ventes ne sont signalés que ces jours-là.",
+      "openDaysNone": "Choisissez au moins un jour."
     }
   },
   "Roles": {
@@ -1877,7 +1882,8 @@
       "none": "Chaque produit en stock s'est vendu au moins une fois."
     },
     "legend": {
-      "noSales": "Aucune vente"
+      "noSales": "Aucune vente",
+      "closed": "Fermé"
     },
     "chartLabels": {
       "sales": "Ventes et marge, {range}",
@@ -1885,7 +1891,29 @@
     },
     "showNetProfit": "Afficher le bénéfice net",
     "hideNetProfit": "Masquer le bénéfice net",
-    "hiddenValue": "Masqué"
+    "hiddenValue": "Masqué",
+    "missingDays": {
+      "title": "Jours sans ventes",
+      "hint": "Jours d'ouverture passés sans aucune vente enregistrée. Ajoutez les ventes, ou indiquez que le jour était fermé.",
+      "none": "Aucun jour manquant. Chaque jour d'ouverture a des ventes ou est marqué fermé.",
+      "dayHeader": "Jour",
+      "shopHeader": "Boutique",
+      "statusHeader": "Statut",
+      "actionsHeader": "Actions",
+      "noSalesRecorded": "Aucune vente enregistrée",
+      "markedClosed": "Fermé / aucune vente",
+      "addSales": "Ajouter les ventes",
+      "markClosed": "Marquer fermé / aucune vente",
+      "undo": "Annuler",
+      "tooOld": "Plus de {days} jours : demandez une correction",
+      "markTitle": "Marquer fermé / aucune vente",
+      "markHint": "{day} ne sera plus affiché comme un jour sans ventes. Vous pourrez annuler.",
+      "noteLabel": "Note",
+      "notePlaceholder": "ex. Jour férié",
+      "cancel": "Annuler",
+      "saving": "Enregistrement…",
+      "saveError": "Impossible d'enregistrer. Réessayez."
+    }
   },
   "NotFound": {
     "title": "Page introuvable",

@@ -29,7 +29,7 @@ test("sales stopped, costs share of margin, net trend; at most 3", () => {
       points,
       granularity: "day",
       today: "2026-10-07",
-      topProduct: { label: "Bob", revenue: 29400 },
+      topProduct: { label: "Bob", revenue: 29400, productsRevenue: 182600 },
     },
     { t, formatDay },
   );
@@ -56,7 +56,7 @@ test("no sales at all; negative margin; sales trend when net isn't comparable; t
         points: [{ start: "2026-10-07", sales: 10000 }],
         granularity: "day",
         today: "2026-10-07",
-        topProduct: { label: "Wig Cap", revenue: 2500 },
+        topProduct: { label: "Wig Cap", revenue: 2500, productsRevenue: 10000 },
       },
       { t, formatDay },
     ),
@@ -83,4 +83,21 @@ test("costs below 90% of the margin and a rising net are just facts", () => {
     { text: "Expenses and payroll took 50% of the margin", tone: "info" },
     { text: "Net profit up 25% vs previous period", tone: "info" },
   ]);
+});
+
+test("a product's share is of the products' revenue and never above 100%", () => {
+  // An exchange took a returned product's revenue negative: sales (8000) are
+  // below the top product's revenue (9000), which still can't exceed 100%.
+  const out = analyticsInsights(
+    {
+      summary: totals({ sales: 8000, margin: 3000, netProfit: 3000 }),
+      previous: null,
+      points: [{ start: "2026-10-07", sales: 8000 }],
+      granularity: "day",
+      today: "2026-10-07",
+      topProduct: { label: "Bob", revenue: 9000, productsRevenue: 9000 },
+    },
+    { t, formatDay },
+  );
+  expect(out).toEqual([{ text: "Bob brought 100% of revenue", tone: "info" }]);
 });
