@@ -9,10 +9,9 @@ import { api } from "../../../convex/_generated/api";
 import type { Id } from "../../../convex/_generated/dataModel";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { formatMoney } from "../../../convex/lib/money";
-import { MAX_BACKDATE_DAYS, PAYMENT_METHODS, type PaymentMethod } from "../../../convex/lib/sales";
+import { EARLIEST_SALE_DAY, MAX_BACKDATE_DAYS, PAYMENT_METHODS, type PaymentMethod } from "../../../convex/lib/sales";
 import {
   BUSINESS_TIME_ZONE,
-  addBusinessDays,
   businessDayOf,
   businessDayStartUtc,
   isBusinessDay,
@@ -32,6 +31,7 @@ import { useCan } from "@/lib/use-can";
 import { cn } from "@/lib/utils";
 import { type CelebrationTier, firstName, nextQuote, tierFor } from "@/lib/sale-celebration";
 import { isEmptyDraft, parseDraft, saleDraftKey, serializeDraft, type SaleDraft } from "@/lib/sale-draft";
+import { useSaleDateWindow } from "@/lib/use-sale-date-window";
 import { SaleCelebration } from "./sale-celebration";
 import { SalePreviewDialog, type SalePreview } from "./sale-preview-dialog";
 import {
@@ -61,7 +61,9 @@ function rememberedLocation(): string {
 function loadDraft(key: string): SaleDraft | null {
   const today = businessDayOf(Date.now());
   try {
-    return parseDraft(localStorage.getItem(key), { today, earliest: addBusinessDays(today, -MAX_BACKDATE_DAYS) });
+    // The widest window (the Super Admin's): a date the user may not use is
+    // set back to today once their own window is known.
+    return parseDraft(localStorage.getItem(key), { today, earliest: EARLIEST_SALE_DAY });
   } catch {
     return null;
   }
@@ -110,12 +112,13 @@ function SaleFormBody({
   // Read once, on the first render: the initial state below comes from it.
   const [draft] = useState(() => loadDraft(draftKey));
   const [restored, setRestored] = useState(() => draft !== null && !isEmptyDraft(draft));
-  // A linked day must be one a sale can be dated on (today or up to MAX_BACKDATE_DAYS back).
+  // A linked day must be a real past day (checked against the user's own window below).
   const [linkedDay] = useState(() => {
     const now = businessDayOf(Date.now());
     const day = initial.day;
-    return day && isBusinessDay(day) && day <= now && day >= addBusinessDays(now, -MAX_BACKDATE_DAYS) ? day : null;
+    return day && isBusinessDay(day) && day <= now && day >= EARLIEST_SALE_DAY ? day : null;
   });
+  const dateWindow = useSaleDateWindow();
   const [picked, setPicked] = useState(() => initial.locationId || draft?.locationId || rememberedLocation());
   const options = useQuery(api.sales.options, {
     businessUnitKey: service,
@@ -154,10 +157,13 @@ function SaleFormBody({
     quote: number;
   } | null>(null);
   const [lastQuote, setLastQuote] = useState<number | null>(null);
-  // The day of the sale: today, or up to MAX_BACKDATE_DAYS back for a sale
-  // recorded late. Kept after recording, to enter several late sales.
+  // The day of the sale: today, or an earlier day for a sale recorded late
+  // (7 days back; any past day for the Super Admin). Kept after recording,
+  // to enter several late sales.
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
   const [soldOn, setSoldOn] = useState(() => linkedDay ?? draft?.soldOn ?? today);
+  // A restored or linked day outside the user's window goes back to today.
+  if (dateWindow.loaded && soldOn < dateWindow.earliest) setSoldOn(today);
   const [submitting, setSubmitting] = useState(false);
   // The preview shown before recording, to catch mistakes.
   const [reviewing, setReviewing] = useState(false);
@@ -200,7 +206,7 @@ function SaleFormBody({
   // Mode products have a photo: show it so sellers pick the right item.
   const withPhotos = PRODUCT_PROFILES[service].attributes.photo;
   const money = (cents: number) => formatMoney(cents, "USD", locale);
-  const earliest = addBusinessDays(today, -MAX_BACKDATE_DAYS);
+  const earliest = dateWindow.earliest;
   const longDay = (day: string) =>
     new Intl.DateTimeFormat(locale, { weekday: "long", day: "numeric", month: "long", timeZone: BUSINESS_TIME_ZONE }).format(
       businessDayStartUtc(day) + 12 * 3600_000,
@@ -484,7 +490,9 @@ function SaleFormBody({
             {t("pastDateNote", { date: longDay(soldOn) })}
           </p>
         ) : (
-          <p className="text-xs text-muted-foreground">{t("dateHint", { days: MAX_BACKDATE_DAYS })}</p>
+          <p className="text-xs text-muted-foreground">
+            {dateWindow.anyPastDay ? t("dateHintAny", { date: longDay(earliest) }) : t("dateHint", { days: MAX_BACKDATE_DAYS })}
+          </p>
         )}
       </div>
 
