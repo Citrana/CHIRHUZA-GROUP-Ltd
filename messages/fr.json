@@ -150,7 +150,8 @@
     "manageRoles": "Gérer les rôles",
     "manageLocations": "Sites",
     "auditLog": "Journal d'audit",
-    "productSettings": "Paramètres produits"
+    "productSettings": "Paramètres produits",
+    "featuresGuide": "Guide des fonctionnalités (PDF)"
   },
   "Auth": {
     "logout": "Se déconnecter",

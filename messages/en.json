@@ -150,7 +150,8 @@
     "manageRoles": "Manage roles",
     "manageLocations": "Locations",
     "auditLog": "Audit log",
-    "productSettings": "Product settings"
+    "productSettings": "Product settings",
+    "featuresGuide": "Features guide (PDF)"
   },
   "Auth": {
     "logout": "Log out",

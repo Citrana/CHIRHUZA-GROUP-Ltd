@@ -439,6 +439,23 @@ AI assistant and contributor, for every change, now and later.
   terminal. Hooks are installed automatically by `pnpm install` (via the
   `prepare` script) — no manual setup needed after cloning.
 
+## Features guide
+
+- `docs/features/` holds the **features guide**: a plain-language PDF of
+  every feature, in English and French, downloaded from "Features guide
+  (PDF)" in the side menu (`public/docs/chirhuza-features-{en,fr}.pdf`).
+  How to write and build it: `docs/features/README.md`.
+- **Every new or changed user-facing feature updates the guide in the
+  same change**: edit `docs/features/content-en.html` **and**
+  `content-fr.html` (a new category gets a new numbered section and a
+  contents line; a new module's section id is its module key), run
+  `python3 docs/features/build.py`, and commit both rebuilt PDFs. A
+  feature isn't done until the guide describes it.
+- Write for non-technical staff: short, simple words, no code, screen
+  words copied exactly from `messages/{en,fr}.json`.
+- `src/lib/features-guide.test.ts` checks that every live module has a
+  section in both languages and that the PDFs exist.
+
 ## Authentication
 
 - Authentication is Convex Auth (`@convex-dev/auth`), email + password only.
