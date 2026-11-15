@@ -12,11 +12,12 @@ import { planSaleEdit, saleEditChangesValidator, saleItemsOf } from "./lib/saleE
 import { applyRollupEvents, saleEvents, unitsSoldOn } from "./lib/analytics";
 import { businessDayEndUtc, businessDayOf, businessDayStartUtc } from "./lib/time";
 import {
-  MAX_BACKDATE_DAYS,
   MAX_SALE_LINES,
   lineMargin,
   paymentMethodValidator,
   saleLineProblems,
+  earliestSaleDay,
+  saleDateError,
   saleTimestamp,
 } from "./lib/sales";
 import { describeProduct } from "./lib/products";
@@ -85,6 +86,21 @@ async function lotsAt(ctx: QueryCtx, businessUnitId: Id<"businessUnits">, locati
  * lot in stock there with its product, source batch, date, cost, suggested
  * price and quantity on hand (oldest lot first per product).
  */
+/**
+ * The days the caller may date a sale, a correction or a repayment on
+ * (today back to `earliest`): MAX_BACKDATE_DAYS, or any past day from
+ * EARLIEST_SALE_DAY for the Super Admin. For the date pickers only - the
+ * mutations apply the same rule themselves.
+ */
+export const dateWindow = authedQuery({
+  args: {},
+  handler: async (ctx) => {
+    const today = businessDayOf(Date.now());
+    const anyPastDay = ctx.isSuperAdmin;
+    return { today, earliest: earliestSaleDay(today, { anyPastDay }), anyPastDay };
+  },
+});
+
 export const options = authedQuery({
   args: { businessUnitKey: businessUnitKeyValidator, locationId: v.optional(v.id("locations")) },
   handler: async (ctx, args) => {
@@ -112,7 +128,8 @@ export const create = authedMutation({
     businessUnitKey: businessUnitKeyValidator,
     locationId: v.optional(v.id("locations")),
     // The business day it was sold (YYYY-MM-DD); missing = today. Up to
-    // MAX_BACKDATE_DAYS back, for sales recorded late.
+    // MAX_BACKDATE_DAYS back for sales recorded late (any past day from
+    // EARLIEST_SALE_DAY for the Super Admin).
     soldOn: v.optional(v.string()),
     paymentMethod: paymentMethodValidator,
     // Optional for cash / mobile money sales (credit sales use customerId).
@@ -157,16 +174,10 @@ export const create = authedMutation({
 
     // When: today, or an earlier day for a sale recorded late.
     const recordedAt = Date.now();
-    const when = saleTimestamp(args.soldOn, recordedAt);
-    if ("problem" in when) {
-      throw new ConvexError(
-        when.problem === "future"
-          ? "A sale can't be dated in the future."
-          : when.problem === "tooOld"
-            ? `Pick today or one of the last ${MAX_BACKDATE_DAYS} days.`
-            : "The sale date must be YYYY-MM-DD.",
-      );
-    }
+    // The Super Admin may date it on any past day (from EARLIEST_SALE_DAY).
+    const anyPastDay = ctx.isSuperAdmin;
+    const when = saleTimestamp(args.soldOn, recordedAt, { anyPastDay });
+    if ("problem" in when) throw new ConvexError(saleDateError(when.problem, { anyPastDay }));
 
     // 2. What: validate every line before writing anything.
     if (args.lines.length === 0) throw new ConvexError("Add at least one line.");
@@ -576,7 +587,10 @@ export const requestEdit = authedMutation({
     const cleanReason = reason.trim();
     if (!cleanReason) throw new ConvexError("Say why this sale needs a correction.");
     if (cleanReason.length > 300) throw new ConvexError("The reason is too long.");
-    const plan = await planSaleEdit(ctx, sale, changes, Date.now());
+    // A Super Admin's correction may move the sale to any past day; the
+    // approval keeps that allowance (it's the requester's, not the decider's).
+    const anyPastDay = ctx.isSuperAdmin;
+    const plan = await planSaleEdit(ctx, sale, changes, Date.now(), { anyPastDay });
     if (!plan.changed) throw new ConvexError("Nothing was changed.");
     return await requestApproval(ctx, {
       type: "sale_edit",
@@ -584,7 +598,7 @@ export const requestEdit = authedMutation({
       locationId: sale.locationId,
       entityTable: "sales",
       entityId: sale._id,
-      payload: { before: plan.before, after: plan.after, changes, baseline: plan.baseline },
+      payload: { before: plan.before, after: plan.after, changes, baseline: plan.baseline, ...(anyPastDay ? { anyPastDay } : {}) },
       reason: cleanReason,
     });
   },

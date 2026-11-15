@@ -66,25 +66,52 @@ export function lineMargin(item: { qty: number; unitPrice: number; unitCostSnaps
 /** How many days back a sale may be dated (forgot to record it on the day). */
 export const MAX_BACKDATE_DAYS = 7;
 
+/** The Super Admin may date sales, corrections and repayments on any past day from this one. */
+export const EARLIEST_SALE_DAY = "2026-01-01";
+
+/**
+ * The earliest day a sale (or a correction's date, or a repayment) may be
+ * dated: MAX_BACKDATE_DAYS back, or EARLIEST_SALE_DAY for the Super Admin
+ * (`anyPastDay`).
+ */
+export function earliestSaleDay(today: string, { anyPastDay = false }: { anyPastDay?: boolean } = {}): string {
+  return anyPastDay ? EARLIEST_SALE_DAY : addBusinessDays(today, -MAX_BACKDATE_DAYS);
+}
+
+export type SaleDateProblem = "invalid" | "future" | "tooOld";
+
 /**
  * When a sale sold on business day `soldOn` (YYYY-MM-DD, default today)
- * happened, recorded at `now`. Today: now. An earlier day (up to
- * MAX_BACKDATE_DAYS back): that day at the same Lubumbashi clock time, so
- * it stays inside the chosen day and in entry order. Never in the future.
+ * happened, recorded at `now`. Today: now. An earlier day (from
+ * earliestSaleDay): that day at the same Lubumbashi clock time, so it
+ * stays inside the chosen day and in entry order. Never in the future.
  */
 export function saleTimestamp(
   soldOn: string | undefined,
   now: number,
-): { createdAt: number; backdated: boolean } | { problem: "invalid" | "future" | "tooOld" } {
+  { anyPastDay = false }: { anyPastDay?: boolean } = {},
+): { createdAt: number; backdated: boolean } | { problem: SaleDateProblem } {
   const today = businessDayOf(now);
   if (soldOn === undefined || soldOn === today) return { createdAt: now, backdated: false };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(soldOn) || businessDayOf(businessDayStartUtc(soldOn)) !== soldOn) {
     return { problem: "invalid" };
   }
   if (soldOn > today) return { problem: "future" };
-  if (soldOn < addBusinessDays(today, -MAX_BACKDATE_DAYS)) return { problem: "tooOld" };
+  if (soldOn < earliestSaleDay(today, { anyPastDay })) return { problem: "tooOld" };
   const clock = now - businessDayStartUtc(today);
   return { createdAt: businessDayStartUtc(soldOn) + clock, backdated: true };
+}
+
+/** The error for a date saleTimestamp refused (a sale, a correction or a payment). */
+export function saleDateError(
+  problem: SaleDateProblem,
+  { anyPastDay = false, kind = "sale" }: { anyPastDay?: boolean; kind?: "sale" | "payment" } = {},
+): string {
+  if (problem === "future") return kind === "payment" ? "A payment can't be dated in the future." : "A sale can't be dated in the future.";
+  if (problem === "tooOld") {
+    return anyPastDay ? `Pick a day from ${EARLIEST_SALE_DAY}.` : `Pick today or one of the last ${MAX_BACKDATE_DAYS} days.`;
+  }
+  return kind === "payment" ? "The date must be YYYY-MM-DD." : "The sale date must be YYYY-MM-DD.";
 }
 
 /**
