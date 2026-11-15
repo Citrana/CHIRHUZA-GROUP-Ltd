@@ -2,10 +2,12 @@
 
 import { useState, type FormEvent, type ReactElement } from "react";
 import { useMutation } from "convex/react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { api } from "../../../convex/_generated/api";
 import type { Doc } from "../../../convex/_generated/dataModel";
 import type { LocationType } from "../../../convex/lib/businessUnits";
+import { DEFAULT_OPEN_DAYS } from "../../../convex/lib/salesDays";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +34,10 @@ export function LocationFormDialog({
   trigger: ReactElement;
 }) {
   const t = useTranslations("Admin.locations");
+  const locale = useLocale();
+  // Short weekday names in the user's language, Monday first (0 = Sunday).
+  const weekdayName = new Intl.DateTimeFormat(locale, { weekday: "short", timeZone: "UTC" });
+  const WEEK = [1, 2, 3, 4, 5, 6, 0].map((d) => ({ d, name: weekdayName.format(Date.UTC(2026, 10, 1 + d)) }));
   const create = useMutation(api.locations.create);
   const update = useMutation(api.locations.update);
 
@@ -40,6 +46,7 @@ export function LocationFormDialog({
   const [type, setType] = useState<LocationType>("shop");
   const [address, setAddress] = useState("");
   const [active, setActive] = useState(true);
+  const [openDays, setOpenDays] = useState<number[]>([...DEFAULT_OPEN_DAYS]);
   const [error, setError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -48,6 +55,7 @@ export function LocationFormDialog({
     setType(location?.type ?? "shop");
     setAddress(location?.address ?? "");
     setActive(location?.active ?? true);
+    setOpenDays([...(location?.openDays ?? DEFAULT_OPEN_DAYS)]);
     setError(false);
     setSubmitting(false);
   }
@@ -57,7 +65,7 @@ export function LocationFormDialog({
     setError(false);
     setSubmitting(true);
     try {
-      const fields = { name, type, address, active };
+      const fields = { name, type, address, active, openDays };
       if (location) {
         await update({ locationId: location._id, ...fields });
       } else {
@@ -120,6 +128,33 @@ export function LocationFormDialog({
                 onChange={(event) => setAddress(event.target.value)}
               />
             </div>
+            {type === "shop" ? (
+              <fieldset className="flex flex-col gap-2">
+                <legend className="mb-2 text-sm font-medium">{t("openDaysLabel")}</legend>
+                <div className="grid grid-cols-7 gap-1">
+                  {WEEK.map(({ d, name: dayName }) => {
+                    const on = openDays.includes(d);
+                    return (
+                      <button
+                        key={d}
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() =>
+                          setOpenDays((days) => (on ? days.filter((x) => x !== d) : [...days, d].sort((a, b) => a - b)))
+                        }
+                        className={cn(
+                          "min-h-11 rounded-md border text-xs font-medium capitalize",
+                          on ? "border-primary bg-primary text-primary-foreground" : "border-border text-muted-foreground hover:text-foreground",
+                        )}
+                      >
+                        {dayName}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-xs text-muted-foreground">{openDays.length === 0 ? t("openDaysNone") : t("openDaysHint")}</p>
+              </fieldset>
+            ) : null}
             <div className="flex flex-col gap-1">
               <label
                 htmlFor={`${idPrefix}-active`}
@@ -141,7 +176,7 @@ export function LocationFormDialog({
             ) : null}
           </div>
           <DialogFooter>
-            <Button type="submit" disabled={submitting}>
+            <Button type="submit" disabled={submitting || openDays.length === 0}>
               {submitting ? t("saving") : t("save")}
             </Button>
           </DialogFooter>

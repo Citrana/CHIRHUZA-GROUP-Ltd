@@ -15,6 +15,7 @@ import {
   addBusinessDays,
   businessDayOf,
   businessDayStartUtc,
+  isBusinessDay,
 } from "../../../convex/lib/time";
 import { PRODUCT_PROFILES } from "../../../convex/lib/products";
 import { COLLECTION_METHODS, type CollectionMethod } from "../../../convex/lib/credit";
@@ -73,14 +74,17 @@ function loadDraft(key: string): SaleDraft | null {
  * first), how it's paid. The server re-checks
  * everything and refuses to sell stock that isn't there.
  */
-export function SaleForm({ service }: { service: BusinessUnitKey }) {
+/** Pre-filled from a link (Analytics' missing sales days): the day and the shop. */
+type SaleFormInitial = { day?: string; locationId?: string };
+
+export function SaleForm({ service, initial = {} }: { service: BusinessUnitKey; initial?: SaleFormInitial }) {
   const t = useTranslations("Sales");
   const canSell = useCan("sales.create");
   const me = useQuery(api.users.getCurrentUser, canSell ? {} : "skip");
   if (canSell === undefined) return null;
   if (!canSell) return <p className="text-sm text-muted-foreground">{t("cannotSell")}</p>;
   if (!me) return null;
-  return <SaleFormBody key={me._id} service={service} userId={me._id} userName={me.name} />;
+  return <SaleFormBody key={me._id} service={service} userId={me._id} userName={me.name} initial={initial} />;
 }
 
 /**
@@ -88,7 +92,17 @@ export function SaleForm({ service }: { service: BusinessUnitKey }) {
  * browser as a draft (per user and service) while it's being filled in,
  * so leaving the page doesn't lose it; recording or discarding clears it.
  */
-function SaleFormBody({ service, userId, userName }: { service: BusinessUnitKey; userId: string; userName?: string }) {
+function SaleFormBody({
+  service,
+  userId,
+  userName,
+  initial,
+}: {
+  service: BusinessUnitKey;
+  userId: string;
+  userName?: string;
+  initial: SaleFormInitial;
+}) {
   const t = useTranslations("Sales");
   const tProducts = useTranslations("Products");
   const locale = useLocale();
@@ -96,7 +110,13 @@ function SaleFormBody({ service, userId, userName }: { service: BusinessUnitKey;
   // Read once, on the first render: the initial state below comes from it.
   const [draft] = useState(() => loadDraft(draftKey));
   const [restored, setRestored] = useState(() => draft !== null && !isEmptyDraft(draft));
-  const [picked, setPicked] = useState(() => draft?.locationId || rememberedLocation());
+  // A linked day must be one a sale can be dated on (today or up to MAX_BACKDATE_DAYS back).
+  const [linkedDay] = useState(() => {
+    const now = businessDayOf(Date.now());
+    const day = initial.day;
+    return day && isBusinessDay(day) && day <= now && day >= addBusinessDays(now, -MAX_BACKDATE_DAYS) ? day : null;
+  });
+  const [picked, setPicked] = useState(() => initial.locationId || draft?.locationId || rememberedLocation());
   const options = useQuery(api.sales.options, {
     businessUnitKey: service,
     ...(picked ? { locationId: picked as Id<"locations"> } : {}),
@@ -137,7 +157,7 @@ function SaleFormBody({ service, userId, userName }: { service: BusinessUnitKey;
   // The day of the sale: today, or up to MAX_BACKDATE_DAYS back for a sale
   // recorded late. Kept after recording, to enter several late sales.
   const [today, setToday] = useState(() => businessDayOf(Date.now()));
-  const [soldOn, setSoldOn] = useState(() => draft?.soldOn ?? today);
+  const [soldOn, setSoldOn] = useState(() => linkedDay ?? draft?.soldOn ?? today);
   const [submitting, setSubmitting] = useState(false);
   // The preview shown before recording, to catch mistakes.
   const [reviewing, setReviewing] = useState(false);
