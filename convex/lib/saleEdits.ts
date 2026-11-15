@@ -7,12 +7,12 @@ import { applyRollupEvents, saleEvents } from "./analytics";
 import { applySaleTotalChange, splitDiscount } from "./credit";
 import { describeProduct } from "./products";
 import {
-  MAX_BACKDATE_DAYS,
   MAX_SALE_LINES,
   hasExchange,
   paymentMethodValidator,
   pendingSaleApprovals,
   saleLineProblems,
+  saleDateError,
   saleTimestamp,
 } from "./sales";
 import { businessDayOf } from "./time";
@@ -28,7 +28,8 @@ import { businessDayOf } from "./time";
  *   - the agreed total (never above the lines, lower with a reason);
  *   - payment method between cash and mobile money (credit stays credit:
  *     its customer and payments can't move), the customer's name on a
- *     non-credit sale, and the date (today or up to MAX_BACKDATE_DAYS back);
+ *     non-credit sale, and the date (today or up to MAX_BACKDATE_DAYS back,
+ *     any past day from EARLIEST_SALE_DAY when the Super Admin asks);
  *   - a credit sale's new total can't be below what was already paid.
  */
 
@@ -94,7 +95,14 @@ export async function saleItemsOf(ctx: QueryCtx, saleId: Id<"sales">) {
  * before/after snapshots for the Approvals page, and whether anything
  * changed at all. Throws a ConvexError naming the first problem.
  */
-export async function planSaleEdit(ctx: QueryCtx, sale: Doc<"sales">, changes: SaleEditChanges, now: number) {
+export async function planSaleEdit(
+  ctx: QueryCtx,
+  sale: Doc<"sales">,
+  changes: SaleEditChanges,
+  now: number,
+  // The requester is the Super Admin: the new date may be any past day.
+  { anyPastDay = false }: { anyPastDay?: boolean } = {},
+) {
   if (sale.status !== "completed") throw new ConvexError("Only a completed sale can be corrected.");
   // An exchange already moved some of its units: the lines no longer tell the whole story.
   if (await hasExchange(ctx, sale._id)) throw new ConvexError("Products of this sale were exchanged: it can't be corrected.");
@@ -168,16 +176,8 @@ export async function planSaleEdit(ctx: QueryCtx, sale: Doc<"sales">, changes: S
 
   let createdAt = sale.createdAt;
   if (changes.soldOn !== undefined && changes.soldOn !== businessDayOf(sale.createdAt)) {
-    const when = saleTimestamp(changes.soldOn, now);
-    if ("problem" in when) {
-      throw new ConvexError(
-        when.problem === "future"
-          ? "A sale can't be dated in the future."
-          : when.problem === "tooOld"
-            ? `Pick today or one of the last ${MAX_BACKDATE_DAYS} days.`
-            : "The sale date must be YYYY-MM-DD.",
-      );
-    }
+    const when = saleTimestamp(changes.soldOn, now, { anyPastDay });
+    if ("problem" in when) throw new ConvexError(saleDateError(when.problem, { anyPastDay }));
     createdAt = when.createdAt;
   }
 
@@ -242,8 +242,8 @@ export async function planSaleEdit(ctx: QueryCtx, sale: Doc<"sales">, changes: S
 export async function applySaleEdit(ctx: MutationCtx, approval: Doc<"approvals">, decider: Doc<"users">) {
   const sale = await ctx.db.get("sales", approval.entityId as Id<"sales">);
   if (!sale) throw new ConvexError("Sale not found.");
-  const payload = approval.payload as { changes: SaleEditChanges; baseline: Baseline };
-  const plan = await planSaleEdit(ctx, sale, payload.changes, Date.now());
+  const payload = approval.payload as { changes: SaleEditChanges; baseline: Baseline; anyPastDay?: boolean };
+  const plan = await planSaleEdit(ctx, sale, payload.changes, Date.now(), { anyPastDay: payload.anyPastDay === true });
   if (!sameBaseline(plan.baseline, payload.baseline)) {
     throw new ConvexError("The sale changed since this correction was asked for: reject it and ask again.");
   }

@@ -74,6 +74,14 @@ export function homeAttention(
   if (ctx.canRecordSales && summary.salesToday && summary.salesToday.amount === 0 && ctx.hour >= RECORD_SALES_REMINDER_HOUR) {
     rows.push({ key: "recordSales", href: at("/sales/new"), label: t("attention.recordSales"), severity: "warning" });
   }
+  if (summary.missingSalesDays?.count) {
+    rows.push({
+      key: "missingDays",
+      href: at("/analytics#missing-days"),
+      label: t("attention.missingDays", { count: summary.missingSalesDays.count }),
+      severity: "warning",
+    });
+  }
   if (summary.creditOwed && summary.creditOwed.amount > 0) {
     rows.push({ key: "credit", href: at("/sales/credit"), label: t("attention.credit"), count: ctx.money(summary.creditOwed.amount), severity: "warning" });
   }

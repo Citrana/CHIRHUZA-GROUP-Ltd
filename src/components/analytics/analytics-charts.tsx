@@ -30,8 +30,9 @@ type Granularity = "day" | "week" | "month";
 /**
  * One meaning, one colour - on every chart, sparkline and legend. From the
  * theme tokens (light and dark mode): greens for sales and margin, warm
- * tones (--chart-cost-*) for costs, amber for "no sales"
- * (as on the Stock page's low-stock figures).
+ * tones (--chart-cost-*) for costs, amber for a missing sales day
+ * (as on the Stock page's low-stock figures), the muted surface for
+ * closed days.
  */
 export const ANALYTICS_COLORS = {
   sales: "var(--chart-2)",
@@ -39,6 +40,7 @@ export const ANALYTICS_COLORS = {
   expenses: "var(--chart-cost-1)",
   payroll: "var(--chart-cost-2)",
   noSales: "#d97706",
+  closed: "var(--muted)",
 } as const;
 
 /** Short axis labels: "1 Oct" per day/week, "Oct 2026" per month. */
@@ -64,7 +66,7 @@ function MoneyTooltip({
   labelFor,
 }: {
   active?: boolean;
-  payload?: { name?: string; value?: number; color?: string }[];
+  payload?: { name?: string; value?: number; color?: string; dataKey?: unknown }[];
   label?: string;
   labelFor: (start: string) => string;
 }) {
@@ -76,6 +78,7 @@ function MoneyTooltip({
     <div className="rounded-md border border-border bg-background px-3 py-2 text-xs shadow-sm">
       <p className="mb-1 font-medium">{labelFor(label)}</p>
       {payload
+        .filter((p) => p.dataKey !== CLOSED_BAND)
         .filter((p) => (p.name && !seen.has(p.name) ? (seen.add(p.name), true) : false))
         .map((p) => (
           <p key={p.name} className="flex items-center gap-2 tabular-nums">
@@ -106,6 +109,8 @@ export function ChartLegend({ items }: { items: Array<{ label: string; color: st
 }
 
 const AXIS = { fontSize: 11, fill: "var(--muted-foreground)" };
+/** The hidden series that shades closed days (full height, never in the tooltip). */
+const CLOSED_BAND = "closedBand";
 
 function Axes({ granularity }: { granularity: Granularity }) {
   const labelFor = useBucketLabel(granularity);
@@ -122,30 +127,48 @@ function Axes({ granularity }: { granularity: Granularity }) {
 
 /**
  * Sales and margin per period as straight lines (a light fill under
- * sales). Days with no sale (`zeroDays`) get an amber dot on the axis.
+ * sales). Per day: closed days (`closedDays`) are shaded, missing sales
+ * days (`missingDays`) get a small amber dot on the axis.
  */
 export function SalesChart({
   points,
   granularity,
   labels,
-  zeroDays,
+  missingDays,
+  closedDays,
   ariaLabel,
 }: {
   points: SeriesPoint[];
   granularity: Granularity;
   labels: { sales: string; margin: string };
-  zeroDays: string[];
+  missingDays: string[];
+  closedDays: string[];
   ariaLabel: string;
 }) {
   const labelFor = useBucketLabel(granularity);
   const compact = useCompactMoney();
+  const closed = new Set(closedDays);
+  const data = closed.size > 0 ? points.map((p) => ({ ...p, [CLOSED_BAND]: closed.has(p.start) ? 1 : 0 })) : points;
   return (
     <div className="h-56 w-full sm:h-64" role="img" aria-label={ariaLabel}>
       <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart data={points} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+        <ComposedChart data={data} margin={{ top: 8, right: 8, bottom: 0, left: 0 }} barCategoryGap={0}>
           <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
           <XAxis dataKey="start" tickFormatter={labelFor} tick={AXIS} tickLine={false} axisLine={false} minTickGap={16} />
           <YAxis tickFormatter={compact} tick={AXIS} tickLine={false} axisLine={false} width={52} />
+          {closed.size > 0 ? (
+            <>
+              <YAxis yAxisId="band" domain={[0, 1]} hide />
+              <Bar
+                yAxisId="band"
+                dataKey={CLOSED_BAND}
+                fill={ANALYTICS_COLORS.closed}
+                fillOpacity={0.7}
+                legendType="none"
+                isAnimationActive={false}
+              />
+            </>
+          ) : null}
           <Tooltip content={<MoneyTooltip labelFor={labelFor} />} cursor={{ stroke: "var(--border)" }} />
           <Area
             type="linear"
@@ -158,8 +181,8 @@ export function SalesChart({
           />
           <Line type="linear" dataKey="sales" name={labels.sales} stroke={ANALYTICS_COLORS.sales} strokeWidth={2} dot={false} />
           <Line type="linear" dataKey="margin" name={labels.margin} stroke={ANALYTICS_COLORS.margin} strokeWidth={2} dot={false} />
-          {zeroDays.map((day) => (
-            <ReferenceDot key={day} x={day} y={0} r={4} fill={ANALYTICS_COLORS.noSales} stroke="var(--background)" strokeWidth={1.5} />
+          {missingDays.map((day) => (
+            <ReferenceDot key={day} x={day} y={0} r={3} fill={ANALYTICS_COLORS.noSales} fillOpacity={0.85} stroke="var(--background)" strokeWidth={1} />
           ))}
         </ComposedChart>
       </ResponsiveContainer>

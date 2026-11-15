@@ -11,7 +11,8 @@ import type { Id } from "../../../convex/_generated/dataModel";
 import { formatMoney } from "../../../convex/lib/money";
 import { MAX_BACKDATE_DAYS } from "../../../convex/lib/sales";
 import { COLLECTION_METHODS, type CollectionMethod } from "../../../convex/lib/credit";
-import { addBusinessDays, businessDayOf } from "../../../convex/lib/time";
+import { businessDayOf } from "../../../convex/lib/time";
+import { useSaleDateWindow } from "@/lib/use-sale-date-window";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -83,9 +84,11 @@ function SaleEditForm({ sale, onClose }: { sale: EditOptions; onClose: () => voi
   const [submitting, setSubmitting] = useState(false);
   const [sent, setSent] = useState(false);
   const [today] = useState(() => businessDayOf(Date.now()));
+  const dateWindow = useSaleDateWindow();
 
   const money = (cents: number) => formatMoney(cents, "USD", locale);
-  const earliest = addBusinessDays(today, -MAX_BACKDATE_DAYS);
+  const earliest = dateWindow.earliest;
+  const fullDay = (d: string) => new Intl.DateTimeFormat(locale, { dateStyle: "long", timeZone: "UTC" }).format(Date.parse(`${d}T12:00:00Z`));
   const linesTotal = lines.reduce((s, l) => s + (l.price ?? 0) * l.qty, 0);
   const agreedTotal = agreed && agreed.linesTotal === linesTotal ? agreed.value : null;
   const total = agreedTotal ?? linesTotal;
@@ -339,7 +342,9 @@ function SaleEditForm({ sale, onClose }: { sale: EditOptions; onClose: () => voi
           onChange={(e) => e.target.value && setSoldOn(e.target.value)}
           className="h-11 w-44"
         />
-        <p className="text-xs text-muted-foreground">{t("editDateHint", { days: MAX_BACKDATE_DAYS })}</p>
+        <p className="text-xs text-muted-foreground">
+          {dateWindow.anyPastDay ? t("editDateHintAny", { date: fullDay(earliest) }) : t("editDateHint", { days: MAX_BACKDATE_DAYS })}
+        </p>
       </div>
 
       <div className="flex flex-col gap-2">

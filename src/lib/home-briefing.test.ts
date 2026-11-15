@@ -28,6 +28,7 @@ const summary = (o: Partial<Summary> = {}): Summary =>
     withdrawals: null,
     creditOwed: { amount: 0, customers: 0 },
     salesToday: { amount: 5000, lastSaleDay: null },
+    missingSalesDays: null,
     monthToDate: null,
     ...o,
   }) as Summary;
@@ -94,4 +95,14 @@ test("'Record today's sales': sellers only, nothing sold today, from 16:00", () 
   expect(rows(none, { hour: 15 })).toEqual([]);
   expect(rows(none, { hour: 18, canRecordSales: false })).toEqual([]);
   expect(rows(summary(), { hour: 18 })).toEqual([]); // already sold today
+});
+
+test("days without sales this month: a warning row to Analytics' list, gone at 0", () => {
+  const found = (s: Summary) => homeAttention(s, { service: "hair", hour: 10, canRecordSales: true, t, money }).find((r) => r.key === "missingDays");
+  expect(found(summary({ missingSalesDays: { count: 3 } }))).toMatchObject({
+    href: "/hair/analytics#missing-days",
+    severity: "warning",
+  });
+  expect(found(summary({ missingSalesDays: { count: 0 } }))).toBeUndefined();
+  expect(found(summary({ missingSalesDays: null }))).toBeUndefined();
 });

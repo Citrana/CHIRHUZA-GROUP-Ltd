@@ -200,7 +200,12 @@ this repo, now and later — do not relax them for convenience.
   the suggested one needs a `discountReason`. Only `products.set_price`
   holders set suggested prices. Sales are USD only for now.
 - A sale may be dated up to `MAX_BACKDATE_DAYS` (7) business days back,
-  never in the future (`saleTimestamp`, `convex/lib/sales.ts`):
+  never in the future (`saleTimestamp`, `convex/lib/sales.ts`). The Super
+  Admin may use any past day from `EARLIEST_SALE_DAY` (2026-01-01), for
+  sales, sale corrections (the allowance is the requester's, kept in the
+  approval payload as `anyPastDay`) and credit repayments; the window comes
+  from `earliestSaleDay`, and screens read it from `sales.dateWindow`
+  (`useSaleDateWindow`):
   `sales.createdAt` is when it happened (lists/filters use it),
   `recordedAt` when it was entered; backdated sales are flagged in the list
   and the audit. Stock still moves at recording time.
@@ -330,6 +335,16 @@ this repo, now and later — do not relax them for convenience.
 - Margin = sale price − purchase cost (`unitCostSnapshot`); net profit =
   margin − expenses − payroll; withdrawals are shown apart, never
   subtracted.
+- **Missing sales days** (`convex/lib/salesDays.ts`, the only place they
+  are computed - Analytics `getSalesDays` and Home both call
+  `salesDaysFor`): a shop's past open day (`locations.openDays`, default
+  Mon-Sat) with no sale in `dailyFinance`, since its first sale, and not
+  marked "Closed / no sales" (`closedSalesDays`, per service; marked /
+  undone with `sales.create` in scope via `convex/salesDays.ts`, never
+  deleted, audited). Warehouses and today are never flagged.
+- Period comparisons (`comparableRange`, `src/lib/analytics-compare.ts`)
+  only compare equal-length periods of at least 3 days; ▲/▼ colours come
+  from `deltaTone` (a cost going down is good news).
 
 ## Append-only tables
 
@@ -428,6 +443,23 @@ AI assistant and contributor, for every change, now and later.
   the commit; Vitest prints a full per-file pass/fail report in the
   terminal. Hooks are installed automatically by `pnpm install` (via the
   `prepare` script) — no manual setup needed after cloning.
+
+## Features guide
+
+- `docs/features/` holds the **features guide**: a plain-language PDF of
+  every feature, in English and French, downloaded from "Features guide
+  (PDF)" in the side menu (`public/docs/chirhuza-features-{en,fr}.pdf`).
+  How to write and build it: `docs/features/README.md`.
+- **Every new or changed user-facing feature updates the guide in the
+  same change**: edit `docs/features/content-en.html` **and**
+  `content-fr.html` (a new category gets a new numbered section and a
+  contents line; a new module's section id is its module key), run
+  `python3 docs/features/build.py`, and commit both rebuilt PDFs. A
+  feature isn't done until the guide describes it.
+- Write for non-technical staff: short, simple words, no code, screen
+  words copied exactly from `messages/{en,fr}.json`.
+- `src/lib/features-guide.test.ts` checks that every live module has a
+  section in both languages and that the PDFs exist.
 
 ## Authentication
 

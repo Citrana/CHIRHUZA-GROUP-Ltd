@@ -77,7 +77,8 @@
       "requisitions": "Requisitions ready to buy",
       "reviewApprovals": "Review pending approvals",
       "recordSales": "Record today's sales",
-      "receiveStock": "Update stock for a recent purchase"
+      "receiveStock": "Update stock for a recent purchase",
+      "missingDays": "{count, plural, one {# day} other {# days}} without sales this month"
     },
     "metrics": {
       "approvals": "{count} waiting",
@@ -149,7 +150,8 @@
     "manageRoles": "Manage roles",
     "manageLocations": "Locations",
     "auditLog": "Audit log",
-    "productSettings": "Product settings"
+    "productSettings": "Product settings",
+    "featuresGuide": "Features guide (PDF)"
   },
   "Auth": {
     "logout": "Log out",
@@ -263,7 +265,10 @@
       "saving": "Saving…",
       "saveError": "Could not save the location. Check the name and try again.",
       "searchPlaceholder": "Search locations…",
-      "sharedHint": "Locations are shared by every service: a shop serves Hair and Mode alike, with separate stock and sales for each."
+      "sharedHint": "Locations are shared by every service: a shop serves Hair and Mode alike, with separate stock and sales for each.",
+      "openDaysLabel": "Days we open",
+      "openDaysHint": "Days with no sales are only flagged on these days.",
+      "openDaysNone": "Pick at least one day."
     }
   },
   "Roles": {
@@ -1384,6 +1389,7 @@
     "needCustomer": "Choose the customer for a credit sale.",
     "dateLabel": "Sale date",
     "dateHint": "Today by default. Forgot to record a sale? Pick the day it happened (up to {days} days back).",
+    "dateHintAny": "Any past day from {date}.",
     "pastDateNote": "This sale will be dated {date}.",
     "backToToday": "Back to today",
     "recordedOn": "Sale {number} recorded for {date} — {total}.",
@@ -1430,6 +1436,7 @@
     "editRemoved": "Removed from the sale",
     "editCreditNote": "Credit sale: the customer and payment method can't be changed.",
     "editDateHint": "Today or up to {days} days back.",
+    "editDateHintAny": "Any past day from {date}.",
     "editReasonLabel": "Why does this sale need a correction?",
     "editReasonPlaceholder": "e.g. wrong price entered",
     "editSubmit": "Send for approval",
@@ -1547,6 +1554,7 @@
     "methodLabel": "Paid with",
     "dateLabel": "Date",
     "dateHint": "Today, or up to {days} days back.",
+    "dateHintAny": "Any past day from {date}.",
     "noteLabel": "Note (optional)",
     "recordButton": "Record payment",
     "recording": "Recording…",
@@ -1877,7 +1885,8 @@
       "none": "Every product in stock sold at least once."
     },
     "legend": {
-      "noSales": "No sales"
+      "noSales": "No sales",
+      "closed": "Closed"
     },
     "chartLabels": {
       "sales": "Sales and margin, {range}",
@@ -1885,7 +1894,29 @@
     },
     "showNetProfit": "Show net profit",
     "hideNetProfit": "Hide net profit",
-    "hiddenValue": "Hidden"
+    "hiddenValue": "Hidden",
+    "missingDays": {
+      "title": "Days with no sales",
+      "hint": "Open days in the past with no sales recorded. Add the sales, or mark the day as closed.",
+      "none": "No missing days. Every open day has sales or is marked closed.",
+      "dayHeader": "Day",
+      "shopHeader": "Shop",
+      "statusHeader": "Status",
+      "actionsHeader": "Actions",
+      "noSalesRecorded": "No sales recorded",
+      "markedClosed": "Closed / no sales",
+      "addSales": "Add sales",
+      "markClosed": "Mark as closed / no sales",
+      "undo": "Undo",
+      "tooOld": "Older than {days} days: ask for a correction",
+      "markTitle": "Mark as closed / no sales",
+      "markHint": "{day} will no longer show as a day with no sales. You can undo this.",
+      "noteLabel": "Note",
+      "notePlaceholder": "e.g. Public holiday",
+      "cancel": "Cancel",
+      "saving": "Saving…",
+      "saveError": "Could not save. Try again."
+    }
   },
   "NotFound": {
     "title": "Page not found",

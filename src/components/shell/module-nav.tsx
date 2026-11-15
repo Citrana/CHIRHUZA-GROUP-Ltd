@@ -1,7 +1,7 @@
 "use client";
 
-import { House, Settings } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { FileDown, House, Settings } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import type { BusinessUnitKey } from "../../../convex/lib/businessUnits";
 import { useVisibleModules } from "@/lib/use-visible-modules";
@@ -30,6 +30,7 @@ export function ModuleNav({
   const modules = useVisibleModules();
   const tNav = useTranslations("Nav");
   const canManageProductSettings = useCan("products.settings");
+  const locale = useLocale();
 
   const homeHref = `/${service}`;
   const settingsHref = `/${service}/settings`;
@@ -70,9 +71,9 @@ export function ModuleNav({
           </Link>
         );
       })}
-      {/* Bottom: product settings (if allowed). Switching service is in the header. */}
-      {canManageProductSettings ? (
-        <div className="mt-auto flex flex-col gap-1 border-t border-border pt-2">
+      {/* Bottom: product settings (if allowed) and the features guide. Switching service is in the header. */}
+      <div className="mt-auto flex flex-col gap-1 border-t border-border pt-2">
+        {canManageProductSettings ? (
           <Link
             href={settingsHref}
             onClick={onNavigate}
@@ -87,8 +88,18 @@ export function ModuleNav({
             <Settings className="size-4 shrink-0" aria-hidden />
             {tNav("productSettings")}
           </Link>
-        </div>
-      ) : null}
+        ) : null}
+        {/* The features guide in the user's language (built by docs/features/build.py). */}
+        <a
+          href={`/docs/chirhuza-features-${locale === "fr" ? "fr" : "en"}.pdf`}
+          download
+          onClick={onNavigate}
+          className="flex min-h-11 items-center gap-3 rounded-lg px-3 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+        >
+          <FileDown className="size-4 shrink-0" aria-hidden />
+          {tNav("featuresGuide")}
+        </a>
+      </div>
     </nav>
   );
 }
