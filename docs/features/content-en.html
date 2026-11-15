@@ -126,14 +126,14 @@
 <div class="block"><h4>What it is</h4><p>Recording sales on the phone in the shop, and the list of every sale.</p></div>
 <div class="block"><h4>How it works</h4>
 <ol class="steps">
-  <li><span class="ui">Sales</span> → <span class="ui">New sale</span>. Pick the day: today, or up to 7 days back for a sale recorded late.</li>
+  <li><span class="ui">Sales</span> → <span class="ui">New sale</span>. Pick the day: today, or up to 7 days back for a sale recorded late. The Super Admin can pick any past day from 1 January 2026.</li>
   <li>Search a product, choose the lot, the quantity and the price. The selling price is filled in. A different price needs a short reason.</li>
   <li>The <strong>agreed total</strong> can be lowered for a whole-sale discount, with a reason.</li>
   <li>Payment: <span class="ui">Cash</span>, <span class="ui">Mobile money</span> or <span class="ui">Credit</span> (see Credit). Check the sale, then record it.</li>
 </ol></div>
 <div class="block"><h4>Fixing a sale</h4>
 <ul>
-  <li><span class="ui">Request correction</span> on a sale: change quantities, prices, the total, cash ↔ mobile money, the customer name or the date, with a reason. Nothing changes until the Super Admin approves.</li>
+  <li><span class="ui">Request correction</span> on a sale: change quantities, prices, the total, cash ↔ mobile money, the customer name or the date (up to 7 days back, any past day for the Super Admin), with a reason. Nothing changes until the Super Admin approves.</li>
   <li><span class="ui">Exchange products</span> (cash and mobile money sales, up to 30 days): the customer brings products back and takes others. If the customer pays the difference, it's recorded at once. Money given back needs approval.</li>
 </ul></div>
 <div class="block"><h4>Who can use it</h4><p>Sales Agents sell in their own shop only. Chief Sales Admin and Super Admin sell anywhere.</p></div>
@@ -146,7 +146,7 @@
 <div class="block"><h4>How it works</h4>
 <ul>
   <li>In a credit sale, pick the customer or add a <span class="ui">New customer</span>, and enter what was <span class="ui">Paid now</span> (0 or more).</li>
-  <li><span class="ui">Record a payment</span> later. A payment goes to the oldest open sale first, and never more than what is owed.</li>
+  <li><span class="ui">Record a payment</span> later. It can be dated up to 7 days back (any past day for the Super Admin). A payment goes to the oldest open sale first, and never more than what is owed.</li>
   <li>A wrong payment: <span class="ui">Report a mistake</span>. It is cancelled after approval.</li>
   <li>A debt recorded by mistake: <span class="ui">Cancel the debt (recorded by mistake)</span>. After approval the stock goes back to the shop and the sale is marked cancelled.</li>
 </ul></div>
@@ -207,7 +207,7 @@
 <ul>
   <li>A day counts as having no sales when it is a past <strong>open day</strong> of the shop, nothing was sold, and nobody marked it closed. Counting starts from the shop's first sale. Today is never counted.</li>
   <li>On the sales chart: a small amber dot for each such day. Closed days are shaded.</li>
-  <li>Under the chart, <span class="ui">Days with no sales</span>: <span class="ui">Add sales</span> opens the sale form with the day and shop filled in (up to 7 days back). Or <span class="ui">Mark as closed / no sales</span>, with an optional note (e.g. public holiday). <span class="ui">Undo</span> brings the day back.</li>
+  <li>Under the chart, <span class="ui">Days with no sales</span>: <span class="ui">Add sales</span> opens the sale form with the day and shop filled in (up to 7 days back; any day for the Super Admin). Or <span class="ui">Mark as closed / no sales</span>, with an optional note (e.g. public holiday). <span class="ui">Undo</span> brings the day back.</li>
   <li>Home shows the number of days without sales this month.</li>
 </ul></div>
 <div class="block"><h4>Who can use it</h4><p>Analytics: Chief Admin and Super Admin. Marking a day closed: whoever can record sales at that shop. The Home row: whoever sees the shop's sales.</p></div>

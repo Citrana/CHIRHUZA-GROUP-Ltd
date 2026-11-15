@@ -126,14 +126,14 @@
 <div class="block"><h4>Ce que c'est</h4><p>Enregistrer les ventes sur le téléphone en boutique, et la liste de toutes les ventes.</p></div>
 <div class="block"><h4>Comment ça marche</h4>
 <ol class="steps">
-  <li><span class="ui">Ventes</span> → <span class="ui">Nouvelle vente</span>. Choisissez le jour : aujourd'hui, ou jusqu'à 7 jours avant pour une vente enregistrée en retard.</li>
+  <li><span class="ui">Ventes</span> → <span class="ui">Nouvelle vente</span>. Choisissez le jour : aujourd'hui, ou jusqu'à 7 jours avant pour une vente enregistrée en retard. Le Super Admin peut choisir n'importe quel jour passé depuis le 1er janvier 2026.</li>
   <li>Cherchez un produit, choisissez le lot, la quantité et le prix. Le prix de vente est rempli. Un autre prix demande une courte raison.</li>
   <li>Le <strong>total convenu</strong> peut être baissé pour une remise sur toute la vente, avec une raison.</li>
   <li>Paiement : <span class="ui">Espèces</span>, <span class="ui">Mobile money</span> ou <span class="ui">Crédit</span> (voir Crédit). Vérifiez la vente, puis enregistrez-la.</li>
 </ol></div>
 <div class="block"><h4>Corriger une vente</h4>
 <ul>
-  <li><span class="ui">Demander une correction</span> sur une vente : changer les quantités, les prix, le total, espèces ↔ mobile money, le nom du client ou la date, avec une raison. Rien ne change avant l'approbation du Super Admin.</li>
+  <li><span class="ui">Demander une correction</span> sur une vente : changer les quantités, les prix, le total, espèces ↔ mobile money, le nom du client ou la date (jusqu'à 7 jours avant, n'importe quel jour passé pour le Super Admin), avec une raison. Rien ne change avant l'approbation du Super Admin.</li>
   <li><span class="ui">Échanger des produits</span> (ventes en espèces et mobile money, jusqu'à 30 jours) : le client rapporte des produits et en prend d'autres. Si le client paie la différence, c'est enregistré tout de suite. L'argent rendu demande une approbation.</li>
 </ul></div>
 <div class="block"><h4>Qui peut l'utiliser</h4><p>Les Sales Agents vendent seulement dans leur boutique. Le Chief Sales Admin et le Super Admin vendent partout.</p></div>
@@ -146,7 +146,7 @@
 <div class="block"><h4>Comment ça marche</h4>
 <ul>
   <li>Dans une vente à crédit, choisissez le client ou ajoutez un <span class="ui">Nouveau client</span>, et indiquez ce qui est <span class="ui">Payé maintenant</span> (0 ou plus).</li>
-  <li><span class="ui">Enregistrer un paiement</span> plus tard. Un paiement va d'abord à la plus ancienne vente ouverte, et jamais plus que ce qui est dû.</li>
+  <li><span class="ui">Enregistrer un paiement</span> plus tard, daté jusqu'à 7 jours avant (n'importe quel jour passé pour le Super Admin). Un paiement va d'abord à la plus ancienne vente ouverte, et jamais plus que ce qui est dû.</li>
   <li>Un paiement erroné : <span class="ui">Signaler une erreur</span>. Il est annulé après approbation.</li>
   <li>Une dette enregistrée par erreur : <span class="ui">Annuler la dette (enregistrée par erreur)</span>. Après approbation, le stock revient à la boutique et la vente est marquée annulée.</li>
 </ul></div>
@@ -207,7 +207,7 @@
 <ul>
   <li>Un jour compte comme sans ventes quand c'est un <strong>jour d'ouverture</strong> passé de la boutique, que rien n'a été vendu et que personne ne l'a marqué fermé. Le comptage commence à la première vente de la boutique. Aujourd'hui ne compte jamais.</li>
   <li>Sur le graphique des ventes : un petit point orange pour chacun de ces jours. Les jours fermés sont grisés.</li>
-  <li>Sous le graphique, <span class="ui">Jours sans ventes</span> : <span class="ui">Ajouter les ventes</span> ouvre le formulaire de vente avec le jour et la boutique déjà remplis (jusqu'à 7 jours avant). Ou <span class="ui">Marquer fermé / aucune vente</span>, avec une note facultative (par ex. jour férié). <span class="ui">Annuler</span> remet le jour dans la liste.</li>
+  <li>Sous le graphique, <span class="ui">Jours sans ventes</span> : <span class="ui">Ajouter les ventes</span> ouvre le formulaire de vente avec le jour et la boutique déjà remplis (jusqu'à 7 jours avant ; n'importe quel jour pour le Super Admin). Ou <span class="ui">Marquer fermé / aucune vente</span>, avec une note facultative (par ex. jour férié). <span class="ui">Annuler</span> remet le jour dans la liste.</li>
   <li>L'Accueil montre le nombre de jours sans ventes ce mois-ci.</li>
 </ul></div>
 <div class="block"><h4>Qui peut l'utiliser</h4><p>Analyses : Chief Admin et Super Admin. Marquer un jour fermé : ceux qui peuvent vendre dans cette boutique. La ligne de l'Accueil : ceux qui voient les ventes de la boutique.</p></div>
