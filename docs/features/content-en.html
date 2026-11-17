@@ -24,8 +24,9 @@
   <li><a href="#cash"><span class="n">11</span>Cash</a></li>
   <li><a href="#approvals"><span class="n">12</span>Approvals</a></li>
   <li><a href="#analytics"><span class="n">13</span>Analytics</a></li>
-  <li><a href="#admin"><span class="n">14</span>Administration</a></li>
-  <li><a href="#rules"><span class="n">15</span>Rules that protect your data</a></li>
+  <li><a href="#reports"><span class="n">14</span>Reports</a></li>
+  <li><a href="#admin"><span class="n">15</span>Administration</a></li>
+  <li><a href="#rules"><span class="n">16</span>Rules that protect your data</a></li>
 </ol>
 <div class="note"><strong>About this guide.</strong> Words in <span class="ui">boxes</span> are exactly what you see on the screen. This guide is updated every time a feature is added or changed. Download the latest copy from <span class="ui">Features guide (PDF)</span> in the side menu. For step-by-step training, see the training guide.</div>
 
@@ -222,7 +223,27 @@
 <div class="block"><h4>Good to know</h4><p>Each service marks its own days: a shop can sell hair but no clothes on the same day. The opening days are set per shop in <span class="ui">Locations</span>.</p></div>
 
 <!-- 14 -->
-<h2 id="admin"><span class="num">14</span>Administration</h2>
+<h2 id="reports"><span class="num">14</span>Reports</h2>
+<div class="block"><h4>What it is</h4><p>A short summary of a service for a period, saved so it can be opened again. It only reads the figures: it never changes money or stock.</p></div>
+<div class="block"><h4>Where to find it</h4><p><span class="ui">Reports</span>. The bell at the top tells you when a report is ready.</p></div>
+<div class="block"><h4>How it works</h4>
+<ul>
+  <li><span class="ui">Highlights</span> at the top: 3 or 4 short lines about sales, days with no sales, stock to reorder and money owed.</li>
+  <li><span class="ui">Sales</span>: total sales, <span class="ui">Margin</span>, <span class="ui">Expenses</span>, <span class="ui">Payroll</span>, <span class="ui">Net profit</span> and <span class="ui">Withdrawals</span> (shown apart), <span class="ui">Sales per shop</span> and <span class="ui">Top 5 products</span>. They are compared with the period of the same length just before, only when that period has figures. When some shop days have no sales registered, the report warns that the totals may be lower than the real figures.</li>
+  <li><span class="ui">Days with no sales registered</span>: the number of days per shop and the dates, with days in a row shown as one range (open days only; days marked <span class="ui">Closed / no sales</span> are left out). For periods longer than 31 days, only the latest 14 dates are listed.</li>
+  <li><span class="ui">Low and sold-out stock</span>: each product with <span class="ui">Sold in last 30 days</span> and a <span class="ui">Suggested reorder</span> (enough for 30 days of sales, and at least the low stock level, minus what is on hand), plus the <span class="ui">Stock value (purchase cost)</span>.</li>
+  <li><span class="ui">Waiting for approval</span>: each request with its type, amount, who asked and when. <span class="ui">Customers owe</span>: each customer with the oldest unpaid date and the days unpaid, oldest debts first. <span class="ui">Cash</span>: cash on hand and opening cash waiting for approval.</li>
+  <li>Each report says <span class="ui">Based on data entered by</span> a date and time. Sales entered later are not in it.</li>
+  <li><span class="ui">Generate report</span>: pick any period up to 12 months. The report is made at once and saved.</li>
+  <li><span class="ui">Report settings</span>: switch on <span class="ui">Send the report automatically</span>, then choose how often (every day, week or month), the day, the time (Lubumbashi time), what to include and who receives it. By default: every Sunday at 09:00, covering Monday to Sunday of that week.</li>
+  <li>Every saved report opens from the list. <span class="ui">Download PDF</span> gives the same report as a PDF.</li>
+  <li>Reports are sent <span class="ui">In the app</span>. Email is coming soon.</li>
+</ul></div>
+<div class="block"><h4>Who can use it</h4><p>The Super Admin and the Chief Admin. The <span class="ui">Cash</span> part is shown to the owner only. Each person sets up their own scheduled report.</p></div>
+<div class="block"><h4>Good to know</h4><p>If a scheduled report can't be made, it is tried again once. If it still fails, it shows as <span class="ui">Failed</span> and you can generate it yourself. Every report is written in the audit log.</p></div>
+
+<!-- 15 -->
+<h2 id="admin"><span class="num">15</span>Administration</h2>
 <div class="block"><h4>What it is</h4><p>Managing people, roles, locations, and checking the history of changes. In the <span class="ui">Admin</span> menu at the top.</p></div>
 <div class="block"><h4>How it works</h4>
 <ul>
@@ -233,8 +254,8 @@
 </ul></div>
 <div class="block"><h4>Who can use it</h4><p>Users, roles and locations: Super Admin. Audit log: Chief Admin and Super Admin.</p></div>
 
-<!-- 15 -->
-<h2 id="rules"><span class="num">15</span>Rules that protect your data</h2>
+<!-- 16 -->
+<h2 id="rules"><span class="num">16</span>Rules that protect your data</h2>
 <ul>
   <li><strong>Everything is recorded.</strong> Every add, change and delete goes to the audit log, which can't be edited.</li>
   <li><strong>Nothing is deleted straight away.</strong> A delete waits for an approval. Records in use are archived instead.</li>
