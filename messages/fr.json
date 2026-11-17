@@ -138,7 +138,8 @@
     "payroll": "Paie",
     "withdrawals": "Retraits",
     "approvals": "Approbations",
-    "cash": "Caisse"
+    "cash": "Caisse",
+    "reports": "Rapports"
   },
   "LocaleSwitcher": {
     "label": "Langue",
@@ -308,7 +309,8 @@
     "admin": "Administration",
     "products": "Produits",
     "withdrawals": "Retraits",
-    "cash": "Caisse"
+    "cash": "Caisse",
+    "reports": "Rapports"
   },
   "Permissions": {
     "sales": {
@@ -385,6 +387,11 @@
         "approve": "Approuver l'argent de départ au-dessus de la limite"
       },
       "settings": "Définir la limite d'approbation de l'argent de départ"
+    },
+    "reports": {
+      "view": "Voir les rapports",
+      "generate": "Créer des rapports pour une période choisie",
+      "settings": "Régler le rapport automatique"
     }
   },
   "AuditLog": {
@@ -428,7 +435,9 @@
       "rolePermissions": "Permission de rôle",
       "locations": "Site",
       "openingCash": "Argent de départ",
-      "cashSettings": "Réglages de la caisse"
+      "cashSettings": "Réglages de la caisse",
+      "reports": "Rapport",
+      "reportSettings": "Réglages des rapports"
     }
   },
   "Changes": {
@@ -2008,5 +2017,201 @@
       "q12": "Merci pour le soin que vous mettez dans chaque vente."
     },
     "dismiss": "Fermer"
+  },
+  "Reports": {
+    "title": "Rapports",
+    "subtitle": "Un court résumé de l'activité pour une période. Les rapports sont gardés ici et peuvent être rouverts.",
+    "accessDenied": "Vous n'avez pas accès aux rapports.",
+    "generate": "Créer un rapport",
+    "settingsLink": "Réglages des rapports",
+    "historyTitle": "Rapports enregistrés",
+    "empty": "Aucun rapport pour l'instant. Créez-en un, ou activez le rapport automatique dans Réglages des rapports.",
+    "periodHeader": "Période",
+    "typeHeader": "Type",
+    "statusHeader": "État",
+    "madeHeader": "Créé le",
+    "byHeader": "Par",
+    "kinds": {
+      "scheduled": "Automatique",
+      "custom": "Personnalisé"
+    },
+    "statuses": {
+      "ready": "Prêt",
+      "failed": "Échec"
+    },
+    "open": "Ouvrir",
+    "generateTitle": "Créer un rapport",
+    "generateHint": "Choisissez la période. Un rapport peut couvrir jusqu'à 12 mois.",
+    "fromLabel": "Du",
+    "toLabel": "Au",
+    "tooLong": "Choisissez une période de 12 mois ou moins.",
+    "inFuture": "La période ne peut pas finir après aujourd'hui.",
+    "fromAfterTo": "La date de début doit être avant la date de fin.",
+    "generating": "Création du rapport…",
+    "generateError": "Le rapport n'a pas pu être créé. Veuillez réessayer.",
+    "back": "Retour aux rapports",
+    "notFound": "Ce rapport n'existe pas.",
+    "reportTitle": "Rapport du {from} au {to}",
+    "basedOn": "Selon les données saisies jusqu'au {date}",
+    "asOfNote": "Le stock, les approbations, l'argent dû et la caisse sont montrés tels qu'ils étaient à la création du rapport.",
+    "failedTitle": "Ce rapport n'a pas pu être créé",
+    "failedBody": "Nous avons essayé deux fois. Vous pouvez le recréer pour la même période.",
+    "download": "Télécharger le PDF",
+    "downloadError": "Le PDF n'a pas pu être créé. Veuillez réessayer.",
+    "preparing": "Préparation…",
+    "sections": {
+      "sales": "Ventes",
+      "missingDays": "Jours sans ventes enregistrées",
+      "stock": "Stock bas et épuisé",
+      "approvals": "En attente d'approbation",
+      "credit": "Ce que les clients doivent",
+      "cash": "Caisse"
+    },
+    "sales": {
+      "total": "Total des ventes",
+      "previous": "Même durée avant (du {from} au {to})",
+      "change": "Évolution",
+      "noCompare": "Pas de comparaison : la période fait moins de 3 jours.",
+      "noPrevious": "Aucune vente dans la période d'avant.",
+      "thisPeriod": "Cette période",
+      "previousPeriod": "Période d'avant",
+      "margin": "Marge",
+      "expenses": "Dépenses",
+      "payroll": "Paie",
+      "netProfit": "Bénéfice net",
+      "withdrawals": "Retraits",
+      "withdrawalsNote": "Les retraits sont montrés à part. Ce ne sont pas des dépenses de l'entreprise.",
+      "byShop": "Ventes par boutique",
+      "topProducts": "Les 5 meilleurs produits",
+      "units": "Unités",
+      "revenue": "Ventes",
+      "noTopProducts": "Aucun produit vendu pendant cette période.",
+      "understated": "{count, plural, one {# jour de boutique n'a} other {# jours de boutique n'ont}} pas de ventes enregistrées : ces totaux peuvent être plus bas que la réalité.",
+      "comparedWith": "Comparé à la période du {from} au {to}."
+    },
+    "missing": {
+      "none": "Chaque boutique a enregistré des ventes ses jours d'ouverture.",
+      "count": "{count, plural, one {# jour} other {# jours}} sans ventes enregistrées",
+      "hint": "Seuls les jours d'ouverture comptent. Les jours marqués « Fermé / aucune vente » ne comptent pas.",
+      "shopCount": "{count, plural, one {# jour} other {# jours}}",
+      "latest": "Seules les {count} dernières dates sont montrées."
+    },
+    "stock": {
+      "lowCount": "Stock bas",
+      "outCount": "Épuisé",
+      "none": "Rien n'est bas ni épuisé.",
+      "product": "Produit",
+      "onHand": "En stock",
+      "outSince": "Épuisé depuis",
+      "more": "Les {shown} premiers sur {total}.",
+      "value": "Valeur du stock (prix d'achat)",
+      "units": "Unités en stock",
+      "sold30": "Vendu ces 30 derniers jours",
+      "reorder": "Rachat proposé",
+      "reorderHint": "Rachat proposé : de quoi couvrir 30 jours de ventes, et au moins le niveau de stock bas, moins ce qui est en stock."
+    },
+    "approvals": {
+      "count": "En attente d'approbation",
+      "none": "Rien n'attend d'approbation.",
+      "type": "Type",
+      "amount": "Montant",
+      "requestedBy": "Demandé par",
+      "requestedOn": "Date",
+      "more": "Les {shown} plus récentes sur {total}."
+    },
+    "credit": {
+      "total": "Total dû",
+      "customers": "{count, plural, one {# client} other {# clients}}",
+      "top": "Qui doit le plus",
+      "none": "Aucun client ne doit d'argent.",
+      "customer": "Client",
+      "owed": "Doit",
+      "oldest": "Plus vieil impayé",
+      "daysUnpaid": "Jours impayés",
+      "days": "{count, plural, =0 {aujourd'hui} one {# jour} other {# jours}}",
+      "sortNote": "Les plus vieilles dettes d'abord.",
+      "more": "{shown} clients montrés sur {total}."
+    },
+    "cash": {
+      "onHand": "Argent en caisse",
+      "pending": "Fonds de départ en attente d'approbation",
+      "pendingCount": "{count, plural, =0 {rien en attente} one {# saisie} other {# saisies}}",
+      "hint": "Le fonds de départ en attente d'approbation n'est pas encore dans l'argent en caisse."
+    },
+    "settings": {
+      "title": "Réglages des rapports",
+      "subtitle": "Votre rapport automatique pour ce service. Chaque personne règle le sien.",
+      "accessDenied": "Vous n'avez pas accès aux réglages des rapports.",
+      "enabled": "Envoyer le rapport automatiquement",
+      "frequency": "À quelle fréquence",
+      "frequencies": {
+        "daily": "Chaque jour",
+        "weekly": "Chaque semaine",
+        "monthly": "Chaque mois"
+      },
+      "day": "Jour",
+      "dayOfMonth": "Jour du mois",
+      "time": "Heure",
+      "timeHint": "Heure de Lubumbashi (UTC+2).",
+      "covers": {
+        "daily": "Couvre la veille.",
+        "weekly": "Couvre du lundi au dimanche. Envoyé un dimanche, il couvre cette même semaine ; un autre jour, la dernière semaine complète.",
+        "monthly": "Couvre tout le mois précédent."
+      },
+      "compareNote": "Les ventes sont comparées à la période de même durée juste avant.",
+      "sectionsLabel": "Ce qu'il contient",
+      "recipientsLabel": "Envoyer à",
+      "recipientsHint": "Seules les personnes qui peuvent voir les rapports sont listées.",
+      "channelLabel": "Comment l'envoyer",
+      "channels": {
+        "in_app": "Dans l'application",
+        "email": "E-mail"
+      },
+      "comingSoon": "bientôt",
+      "save": "Enregistrer",
+      "saving": "Enregistrement…",
+      "saved": "Enregistré.",
+      "saveError": "Les réglages n'ont pas pu être enregistrés. Veuillez réessayer.",
+      "next": "Prochain rapport : {date}",
+      "off": "Le rapport automatique est désactivé."
+    },
+    "weekdays": {
+      "0": "Dimanche",
+      "1": "Lundi",
+      "2": "Mardi",
+      "3": "Mercredi",
+      "4": "Jeudi",
+      "5": "Vendredi",
+      "6": "Samedi"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "open": "Notifications",
+      "empty": "Aucune notification.",
+      "markAll": "Tout marquer comme lu",
+      "ready": "Votre rapport du {from} au {to} est prêt",
+      "failed": "Votre rapport du {from} au {to} n'a pas pu être créé"
+    },
+    "pdf": {
+      "title": "Rapport",
+      "period": "Période",
+      "madeBy": "Créé par",
+      "type": "Type",
+      "downloadedBy": "Téléchargé par {name} le {date}",
+      "page": "Page {page} sur {pages}"
+    },
+    "highlights": {
+      "title": "Points clés",
+      "salesUp": "Les ventes ont augmenté de {pct} % pour atteindre {amount} par rapport à la période d'avant.",
+      "salesDown": "Les ventes ont baissé de {pct} % pour atteindre {amount} par rapport à la période d'avant.",
+      "salesFlat": "Les ventes sont restées comme la période d'avant : {amount}.",
+      "salesTotal": "Ventes de la période : {amount}.",
+      "missing": "{days, plural, one {# jour} other {# jours}} sans ventes enregistrées, dans {shops, plural, one {# boutique} other {# boutiques}}.",
+      "noMissing": "Chaque boutique a enregistré des ventes ses jours d'ouverture.",
+      "reorder": "{products, plural, one {# produit} other {# produits}} à racheter ({units, plural, one {# unité proposée} other {# unités proposées}}).",
+      "noReorder": "Aucun stock à racheter.",
+      "owed": "Les clients doivent {amount} ({customers, plural, one {# client} other {# clients}}). La plus vieille dette {days, plural, =0 {date d'aujourd'hui} one {a # jour} other {a # jours}}.",
+      "noOwed": "Aucun client ne doit d'argent."
+    }
   }
 }

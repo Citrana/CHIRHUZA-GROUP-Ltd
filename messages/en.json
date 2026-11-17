@@ -138,7 +138,8 @@
     "payroll": "Payroll",
     "withdrawals": "Withdrawals",
     "approvals": "Approvals",
-    "cash": "Cash"
+    "cash": "Cash",
+    "reports": "Reports"
   },
   "LocaleSwitcher": {
     "label": "Language",
@@ -308,7 +309,8 @@
     "admin": "Administration",
     "products": "Products",
     "withdrawals": "Withdrawals",
-    "cash": "Cash"
+    "cash": "Cash",
+    "reports": "Reports"
   },
   "Permissions": {
     "sales": {
@@ -385,6 +387,11 @@
         "approve": "Approve opening cash above the limit"
       },
       "settings": "Set the opening cash approval limit"
+    },
+    "reports": {
+      "view": "View reports",
+      "generate": "Generate reports for a chosen period",
+      "settings": "Set up the scheduled report"
     }
   },
   "AuditLog": {
@@ -428,7 +435,9 @@
       "rolePermissions": "Role permission",
       "locations": "Location",
       "openingCash": "Opening cash",
-      "cashSettings": "Cash settings"
+      "cashSettings": "Cash settings",
+      "reports": "Report",
+      "reportSettings": "Report settings"
     }
   },
   "Changes": {
@@ -2008,5 +2017,201 @@
       "q12": "Thank you for the care you put into every sale."
     },
     "dismiss": "Dismiss"
+  },
+  "Reports": {
+    "title": "Reports",
+    "subtitle": "A short summary of the business for a period. Reports are saved here and can be opened again.",
+    "accessDenied": "You don't have access to reports.",
+    "generate": "Generate report",
+    "settingsLink": "Report settings",
+    "historyTitle": "Saved reports",
+    "empty": "No reports yet. Generate one, or switch on the scheduled report in Report settings.",
+    "periodHeader": "Period",
+    "typeHeader": "Type",
+    "statusHeader": "Status",
+    "madeHeader": "Made",
+    "byHeader": "By",
+    "kinds": {
+      "scheduled": "Scheduled",
+      "custom": "Custom"
+    },
+    "statuses": {
+      "ready": "Ready",
+      "failed": "Failed"
+    },
+    "open": "Open",
+    "generateTitle": "Generate a report",
+    "generateHint": "Pick the period. A report can cover up to 12 months.",
+    "fromLabel": "From",
+    "toLabel": "To",
+    "tooLong": "Pick a period of 12 months or less.",
+    "inFuture": "The period can't end after today.",
+    "fromAfterTo": "The start date must be before the end date.",
+    "generating": "Making the report…",
+    "generateError": "The report could not be made. Please try again.",
+    "back": "Back to reports",
+    "notFound": "This report doesn't exist.",
+    "reportTitle": "Report {from} – {to}",
+    "basedOn": "Based on data entered by {date}",
+    "asOfNote": "Stock, approvals, money owed and cash are shown as they were when the report was made.",
+    "failedTitle": "This report could not be made",
+    "failedBody": "We tried twice. You can generate it again for the same period.",
+    "download": "Download PDF",
+    "downloadError": "The PDF could not be made. Please try again.",
+    "preparing": "Preparing…",
+    "sections": {
+      "sales": "Sales",
+      "missingDays": "Days with no sales registered",
+      "stock": "Low and sold-out stock",
+      "approvals": "Waiting for approval",
+      "credit": "Customers owe",
+      "cash": "Cash"
+    },
+    "sales": {
+      "total": "Total sales",
+      "previous": "Same length before ({from} – {to})",
+      "change": "Change",
+      "noCompare": "Not compared: the period is shorter than 3 days.",
+      "noPrevious": "No sales in the period before.",
+      "thisPeriod": "This period",
+      "previousPeriod": "Period before",
+      "margin": "Margin",
+      "expenses": "Expenses",
+      "payroll": "Payroll",
+      "netProfit": "Net profit",
+      "withdrawals": "Withdrawals",
+      "withdrawalsNote": "Withdrawals are shown apart. They are not a business cost.",
+      "byShop": "Sales per shop",
+      "topProducts": "Top 5 products",
+      "units": "Units",
+      "revenue": "Sales",
+      "noTopProducts": "No products sold in this period.",
+      "understated": "{count, plural, one {# shop day} other {# shop days}} had no sales registered, so these totals may be lower than the real figures.",
+      "comparedWith": "Compared with the period from {from} to {to}."
+    },
+    "missing": {
+      "none": "Every shop registered sales on its open days.",
+      "count": "{count, plural, one {# day} other {# days}} with no sales registered",
+      "hint": "Only open days count. Days marked \"Closed / no sales\" are left out.",
+      "shopCount": "{count, plural, one {# day} other {# days}}",
+      "latest": "Only the latest {count} dates are shown."
+    },
+    "stock": {
+      "lowCount": "Running low",
+      "outCount": "Sold out",
+      "none": "Nothing is low or sold out.",
+      "product": "Product",
+      "onHand": "On hand",
+      "outSince": "Sold out since",
+      "more": "Showing the first {shown} of {total}.",
+      "value": "Stock value (purchase cost)",
+      "units": "Units on hand",
+      "sold30": "Sold in last 30 days",
+      "reorder": "Suggested reorder",
+      "reorderHint": "Suggested reorder: enough for 30 days of sales, and at least the low stock level, minus what is on hand."
+    },
+    "approvals": {
+      "count": "Waiting for approval",
+      "none": "Nothing is waiting for approval.",
+      "type": "Type",
+      "amount": "Amount",
+      "requestedBy": "Requested by",
+      "requestedOn": "Date",
+      "more": "Showing the {shown} newest of {total}."
+    },
+    "credit": {
+      "total": "Total owed",
+      "customers": "{count, plural, one {# customer} other {# customers}}",
+      "top": "Who owes the most",
+      "none": "No customer owes money.",
+      "customer": "Customer",
+      "owed": "Owes",
+      "oldest": "Oldest unpaid",
+      "daysUnpaid": "Days unpaid",
+      "days": "{count, plural, =0 {today} one {# day} other {# days}}",
+      "sortNote": "Oldest debts first.",
+      "more": "Showing {shown} of {total} customers."
+    },
+    "cash": {
+      "onHand": "Cash on hand",
+      "pending": "Opening cash waiting for approval",
+      "pendingCount": "{count, plural, =0 {nothing waiting} one {# record} other {# records}}",
+      "hint": "Opening cash waiting for approval is not in cash on hand yet."
+    },
+    "settings": {
+      "title": "Report settings",
+      "subtitle": "Your scheduled report for this service. Each person sets up their own.",
+      "accessDenied": "You don't have access to report settings.",
+      "enabled": "Send the report automatically",
+      "frequency": "How often",
+      "frequencies": {
+        "daily": "Every day",
+        "weekly": "Every week",
+        "monthly": "Every month"
+      },
+      "day": "Day",
+      "dayOfMonth": "Day of the month",
+      "time": "Time",
+      "timeHint": "Lubumbashi time (UTC+2).",
+      "covers": {
+        "daily": "Covers the day before.",
+        "weekly": "Covers Monday to Sunday. Sent on a Sunday, it covers that same week; on another day, the last full week.",
+        "monthly": "Covers the whole previous month."
+      },
+      "compareNote": "Sales are compared with the period of the same length just before.",
+      "sectionsLabel": "What to include",
+      "recipientsLabel": "Send to",
+      "recipientsHint": "Only people who can see reports are listed.",
+      "channelLabel": "How to send it",
+      "channels": {
+        "in_app": "In the app",
+        "email": "Email"
+      },
+      "comingSoon": "coming soon",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved.",
+      "saveError": "The settings could not be saved. Please try again.",
+      "next": "Next report: {date}",
+      "off": "The scheduled report is switched off."
+    },
+    "weekdays": {
+      "0": "Sunday",
+      "1": "Monday",
+      "2": "Tuesday",
+      "3": "Wednesday",
+      "4": "Thursday",
+      "5": "Friday",
+      "6": "Saturday"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "open": "Notifications",
+      "empty": "No notifications.",
+      "markAll": "Mark all as read",
+      "ready": "Your report for {from} – {to} is ready",
+      "failed": "Your report for {from} – {to} could not be made"
+    },
+    "pdf": {
+      "title": "Report",
+      "period": "Period",
+      "madeBy": "Made by",
+      "type": "Type",
+      "downloadedBy": "Downloaded by {name} on {date}",
+      "page": "Page {page} of {pages}"
+    },
+    "highlights": {
+      "title": "Highlights",
+      "salesUp": "Sales went up {pct}% to {amount} compared with the period before.",
+      "salesDown": "Sales went down {pct}% to {amount} compared with the period before.",
+      "salesFlat": "Sales stayed the same as the period before: {amount}.",
+      "salesTotal": "Sales for the period: {amount}.",
+      "missing": "{days, plural, one {# day} other {# days}} with no sales registered, in {shops, plural, one {# shop} other {# shops}}.",
+      "noMissing": "Every shop registered sales on its open days.",
+      "reorder": "{products, plural, one {# product} other {# products}} to reorder ({units, plural, one {# unit} other {# units}} suggested).",
+      "noReorder": "No stock needs reordering.",
+      "owed": "Customers owe {amount} ({customers, plural, one {# customer} other {# customers}}). The oldest debt is {days, plural, =0 {from today} one {# day old} other {# days old}}.",
+      "noOwed": "No customer owes money."
+    }
   }
 }

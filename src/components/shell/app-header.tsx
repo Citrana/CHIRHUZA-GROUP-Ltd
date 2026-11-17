@@ -16,6 +16,7 @@ import {
 import { LocaleSwitcher } from "@/components/locale-switcher";
 import { LogoutButton } from "@/components/logout-button";
 import { AdminLinks, AdminMenu } from "@/components/shell/admin-links";
+import { NotificationsBell } from "@/components/shell/notifications-bell";
 import { useLastService } from "@/lib/service-store";
 
 /**
@@ -79,7 +80,10 @@ export function AppHeader({
           </span>
         ) : null}
 
-        <div className="ml-auto hidden items-center gap-4 xl:flex">
+        <div className="ml-auto flex items-center">
+          <NotificationsBell />
+        </div>
+        <div className="hidden items-center gap-4 xl:flex">
           {serviceLink}
           <AdminMenu />
           <LocaleSwitcher />
@@ -92,7 +96,7 @@ export function AppHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="ml-auto xl:hidden"
+                className="xl:hidden"
                 aria-label={t("account")}
               />
             }

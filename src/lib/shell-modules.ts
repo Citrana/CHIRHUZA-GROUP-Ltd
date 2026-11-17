@@ -4,6 +4,7 @@ import {
   ChartColumn,
   ClipboardList,
   Coins,
+  FileText,
   Package,
   Receipt,
   ShoppingCart,
@@ -25,6 +26,7 @@ export type ShellModuleGroup = (typeof SHELL_MODULE_GROUPS)[number];
 
 export const SHELL_MODULES = [
   { key: "analytics", permissionModule: "analytics", icon: ChartColumn, group: "overview" },
+  { key: "reports", permissionModule: "reports", icon: FileText, group: "overview" },
   { key: "products", permissionModule: "products", icon: Package, group: "inventory" },
   { key: "requisitions", permissionModule: "requisition", icon: ClipboardList, group: "inventory" },
   { key: "stock", permissionModule: "stock", icon: Warehouse, group: "inventory" },

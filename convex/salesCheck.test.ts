@@ -90,7 +90,8 @@ test("finds the shop-day that sold every listed product, with qty differences", 
     matched: 2,
     missing: [],
     extras: [],
-    closed: null,
+    // Shops are closed on Sundays by default: true when the test runs on a Tuesday.
+    closed: weekdayOf(day(-2)) === 0 ? "weekday" : null,
   });
   expect(result.results[0].found).toEqual([
     { productId: P1, units: 2, qtyDiff: -1 },

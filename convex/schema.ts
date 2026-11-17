@@ -38,6 +38,14 @@ import {
   businessUnitKeyValidator,
   locationTypeValidator,
 } from "./lib/businessUnits";
+import {
+  reportChannelValidator,
+  reportContentValidator,
+  reportFrequencyValidator,
+  reportKindValidator,
+  reportSectionValidator,
+  reportStatusValidator,
+} from "./lib/reports";
 
 // See CLAUDE.md for the permanent rules that apply to every business table:
 // - businessUnitId: v.id("businessUnits") (hair | fashion | housing |
@@ -673,6 +681,63 @@ export default defineSchema({
     updatedBy: v.id("users"),
     updatedAt: v.number(),
   }).index("by_businessUnitId", ["businessUnitId"]),
+
+  // Reports (convex/reports.ts, convex/lib/reports.ts). One scheduled
+  // report set-up per service per owner; no row = the default (weekly,
+  // Sunday 09:00, every section, in-app, to the owner), switched off.
+  reportSettings: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    ownerId: v.id("users"),
+    enabled: v.boolean(),
+    frequency: reportFrequencyValidator,
+    // 0 = Sunday ... 6 = Saturday (weekly).
+    dayOfWeek: v.number(),
+    // 1-28 (monthly).
+    dayOfMonth: v.number(),
+    // "HH:MM", Lubumbashi time, quarter hours.
+    time: v.string(),
+    sections: v.array(reportSectionValidator),
+    recipientIds: v.array(v.id("users")),
+    channels: v.array(reportChannelValidator),
+    // UTC ms of the next run (reports:runDue picks it up).
+    nextRunAt: v.number(),
+    updatedBy: v.id("users"),
+    updatedAt: v.number(),
+  })
+    .index("by_businessUnitId_and_ownerId", ["businessUnitId", "ownerId"])
+    .index("by_enabled_and_nextRunAt", ["enabled", "nextRunAt"]),
+
+  // Saved reports (history): a read-only snapshot, never edited. A failed
+  // scheduled run (after one retry) is kept as status "failed".
+  reports: defineTable({
+    businessUnitId: v.id("businessUnits"),
+    kind: reportKindValidator,
+    settingsId: v.optional(v.id("reportSettings")),
+    // The requester (custom) or the set-up's owner (scheduled).
+    createdBy: v.id("users"),
+    // Period, YYYY-MM-DD (Lubumbashi), inclusive.
+    from: v.string(),
+    to: v.string(),
+    sections: v.array(reportSectionValidator),
+    status: reportStatusValidator,
+    attempts: v.number(),
+    // UTC ms: the data entered up to this moment is in the report.
+    generatedAt: v.number(),
+    content: reportContentValidator,
+    error: v.optional(v.string()),
+  }).index("by_businessUnitId_and_generatedAt", ["businessUnitId", "generatedAt"]),
+
+  // In-app notifications (one per recipient per report). Only readAt is
+  // ever set later.
+  notifications: defineTable({
+    userId: v.id("users"),
+    businessUnitId: v.id("businessUnits"),
+    reportId: v.id("reports"),
+    createdAt: v.number(),
+    readAt: v.optional(v.number()),
+  })
+    .index("by_userId_and_createdAt", ["userId", "createdAt"])
+    .index("by_userId_and_readAt", ["userId", "readAt"]),
 
   // A past open day a shop marked "Closed / no sales" for one service, so it
   // isn't flagged as a missing sales day (convex/lib/salesDays.ts). One row
