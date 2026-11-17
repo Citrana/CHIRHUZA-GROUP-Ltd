@@ -20,10 +20,34 @@ export type PdfTable = {
 /** One block of the document: a title, then details, a table or a line of text. */
 export type PdfSection = {
   title?: string;
+  /** Short lines in a shaded box (a report's highlights), drawn before the rest. */
+  highlights?: string[];
   details?: Array<[label: string, value: string]>;
   table?: PdfTable;
   emptyText?: string;
+  /**
+   * Keep the section on one page when it fits on a fresh one: it starts a
+   * new page instead of splitting, and table rows never break across
+   * pages. Opt-in; other documents keep their flow.
+   */
+  keepTogether?: boolean;
 };
+
+const ROW_MM = 6.5;
+const LINE_MM = 4.2;
+
+/** A rough height (mm) of a section, to decide whether it fits on the page. */
+export function estimateSectionHeight(section: PdfSection): number {
+  const lines = (text: string) => text.split("\n").length;
+  let h = section.title ? 8 : 0;
+  if (section.highlights) h += 10 + section.highlights.length * 2 * LINE_MM;
+  if (section.details) h += section.details.reduce((t, [l, v]) => t + Math.max(lines(l), lines(v)) * LINE_MM + 2.4, 0) + 6;
+  if (section.table && section.table.body.length > 0) {
+    h += ROW_MM + 4 + section.table.body.reduce((t, row) => t + Math.max(...row.map(lines)) * LINE_MM + 2.6, 0);
+  }
+  if (section.emptyText) h += 2 * LINE_MM + 4;
+  return h;
+}
 
 export type PdfDocument = {
   fileName: string;
@@ -95,7 +119,18 @@ export async function renderPdf(document: PdfDocument, pageLabel: (page: number,
     }
   };
 
+  const room = height - 20;
   for (const section of document.sections) {
+    if (section.keepTogether) {
+      const needed = estimateSectionHeight(section);
+      // Start a new page when it doesn't fit here but would on its own page,
+      // or when it's longer than a page and little room is left (so a long
+      // table doesn't start with a few rows at the bottom).
+      if ((y + needed > room && needed <= room - 18) || (needed > room - 18 && room - y < 80)) {
+        doc.addPage();
+        y = 18;
+      }
+    }
     if (section.title) {
       ensureRoom(14);
       y += 4;
@@ -104,6 +139,21 @@ export async function renderPdf(document: PdfDocument, pageLabel: (page: number,
       doc.setTextColor(...INK);
       doc.text(pdfSafe(section.title), MARGIN, y);
       y += 2;
+    }
+    if (section.highlights && section.highlights.length > 0) {
+      const inner = width - MARGIN * 2 - 8;
+      const lines = section.highlights.flatMap((h) => doc.splitTextToSize(`- ${pdfSafe(h)}`, inner) as string[]);
+      const boxHeight = lines.length * 4.2 + 6;
+      ensureRoom(boxHeight + 4);
+      doc.setFillColor(237, 246, 226);
+      doc.setDrawColor(200, 230, 160);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(MARGIN, y + 1, width - MARGIN * 2, boxHeight, 2, 2, "FD");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(...INK);
+      doc.text(lines, MARGIN + 4, y + 6);
+      y += boxHeight + 5;
     }
     if (section.details) {
       autoTable(doc, {
@@ -134,6 +184,7 @@ export async function renderPdf(document: PdfDocument, pageLabel: (page: number,
         headStyles: { fillColor: INK, textColor: [245, 248, 242], fontStyle: "bold" },
         alternateRowStyles: { fillColor: [247, 250, 244] },
         columnStyles,
+        ...(section.keepTogether ? { rowPageBreak: "avoid" as const, showHead: "everyPage" as const } : {}),
       });
       y = lastY() + 4;
     }
