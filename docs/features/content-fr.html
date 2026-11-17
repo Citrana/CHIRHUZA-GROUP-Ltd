@@ -24,8 +24,9 @@
   <li><a href="#cash"><span class="n">11</span>Caisse</a></li>
   <li><a href="#approvals"><span class="n">12</span>Approbations</a></li>
   <li><a href="#analytics"><span class="n">13</span>Analyses</a></li>
-  <li><a href="#admin"><span class="n">14</span>Administration</a></li>
-  <li><a href="#rules"><span class="n">15</span>Les règles qui protègent vos données</a></li>
+  <li><a href="#reports"><span class="n">14</span>Rapports</a></li>
+  <li><a href="#admin"><span class="n">15</span>Administration</a></li>
+  <li><a href="#rules"><span class="n">16</span>Les règles qui protègent vos données</a></li>
 </ol>
 <div class="note"><strong>À propos de ce guide.</strong> Les mots dans des <span class="ui">cadres</span> sont exactement ceux affichés à l'écran. Ce guide est mis à jour à chaque ajout ou changement de fonctionnalité. Téléchargez la dernière version depuis <span class="ui">Guide des fonctionnalités (PDF)</span> dans le menu latéral. Pour une formation pas à pas, voir le guide de formation.</div>
 
@@ -222,7 +223,27 @@
 <div class="block"><h4>Bon à savoir</h4><p>Chaque service marque ses propres jours : une boutique peut vendre en Coiffure mais pas en Mode le même jour. Les jours d'ouverture se règlent par boutique dans <span class="ui">Sites</span>.</p></div>
 
 <!-- 14 -->
-<h2 id="admin"><span class="num">14</span>Administration</h2>
+<h2 id="reports"><span class="num">14</span>Rapports</h2>
+<div class="block"><h4>Ce que c'est</h4><p>Un court résumé d'un service pour une période, gardé pour pouvoir le rouvrir. Il ne fait que lire les chiffres : il ne change jamais l'argent ni le stock.</p></div>
+<div class="block"><h4>Où le trouver</h4><p><span class="ui">Rapports</span>. La cloche en haut vous prévient quand un rapport est prêt.</p></div>
+<div class="block"><h4>Comment ça marche</h4>
+<ul>
+  <li><span class="ui">Points clés</span> en haut : 3 ou 4 lignes courtes sur les ventes, les jours sans ventes, le stock à racheter et l'argent dû.</li>
+  <li><span class="ui">Ventes</span> : total des ventes, <span class="ui">Marge</span>, <span class="ui">Dépenses</span>, <span class="ui">Paie</span>, <span class="ui">Bénéfice net</span> et <span class="ui">Retraits</span> (montrés à part), <span class="ui">Ventes par boutique</span> et <span class="ui">Les 5 meilleurs produits</span>. Ils sont comparés à la période de même durée juste avant, seulement si cette période a des chiffres. Quand des jours de boutique n'ont pas de ventes enregistrées, le rapport prévient que les totaux peuvent être plus bas que la réalité.</li>
+  <li><span class="ui">Jours sans ventes enregistrées</span> : le nombre de jours par boutique et les dates, les jours qui se suivent étant groupés (jours d'ouverture seulement ; les jours marqués <span class="ui">Fermé / aucune vente</span> ne comptent pas). Pour une période de plus de 31 jours, seules les 14 dernières dates sont listées.</li>
+  <li><span class="ui">Stock bas et épuisé</span> : chaque produit avec <span class="ui">Vendu ces 30 derniers jours</span> et un <span class="ui">Rachat proposé</span> (de quoi couvrir 30 jours de ventes, et au moins le niveau de stock bas, moins ce qui est en stock), et la <span class="ui">Valeur du stock (prix d'achat)</span>.</li>
+  <li><span class="ui">En attente d'approbation</span> : chaque demande avec son type, son montant, qui l'a faite et quand. <span class="ui">Ce que les clients doivent</span> : chaque client avec la date du plus vieil impayé et les jours impayés, les plus vieilles dettes d'abord. <span class="ui">Caisse</span> : argent en caisse et fonds de départ en attente d'approbation.</li>
+  <li>Chaque rapport indique <span class="ui">Selon les données saisies jusqu'au</span> une date et une heure. Les ventes saisies après n'y sont pas.</li>
+  <li><span class="ui">Créer un rapport</span> : choisissez une période jusqu'à 12 mois. Le rapport est créé tout de suite et gardé.</li>
+  <li><span class="ui">Réglages des rapports</span> : cochez <span class="ui">Envoyer le rapport automatiquement</span>, puis choisissez la fréquence (chaque jour, semaine ou mois), le jour, l'heure (heure de Lubumbashi), ce qu'il contient et qui le reçoit. Par défaut : chaque dimanche à 09:00, du lundi au dimanche de cette semaine.</li>
+  <li>Chaque rapport gardé s'ouvre depuis la liste. <span class="ui">Télécharger le PDF</span> donne le même rapport en PDF.</li>
+  <li>Les rapports sont envoyés <span class="ui">Dans l'application</span>. L'e-mail arrive bientôt.</li>
+</ul></div>
+<div class="block"><h4>Qui peut l'utiliser</h4><p>Le Super Admin et le Chief Admin. La partie <span class="ui">Caisse</span> n'est montrée qu'au propriétaire. Chaque personne règle son propre rapport automatique.</p></div>
+<div class="block"><h4>Bon à savoir</h4><p>Si un rapport automatique ne peut pas être créé, il est réessayé une fois. S'il échoue encore, il s'affiche <span class="ui">Échec</span> et vous pouvez le créer vous-même. Chaque rapport est écrit dans le journal d'audit.</p></div>
+
+<!-- 15 -->
+<h2 id="admin"><span class="num">15</span>Administration</h2>
 <div class="block"><h4>Ce que c'est</h4><p>Gérer les personnes, les rôles, les sites, et voir l'historique des changements. Dans le menu <span class="ui">Administration</span> en haut.</p></div>
 <div class="block"><h4>Comment ça marche</h4>
 <ul>
@@ -233,8 +254,8 @@
 </ul></div>
 <div class="block"><h4>Qui peut l'utiliser</h4><p>Utilisateurs, rôles et sites : Super Admin. Journal d'audit : Chief Admin et Super Admin.</p></div>
 
-<!-- 15 -->
-<h2 id="rules"><span class="num">15</span>Les règles qui protègent vos données</h2>
+<!-- 16 -->
+<h2 id="rules"><span class="num">16</span>Les règles qui protègent vos données</h2>
 <ul>
   <li><strong>Tout est enregistré.</strong> Chaque ajout, modification et suppression va dans le journal d'audit, qui ne peut pas être modifié.</li>
   <li><strong>Rien n'est supprimé tout de suite.</strong> Une suppression attend une approbation. Ce qui est utilisé est archivé à la place.</li>

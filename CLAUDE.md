@@ -353,6 +353,38 @@ this repo, now and later — do not relax them for convenience.
   only compare equal-length periods of at least 3 days; ▲/▼ colours come
   from `deltaTone` (a cost going down is good news).
 
+## Reports
+
+- **Reports** (`convex/reports.ts`, `convex/lib/reports.ts`, pages
+  `/[service]/reports`, `/reports/[reportId]`, `/reports/settings`) are
+  **read-only**: building one never writes money, stock or any business
+  record. A report is a saved snapshot (`reports.content`), never edited.
+  Sections: sales vs the previous equal period (`comparableRange`, now in
+  `convex/lib/analyticsCompare.ts`; under 3 days not compared), missing
+  sales days (`salesDaysFor`), low / sold-out stock (`productStock`),
+  pending approvals, customers owe, cash (on hand + pending opening cash).
+  Every report says "based on data entered by" its `generatedAt`.
+  Content fields added later are optional, so older reports still open.
+  Highlights (`reportHighlights`) are worked out from the saved content
+  when shown, never stored. Sales add margin / expenses / payroll / net
+  profit / withdrawals (`financeFiguresOf`), per shop and top 5 products,
+  compared only when the previous period has data. Suggested reorder =
+  max(sold in 30 days, low-stock level) - on hand (`reorderQty`). Days
+  unpaid = days since the oldest unpaid sale (no due dates). The PDF uses
+  `keepTogether` sections (`src/lib/pdf/document.ts`, opt-in).
+- Scheduled: one `reportSettings` row per service per owner (default
+  weekly, Sunday 09:00 Lubumbashi, Monday-Sunday of that week;
+  `periodFor`, `nextRunAt`). `crons.ts` runs `reports:runDue` every 15
+  minutes; it moves `nextRunAt` on in the same transaction, then
+  `runScheduled` builds it, retries once after 5 minutes, then saves a
+  `failed` report. Custom: `reports.generate`, at most 12 months.
+- Every run is audited (scheduled runs with the set-up's owner as actor).
+  Recipients get an in-app `notifications` row (bell in the header);
+  email is not wired yet (no provider).
+- Gated by `reports.view` / `reports.generate` / `reports.settings` (Super
+  Admin + Chief Admin). The cash section is stripped server-side for anyone
+  without `cash.view`.
+
 ## Append-only tables
 
 - Append-only tables — the audit log, inventory movements, and similar
@@ -550,6 +582,9 @@ analytics rollups + Analytics page (`/[service]/analytics`: sales, margin,
 expenses, payroll, net profit, withdrawals apart, top products, charts, and
 the "Products sold" report - every product sold in any day or range, per
 shop, with CSV).
+Reports (`/[service]/reports`): a scheduled report (default every Sunday
+09:00) and custom reports up to 12 months, saved as history, with PDF
+download and in-app notifications.
 Mode (fashion) is live on the same modules, with clothes told apart by
 name, size (managed, ordered list in Product settings) and colour. Locations are
 shared by every service.
