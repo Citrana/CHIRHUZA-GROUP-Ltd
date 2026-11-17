@@ -54,6 +54,10 @@ export const PERMISSIONS = [
 
   { key: "analytics.view", module: "analytics", description: "View analytics" },
 
+  { key: "reports.view", module: "reports", description: "View reports" },
+  { key: "reports.generate", module: "reports", description: "Generate reports for a chosen period" },
+  { key: "reports.settings", module: "reports", description: "Set up the scheduled report" },
+
   { key: "users.manage", module: "admin", description: "Manage users" },
   { key: "roles.manage", module: "admin", description: "Manage roles and permissions" },
   { key: "locations.manage", module: "admin", description: "Manage locations" },
@@ -131,6 +135,8 @@ export const SYSTEM_ROLES: readonly RoleSeed[] = [
     permissions: all([
       ...VIEW_KEYS,
       "analytics.view",
+      "reports.generate",
+      "reports.settings",
       "sales.edit.request",
       "stock.approve",
       "payroll.create",
@@ -310,6 +316,17 @@ export const SEED_STEPS: readonly SeedStep[] = [
     revokes: [
       ["chief_admin", "sales.edit.approve"],
       ["chief_sales_admin", "sales.edit.approve"],
+    ],
+  },
+  {
+    // Reports: owners and admins. reports.view reaches the Chief Admin via
+    // its *.view default for new databases; this brings all three to a
+    // Chief Admin role that already exists.
+    key: "2026-11-reports",
+    grants: [
+      ["chief_admin", "reports.view", "all_locations"],
+      ["chief_admin", "reports.generate", "all_locations"],
+      ["chief_admin", "reports.settings", "all_locations"],
     ],
   },
 ];

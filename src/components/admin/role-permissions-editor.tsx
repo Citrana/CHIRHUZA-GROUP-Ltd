@@ -29,6 +29,7 @@ function useModuleLabels(): Record<PermissionModule, string> {
     products: t("products"),
     withdrawals: t("withdrawals"),
     cash: t("cash"),
+    reports: t("reports"),
   };
 }
 
